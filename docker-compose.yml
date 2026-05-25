@@ -3,14 +3,13 @@
 services:
   # ─── PostgreSQL Database ──────────────────────────────────────────────────
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: textile_db
     restart: unless-stopped
-    env_file: .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-textile_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yourpassword}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: factory_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
@@ -29,7 +28,8 @@ services:
       dockerfile: Dockerfile
     container_name: textile_backend
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
       - ./backend/uploads:/app/uploads
@@ -48,7 +48,11 @@ services:
       target: builder
     container_name: textile_frontend
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - ./frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: /api/v1
+      SERVER_API_URL: http://backend:8000/api/v1
     ports:
       - "3000:3000"
     volumes:

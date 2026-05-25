@@ -4,8 +4,8 @@ Initializes FastAPI, includes routers, and configures middlewares.
 """
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
 import time
 import os
 
@@ -85,6 +85,10 @@ def root():
         "message": "Textile QC System API is running.",
         "version": "1.0.0"
     }
+
+@app.get("/docs", include_in_schema=False)
+def docs_redirect():
+    return RedirectResponse(url="/api/docs")
 
 # Global Exception Handler
 @app.exception_handler(Exception)

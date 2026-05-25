@@ -1,7 +1,7 @@
 # Textile Production & QC Analysis System
 ## Backend FastAPI — Dockerfile
 
-FROM python:3.11
+FROM python:3.11-slim
 
 WORKDIR /app
 

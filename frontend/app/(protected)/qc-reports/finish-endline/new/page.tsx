@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { Suspense, useState, useEffect, useCallback } from "react";
 import api from "@/services/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Trash2, Building2, Layers, Settings2 } from "lucide-react";
@@ -38,6 +38,14 @@ function getNextHourSlot(rows: { hour: string }[]) {
 }
 
 export default function FinishEndlineQCPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-white font-black uppercase tracking-widest">Loading report...</div>}>
+      <FinishEndlineQCContent />
+    </Suspense>
+  );
+}
+
+function FinishEndlineQCContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reportType = searchParams.get("type") || "finish";

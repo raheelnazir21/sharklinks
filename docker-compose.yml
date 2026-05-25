@@ -45,7 +45,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: builder
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1
+        SERVER_API_URL: http://backend:8000/api/v1
     container_name: textile_frontend
     restart: unless-stopped
     env_file:
@@ -55,11 +58,6 @@ services:
       SERVER_API_URL: http://backend:8000/api/v1
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev
     depends_on:
       - backend
 
@@ -67,6 +65,8 @@ services:
   nginx:
     image: nginx:alpine
     container_name: textile_nginx
+    profiles:
+      - proxy
     restart: unless-stopped
     ports:
       - "80:80"

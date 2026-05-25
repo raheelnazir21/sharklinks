@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# Alembic
+alembic/versions/*.py
+
+# Uploads
+backend/uploads/
+backend/backups/
+
+# Node / Next.js
+node_modules/
+.next/
+.env.local
+.env.production
+.env.staging
+frontend/.env.local
+frontend/out/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+.frontend-git-backup-before-root-repo/
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.env.staging
+*.env.production

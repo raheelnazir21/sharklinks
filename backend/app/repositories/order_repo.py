@@ -159,13 +159,13 @@ class StageRepository:
     @staticmethod
     def get_by_order(db: Session, order_id: str) -> List[ProductionStage]:
         return db.query(ProductionStage).filter(
-            ProductionStage.order_id == order_id
+            cast(ProductionStage.order_id, String).in_(_id_variants(order_id))
         ).order_by(ProductionStage.stage_order.asc()).all()
 
     @staticmethod
     def get_by_id(db: Session, stage_id: str) -> Optional[ProductionStage]:
         return db.query(ProductionStage).filter(
-            ProductionStage.id == stage_id
+            cast(ProductionStage.id, String).in_(_id_variants(stage_id))
         ).first()
 
     @staticmethod

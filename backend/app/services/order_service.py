@@ -367,13 +367,48 @@ class OrderService:
 
 
 class StageService:
+    @staticmethod
+    def _default_stage_names(track_type: str):
+        from app.models.order import StageName
+
+        if track_type == "sampling":
+            return [
+                (1, StageName.sample_start), (2, StageName.fabrication), (3, StageName.fabric_cutting),
+                (4, StageName.embellishment), (5, StageName.stitching), (6, StageName.washing),
+                (7, StageName.finishing), (8, StageName.qc_check), (9, StageName.dispatch),
+                (10, StageName.sample_completed),
+            ]
+        return [
+            (1, StageName.bulk_start), (2, StageName.fabrication), (3, StageName.pp_sample),
+            (4, StageName.bulk_cutting), (5, StageName.bulk_embellishment), (6, StageName.stitching),
+            (7, StageName.top_sample_picked), (8, StageName.finishing), (9, StageName.packing),
+            (10, StageName.final_qa_audit), (11, StageName.ex_factory), (12, StageName.completed),
+        ]
+
+    @staticmethod
+    def ensure_default_stages(db: Session, order: Order) -> List[ProductionStage]:
+        stages = StageRepository.get_by_order(db, str(order.id))
+        if stages:
+            return stages
+
+        track = order.track_type.value if hasattr(order.track_type, "value") else str(order.track_type)
+        for idx, stage_name in StageService._default_stage_names(track):
+            StageRepository.create(db, {
+                "order_id": order.id,
+                "module_type": order.track_type,
+                "stage_name": stage_name,
+                "stage_order": idx,
+                "status": StageStatus.pending,
+                "is_required": True,
+            })
+        return StageRepository.get_by_order(db, str(order.id))
 
     @staticmethod
     def get_stages(db: Session, order_id: str) -> List[ProductionStage]:
         order = OrderRepository.get_by_id(db, order_id)
         if not order:
             raise HTTPException(status_code=404, detail="Order not found.")
-        return StageRepository.get_by_order(db, order_id)
+        return StageService.ensure_default_stages(db, order)
 
     @staticmethod
     def add_stage(db: Session, order_id: str, payload: StageCreate, user_id: str) -> ProductionStage:

@@ -90,6 +90,10 @@ jobs:
               cp -a "$PROJECT_DIR/backend/uploads" "$ENV_DIR/backend/uploads"
             fi
 
+            if [ -f "$PROJECT_DIR/backend/textile_qc.db" ]; then
+              cp "$PROJECT_DIR/backend/textile_qc.db" "$ENV_DIR/backend/textile_qc.db"
+            fi
+
             rm -rf "$RELEASE_DIR"
             mkdir -p "$RELEASE_DIR"
             tar -xzf /home/ubuntu/release.tgz -C "$RELEASE_DIR"
@@ -120,9 +124,38 @@ jobs:
               cp -a "$ENV_DIR/backend/uploads" "$PROJECT_DIR/backend/uploads"
             fi
 
+            if [ -f "$ENV_DIR/backend/textile_qc.db" ]; then
+              cp "$ENV_DIR/backend/textile_qc.db" "$PROJECT_DIR/backend/textile_qc.db"
+            fi
+
             cd "$PROJECT_DIR"
             docker compose up -d --build
             docker compose exec -T backend alembic upgrade head || echo "Migration skipped or failed."
+
+            echo "Waiting for application containers to become stable..."
+            for i in $(seq 1 18); do
+              BACKEND_STATUS="$(docker inspect -f '{{.State.Status}}' textile_backend 2>/dev/null || echo missing)"
+              FRONTEND_STATUS="$(docker inspect -f '{{.State.Status}}' textile_frontend 2>/dev/null || echo missing)"
+              echo "Attempt $i: backend=$BACKEND_STATUS frontend=$FRONTEND_STATUS"
+
+              if [ "$BACKEND_STATUS" = "running" ] && [ "$FRONTEND_STATUS" = "running" ]; then
+                if curl -fsS http://127.0.0.1:8000/docs >/dev/null && curl -fsS http://127.0.0.1:3000 >/dev/null; then
+                  echo "Application containers are healthy."
+                  break
+                fi
+              fi
+
+              if [ "$i" = "18" ]; then
+                echo "Application did not become healthy in time."
+                docker compose ps
+                docker compose logs --tail=120 backend
+                docker compose logs --tail=120 frontend
+                exit 1
+              fi
+
+              sleep 10
+            done
+
             docker image prune -f
             rm -f /home/ubuntu/release.tgz
             docker compose ps

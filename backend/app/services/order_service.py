@@ -112,22 +112,7 @@ class OrderService:
                 })
         else:
             # Use default track stages
-            stages_to_create = []
-
-            if track == "sampling":
-                stages_to_create = [
-                    (1, StageName.sample_start), (2, StageName.fabrication), (3, StageName.fabric_cutting),
-                    (4, StageName.embellishment), (5, StageName.stitching), (6, StageName.washing),
-                    (7, StageName.finishing), (8, StageName.qc_check), (9, StageName.dispatch),
-                    (10, StageName.sample_completed)
-                ]
-            else: # bulk
-                stages_to_create = [
-                    (1, StageName.bulk_start), (2, StageName.fabrication), (3, StageName.pp_sample),
-                    (4, StageName.bulk_cutting), (5, StageName.bulk_embellishment), (6, StageName.stitching),
-                    (7, StageName.top_sample_picked), (8, StageName.finishing), (9, StageName.packing),
-                    (10, StageName.final_qa_audit), (11, StageName.ex_factory), (12, StageName.completed)
-                ]
+            stages_to_create = StageService._default_stage_names(track)
 
             for idx, s_name in stages_to_create:
                 StageRepository.create(db, {
@@ -379,10 +364,20 @@ class StageService:
                 (10, StageName.sample_completed),
             ]
         return [
-            (1, StageName.bulk_start), (2, StageName.fabrication), (3, StageName.pp_sample),
-            (4, StageName.bulk_cutting), (5, StageName.bulk_embellishment), (6, StageName.stitching),
-            (7, StageName.top_sample_picked), (8, StageName.finishing), (9, StageName.packing),
-            (10, StageName.final_qa_audit), (11, StageName.ex_factory), (12, StageName.completed),
+            (1, StageName.customer_order),
+            (2, StageName.pp_sample_development),
+            (3, StageName.customer_approval),
+            (4, StageName.fabric_shade_approval),
+            (5, StageName.bulk_fabric_cutting),
+            (6, StageName.bulk_embellishment),
+            (7, StageName.stitching),
+            (8, StageName.end_line_qc),
+            (9, StageName.washing),
+            (10, StageName.pressing),
+            (11, StageName.finishing),
+            (12, StageName.packing),
+            (13, StageName.final_random_inspection),
+            (14, StageName.shipment),
         ]
 
     @staticmethod

@@ -46,6 +46,17 @@ class StageName(str, enum.Enum):
     sample_completed = "sample_completed"
 
     # ─── Bulk Production Flow ─────────────────────────────────────────────────
+    customer_order = "customer_order_wrapping_card"
+    pp_sample_development = "pp_sample_development"
+    customer_approval = "customer_approval"
+    fabric_shade_approval = "fabric_shade_continuity_approval"
+    bulk_fabric_cutting = "bulk_fabric_cutting"
+    end_line_qc = "end_line_qc"
+    pressing = "pressing"
+    final_random_inspection = "final_random_inspection"
+    shipment = "shipment_ex_factory"
+
+    # Legacy bulk stage names kept for existing production data.
     bulk_start = "bulk_start"
     pp_sample = "pp_sample"
     bulk_cutting = "bulk_cutting"

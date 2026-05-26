@@ -14,18 +14,20 @@ import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import OrderHistoryModal from "@/components/orders/OrderHistoryModal";
 
 const DEFAULT_BULK_STAGES = [
-  { name: "bulk_start", label: "Bulk Start" },
-  { name: "fabrication", label: "Fabrication" },
-  { name: "pp_sample", label: "PP Sample" },
-  { name: "bulk_cutting", label: "Bulk Cutting" },
+  { name: "customer_order_wrapping_card", label: "Customer Order / Wrapping Card" },
+  { name: "pp_sample_development", label: "PP Sample Development" },
+  { name: "customer_approval", label: "Customer Approval" },
+  { name: "fabric_shade_continuity_approval", label: "Fabric Shade Continuity Approval" },
+  { name: "bulk_fabric_cutting", label: "Bulk Fabric Cutting" },
   { name: "printing_embroidery_embellishment", label: "Printing / Embroidery / Embellishment" },
   { name: "stitching", label: "Stitching" },
-  { name: "top_sample_picked_from_bulk", label: "Top Sample Picked from Bulk" },
+  { name: "end_line_qc", label: "End Line QC" },
+  { name: "washing", label: "Washing" },
+  { name: "pressing", label: "Pressing" },
   { name: "finishing", label: "Finishing" },
   { name: "packing", label: "Packing" },
-  { name: "final_random_qa_audit", label: "Final Random QA Audit" },
-  { name: "ex_factory", label: "Ex-Factory" },
-  { name: "completed", label: "Completed" },
+  { name: "final_random_inspection", label: "Final Random Inspection" },
+  { name: "shipment_ex_factory", label: "Shipment / Ex-Factory" },
 ];
 
 const DEFAULT_SAMPLE_STAGES = [

@@ -90,18 +90,20 @@ function statusLabel(value?: string) {
 }
 
 const BULK_STAGES = [
-  { id: "bulk_start", label: "Start" },
-  { id: "fabrication", label: "Fabrication" },
-  { id: "pp_sample", label: "PP" },
-  { id: "bulk_cutting", label: "Cutting" },
+  { id: "customer_order_wrapping_card", label: "Order" },
+  { id: "pp_sample_development", label: "PP Dev" },
+  { id: "customer_approval", label: "Approval" },
+  { id: "fabric_shade_continuity_approval", label: "Shade" },
+  { id: "bulk_fabric_cutting", label: "Cutting" },
   { id: "printing_embroidery_embellishment", label: "Emb." },
   { id: "stitching", label: "Stitching" },
-  { id: "top_sample_picked_from_bulk", label: "Top Sample" },
+  { id: "end_line_qc", label: "End QC" },
+  { id: "washing", label: "Washing" },
+  { id: "pressing", label: "Pressing" },
   { id: "finishing", label: "Finishing" },
   { id: "packing", label: "Packing" },
-  { id: "final_random_qa_audit", label: "QA" },
-  { id: "ex_factory", label: "Ex-Fac" },
-  { id: "completed", label: "Done" },
+  { id: "final_random_inspection", label: "FRI" },
+  { id: "shipment_ex_factory", label: "Ship" },
 ];
 
 const SAMPLE_STAGES = [

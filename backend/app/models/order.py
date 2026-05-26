@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Enum, Boolean, Date, Text, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
-from sqlalchemy.dialects.postgresql import UUID as GUID
+from app.models.user import GUID
 
 class OrderStatus(str, enum.Enum):
     pending = "pending"

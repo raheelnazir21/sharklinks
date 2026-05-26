@@ -54,6 +54,19 @@ def sync_postgres_enums(engine: Engine) -> None:
 
 def ensure_runtime_schema(engine: Engine) -> None:
     """Apply tiny additive schema fixes for local/dev databases."""
+    legacy_stage_names = {
+        "Sample Start": "sample_start",
+        "Fabrication": "fabrication",
+        "Fabric Cutting": "fabric_cutting",
+        "Embellishment": "embellishment",
+        "Stitching": "stitching",
+        "Washing": "washing",
+        "QC Check": "qc_check",
+        "Finishing": "finishing",
+        "Packing & Dispatch": "dispatch",
+        "Completed": "completed",
+    }
+
     with engine.connect() as conn:
         if engine.dialect.name == "sqlite":
             assignment_cols = {
@@ -68,8 +81,18 @@ def ensure_runtime_schema(engine: Engine) -> None:
             }
             if "reference_attachments" not in order_cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN reference_attachments JSON"))
+            for old_name, new_name in legacy_stage_names.items():
+                conn.execute(
+                    text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
+                    {"new_name": new_name, "old_name": old_name},
+                )
             conn.commit()
         elif engine.dialect.name == "postgresql":
             conn.execute(text("ALTER TABLE order_production_assignments ADD COLUMN IF NOT EXISTS department_id UUID"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS reference_attachments JSONB DEFAULT '[]'::jsonb"))
+            for old_name, new_name in legacy_stage_names.items():
+                conn.execute(
+                    text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
+                    {"new_name": new_name, "old_name": old_name},
+                )
             conn.commit()

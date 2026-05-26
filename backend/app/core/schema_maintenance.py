@@ -69,12 +69,40 @@ def ensure_runtime_schema(engine: Engine) -> None:
 
     with engine.connect() as conn:
         if engine.dialect.name == "sqlite":
-            assignment_cols = {
-                row[1]
-                for row in conn.execute(text("PRAGMA table_info(order_production_assignments)")).fetchall()
-            }
+            assignment_info = conn.execute(text("PRAGMA table_info(order_production_assignments)")).fetchall()
+            assignment_cols = {row[1] for row in assignment_info}
             if "department_id" not in assignment_cols:
                 conn.execute(text("ALTER TABLE order_production_assignments ADD COLUMN department_id CHAR(36)"))
+                assignment_info = conn.execute(text("PRAGMA table_info(order_production_assignments)")).fetchall()
+
+            assignment_notnull = {row[1]: bool(row[3]) for row in assignment_info}
+            if assignment_notnull.get("floor_id") or assignment_notnull.get("line_id"):
+                conn.execute(text("ALTER TABLE order_production_assignments RENAME TO order_production_assignments_old"))
+                conn.execute(text("""
+                    CREATE TABLE order_production_assignments (
+                        id CHAR(36) NOT NULL PRIMARY KEY,
+                        order_id CHAR(36) NOT NULL,
+                        vendor_id CHAR(36) NOT NULL,
+                        floor_id CHAR(36),
+                        line_id CHAR(36),
+                        department_id CHAR(36),
+                        assignment_type VARCHAR(50),
+                        notes TEXT,
+                        created_at DATETIME
+                    )
+                """))
+                conn.execute(text("""
+                    INSERT INTO order_production_assignments (
+                        id, order_id, vendor_id, floor_id, line_id, department_id,
+                        assignment_type, notes, created_at
+                    )
+                    SELECT
+                        id, order_id, vendor_id, floor_id, line_id, department_id,
+                        assignment_type, notes, created_at
+                    FROM order_production_assignments_old
+                """))
+                conn.execute(text("DROP TABLE order_production_assignments_old"))
+
             order_cols = {
                 row[1]
                 for row in conn.execute(text("PRAGMA table_info(orders)")).fetchall()
@@ -89,6 +117,8 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.commit()
         elif engine.dialect.name == "postgresql":
             conn.execute(text("ALTER TABLE order_production_assignments ADD COLUMN IF NOT EXISTS department_id UUID"))
+            conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN floor_id DROP NOT NULL"))
+            conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN line_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS reference_attachments JSONB DEFAULT '[]'::jsonb"))
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(

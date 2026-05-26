@@ -8,12 +8,13 @@ Key rules:
 from typing import List, Optional
 from datetime import date
 from fastapi import HTTPException
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 
-from app.repositories.order_repo import OrderRepository, StageRepository, BulkClassRepository
+from app.repositories.order_repo import OrderRepository, StageRepository, BulkClassRepository, _id_variants
 from app.schemas.order import OrderCreate, OrderUpdate, StageCreate, StageUpdate, BulkOrderCreate, BulkClassCreate
 
-from app.models.order import Order, ProductionStage, OrderStatus, StageStatus, OrderProductionAssignment, VendorFloor, VendorLine, VendorDepartment, LocationStatus, BulkClass, TrackType
+from app.models.order import Order, ProductionStage, OrderStatus, StageStatus, OrderProductionAssignment, Vendor, VendorFloor, VendorLine, VendorDepartment, LocationStatus, BulkClass, TrackType
 
 
 
@@ -83,6 +84,10 @@ class OrderService:
     @staticmethod
     def create_order(db: Session, payload: OrderCreate, user_id: str) -> Order:
         data = payload.model_dump(exclude={"stages", "assignments", "sample_department_id"})
+        vendor = db.query(Vendor).filter(cast(Vendor.id, String).in_(_id_variants(str(data["vendor_id"])))).first()
+        if not vendor or not vendor.is_active:
+            raise HTTPException(status_code=400, detail="Selected vendor is not active or does not exist.")
+        data["vendor_id"] = vendor.id
         data["created_by"] = user_id
         order = OrderRepository.create(db, data)
         

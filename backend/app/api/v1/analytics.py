@@ -19,6 +19,7 @@ from app.models.order import (
     VendorFloor,
     VendorLine,
     VendorDepartment,
+    Vendor,
 )
 from app.services.analytics_service import AnalyticsService
 from app.utils.response import success_response
@@ -115,13 +116,13 @@ def get_order_tracking(
     db: Session = Depends(get_db),
     _=Depends(AnalyticsAccess),
 ):
-    orders_q = db.query(Order).options(
+    orders_q = db.query(Order).join(Order.vendor).options(
         joinedload(Order.vendor),
         joinedload(Order.sample_class),
         joinedload(Order.bulk_class),
         joinedload(Order.stages),
         joinedload(Order.assignments),
-    ).filter(Order.is_active == True)
+    ).filter(Order.is_active == True, Vendor.is_active == True)
 
     if track_type and track_type != "all":
         orders_q = orders_q.filter(Order.track_type == track_type)

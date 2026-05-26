@@ -43,8 +43,8 @@ class VendorService:
         return VendorRepository.update(db, vendor, payload.model_dump(exclude_none=True))
 
     @staticmethod
-    def delete_vendor(db: Session, vendor_id: str) -> None:
+    def delete_vendor(db: Session, vendor_id: str) -> Vendor:
         vendor = VendorRepository.get_by_id(db, vendor_id)
         if not vendor:
             raise HTTPException(status_code=404, detail="Vendor not found.")
-        VendorRepository.soft_delete(db, vendor)
+        return VendorRepository.soft_delete(db, vendor)

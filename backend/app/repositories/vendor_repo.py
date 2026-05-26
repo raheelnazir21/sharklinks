@@ -3,8 +3,20 @@ Vendor Repository — all DB queries for vendors.
 Services call these functions. No raw queries in route files.
 """
 from typing import List, Optional
+import uuid
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from app.models.order import Vendor
+
+
+def _id_variants(value: str) -> list[str]:
+    values = [value]
+    try:
+        parsed = uuid.UUID(str(value))
+        values.extend([str(parsed), parsed.hex])
+    except (TypeError, ValueError):
+        pass
+    return list(dict.fromkeys(values))
 
 
 class VendorRepository:
@@ -19,7 +31,8 @@ class VendorRepository:
     @staticmethod
     def get_by_id(db: Session, vendor_id: str) -> Optional[Vendor]:
         return db.query(Vendor).filter(
-            Vendor.id == vendor_id, Vendor.is_active == True
+            cast(Vendor.id, String).in_(_id_variants(vendor_id)),
+            Vendor.is_active == True,
         ).first()
 
     @staticmethod

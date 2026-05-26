@@ -3,12 +3,15 @@ Vendors API — CRUD for vendor management.
 Only admin and manager can manage vendors.
 """
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles, get_current_user
 from app.models.user import RoleEnum, User
+from app.models.order import Order, OrderStatus
+from app.repositories.order_repo import _id_variants
 from app.schemas.order import VendorCreate, VendorUpdate
 from app.services.vendor_service import VendorService
 from app.services.activity_log_service import ActivityLogService
@@ -101,13 +104,21 @@ def delete_vendor(
     db: Session = Depends(get_db),
     current_user: User = Depends(ManagerAccess),
 ):
-    VendorService.delete_vendor(db, vendor_id)
+    vendor = VendorService.delete_vendor(db, vendor_id)
+    affected_orders = db.query(Order).filter(
+        cast(Order.vendor_id, String).in_(_id_variants(str(vendor.id))),
+        Order.is_active == True,
+    ).all()
+    for order in affected_orders:
+        order.status = OrderStatus.cancelled
+        order.is_active = False
+    db.commit()
     ActivityLogService.record(
         db,
         action="VENDOR_DEACTIVATED",
         entity_type="Vendor",
         entity_id=vendor_id,
         user=current_user,
-        payload={"details": "Vendor was deactivated."},
+        payload={"details": f"Vendor was deactivated with {len(affected_orders)} active order(s)."},
     )
-    return success_response(message="Vendor deactivated successfully.")
+    return success_response(message="Vendor and related active orders deactivated successfully.")

@@ -3,6 +3,7 @@ Floors & Lines API — Manage production floors and lines within a vendor facili
 Vendor → Floor → Line hierarchy with status tracking (idle/occupied/partial).
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from app.models.user import RoleEnum
 from app.models.order import (
     Vendor, VendorDepartment, VendorFloor, VendorLine, OrderProductionAssignment, LocationStatus
 )
+from app.repositories.order_repo import _id_variants
 from app.utils.response import success_response
 
 router = APIRouter(prefix="/vendors", tags=["Floors & Lines"])
@@ -120,15 +122,21 @@ def _serialize_department(department: VendorDepartment) -> dict:
     }
 
 def _get_or_create_sampling_department(db: Session, vendor_id: str) -> VendorDepartment:
+    vendor = db.query(Vendor).filter(
+        cast(Vendor.id, String).in_(_id_variants(vendor_id)),
+        Vendor.is_active == True,
+    ).first()
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
     department = db.query(VendorDepartment).filter(
-        VendorDepartment.vendor_id == vendor_id,
+        cast(VendorDepartment.vendor_id, String).in_(_id_variants(str(vendor.id))),
         VendorDepartment.department_type == "sampling",
         VendorDepartment.is_active == True,
     ).first()
     if department:
         return department
     department = VendorDepartment(
-        vendor_id=vendor_id,
+        vendor_id=vendor.id,
         name="Sampling Department",
         department_type="sampling",
         description="Default sample development area for this vendor.",
@@ -147,12 +155,15 @@ def list_departments(
     db: Session = Depends(get_db),
     _=Depends(AllStaff),
 ):
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id, Vendor.is_active == True).first()
+    vendor = db.query(Vendor).filter(cast(Vendor.id, String).in_(_id_variants(vendor_id)), Vendor.is_active == True).first()
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     if ensure_sampling and (department_type in (None, "", "sampling")):
-        _get_or_create_sampling_department(db, vendor_id)
-    query = db.query(VendorDepartment).filter(VendorDepartment.vendor_id == vendor_id, VendorDepartment.is_active == True)
+        _get_or_create_sampling_department(db, str(vendor.id))
+    query = db.query(VendorDepartment).filter(
+        cast(VendorDepartment.vendor_id, String).in_(_id_variants(str(vendor.id))),
+        VendorDepartment.is_active == True,
+    )
     if department_type:
         query = query.filter(VendorDepartment.department_type == department_type)
     departments = query.order_by(VendorDepartment.name.asc()).all()
@@ -166,11 +177,11 @@ def create_department(
     db: Session = Depends(get_db),
     _=Depends(ManagerAccess),
 ):
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id, Vendor.is_active == True).first()
+    vendor = db.query(Vendor).filter(cast(Vendor.id, String).in_(_id_variants(vendor_id)), Vendor.is_active == True).first()
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     department = VendorDepartment(
-        vendor_id=vendor_id,
+        vendor_id=vendor.id,
         name=payload.name,
         department_type=payload.department_type,
         description=payload.description,
@@ -190,8 +201,8 @@ def update_department(
     _=Depends(ManagerAccess),
 ):
     department = db.query(VendorDepartment).filter(
-        VendorDepartment.id == department_id,
-        VendorDepartment.vendor_id == vendor_id,
+        cast(VendorDepartment.id, String).in_(_id_variants(department_id)),
+        cast(VendorDepartment.vendor_id, String).in_(_id_variants(vendor_id)),
     ).first()
     if not department:
         raise HTTPException(404, "Department not found.")
@@ -213,7 +224,7 @@ def list_floors(
     db: Session = Depends(get_db),
     _=Depends(AllStaff),
 ):
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id, Vendor.is_active == True).first()
+    vendor = db.query(Vendor).filter(cast(Vendor.id, String).in_(_id_variants(vendor_id)), Vendor.is_active == True).first()
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
 
@@ -231,12 +242,12 @@ def create_floor(
     db: Session = Depends(get_db),
     _=Depends(ManagerAccess),
 ):
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id, Vendor.is_active == True).first()
+    vendor = db.query(Vendor).filter(cast(Vendor.id, String).in_(_id_variants(vendor_id)), Vendor.is_active == True).first()
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
 
     floor = VendorFloor(
-        vendor_id=vendor_id,
+        vendor_id=vendor.id,
         name=payload.name,
         description=payload.description,
         total_lines=payload.total_lines or 0,
@@ -256,7 +267,9 @@ def update_floor(
     _=Depends(ManagerAccess),
 ):
     floor = db.query(VendorFloor).filter(
-        VendorFloor.id == floor_id, VendorFloor.vendor_id == vendor_id, VendorFloor.is_active == True
+        cast(VendorFloor.id, String).in_(_id_variants(floor_id)),
+        cast(VendorFloor.vendor_id, String).in_(_id_variants(vendor_id)),
+        VendorFloor.is_active == True,
     ).first()
     if not floor:
         raise HTTPException(404, "Floor not found.")
@@ -275,7 +288,8 @@ def delete_floor(
     _=Depends(ManagerAccess),
 ):
     floor = db.query(VendorFloor).filter(
-        VendorFloor.id == floor_id, VendorFloor.vendor_id == vendor_id
+        cast(VendorFloor.id, String).in_(_id_variants(floor_id)),
+        cast(VendorFloor.vendor_id, String).in_(_id_variants(vendor_id)),
     ).first()
     if not floor:
         raise HTTPException(404, "Floor not found.")
@@ -297,7 +311,9 @@ def list_lines(
     _=Depends(AllStaff),
 ):
     floor = db.query(VendorFloor).filter(
-        VendorFloor.id == floor_id, VendorFloor.vendor_id == vendor_id, VendorFloor.is_active == True
+        cast(VendorFloor.id, String).in_(_id_variants(floor_id)),
+        cast(VendorFloor.vendor_id, String).in_(_id_variants(vendor_id)),
+        VendorFloor.is_active == True,
     ).first()
     if not floor:
         raise HTTPException(404, "Floor not found.")
@@ -318,13 +334,15 @@ def create_line(
     _=Depends(ManagerAccess),
 ):
     floor = db.query(VendorFloor).filter(
-        VendorFloor.id == floor_id, VendorFloor.vendor_id == vendor_id, VendorFloor.is_active == True
+        cast(VendorFloor.id, String).in_(_id_variants(floor_id)),
+        cast(VendorFloor.vendor_id, String).in_(_id_variants(vendor_id)),
+        VendorFloor.is_active == True,
     ).first()
     if not floor:
         raise HTTPException(404, "Floor not found.")
 
     line = VendorLine(
-        floor_id=floor_id,
+        floor_id=floor.id,
         name=payload.name,
         description=payload.description,
         capacity=payload.capacity,
@@ -347,7 +365,9 @@ def update_line(
     _=Depends(ManagerAccess),
 ):
     line = db.query(VendorLine).filter(
-        VendorLine.id == line_id, VendorLine.floor_id == floor_id, VendorLine.is_active == True
+        cast(VendorLine.id, String).in_(_id_variants(line_id)),
+        cast(VendorLine.floor_id, String).in_(_id_variants(floor_id)),
+        VendorLine.is_active == True,
     ).first()
     if not line:
         raise HTTPException(404, "Line not found.")
@@ -367,13 +387,14 @@ def delete_line(
     _=Depends(ManagerAccess),
 ):
     line = db.query(VendorLine).filter(
-        VendorLine.id == line_id, VendorLine.floor_id == floor_id
+        cast(VendorLine.id, String).in_(_id_variants(line_id)),
+        cast(VendorLine.floor_id, String).in_(_id_variants(floor_id)),
     ).first()
     if not line:
         raise HTTPException(404, "Line not found.")
     line.is_active = False
     # Recalculate total_lines
-    floor = db.query(VendorFloor).filter(VendorFloor.id == floor_id).first()
+    floor = db.query(VendorFloor).filter(cast(VendorFloor.id, String).in_(_id_variants(floor_id))).first()
     if floor:
         floor.total_lines = len([l for l in floor.lines if l.is_active and l.id != line.id])
     db.commit()
@@ -393,7 +414,8 @@ def assign_production(
 ):
     # Validate floor belongs to this vendor
     floor = db.query(VendorFloor).filter(
-        VendorFloor.id == payload.floor_id, VendorFloor.vendor_id == vendor_id
+        cast(VendorFloor.id, String).in_(_id_variants(payload.floor_id)),
+        cast(VendorFloor.vendor_id, String).in_(_id_variants(vendor_id)),
     ).first()
     if not floor:
         raise HTTPException(404, "Floor not found for this vendor.")
@@ -401,7 +423,7 @@ def assign_production(
     # Remove existing assignments for this order on this floor
     db.query(OrderProductionAssignment).filter(
         OrderProductionAssignment.order_id == payload.order_id,
-        OrderProductionAssignment.floor_id == payload.floor_id,
+        cast(OrderProductionAssignment.floor_id, String).in_(_id_variants(payload.floor_id)),
     ).delete()
 
     created = []
@@ -409,8 +431,8 @@ def assign_production(
         # Full floor assignment
         asgn = OrderProductionAssignment(
             order_id=payload.order_id,
-            vendor_id=vendor_id,
-            floor_id=payload.floor_id,
+            vendor_id=floor.vendor_id,
+            floor_id=floor.id,
             line_id=None,
             assignment_type="full_floor",
             notes=payload.notes,
@@ -424,14 +446,17 @@ def assign_production(
         created.append("full_floor")
     else:
         for line_id in payload.line_ids:
-            line = db.query(VendorLine).filter(VendorLine.id == line_id, VendorLine.floor_id == payload.floor_id).first()
+            line = db.query(VendorLine).filter(
+                cast(VendorLine.id, String).in_(_id_variants(line_id)),
+                cast(VendorLine.floor_id, String).in_(_id_variants(payload.floor_id)),
+            ).first()
             if not line:
                 continue
             asgn = OrderProductionAssignment(
                 order_id=payload.order_id,
-                vendor_id=vendor_id,
-                floor_id=payload.floor_id,
-                line_id=line_id,
+                vendor_id=floor.vendor_id,
+                floor_id=floor.id,
+                line_id=line.id,
                 assignment_type="single_line" if len(payload.line_ids) == 1 else "multi_line",
                 notes=payload.notes,
             )
@@ -461,7 +486,7 @@ def list_vendor_assignments(
     _=Depends(AllStaff),
 ):
     assignments = db.query(OrderProductionAssignment).filter(
-        OrderProductionAssignment.vendor_id == vendor_id
+        cast(OrderProductionAssignment.vendor_id, String).in_(_id_variants(vendor_id))
     ).all()
     return success_response(data=[{
         "id": str(a.id),

@@ -2,9 +2,21 @@
 Order Repository — all DB queries for Orders, Stages, and History.
 """
 from typing import List, Optional
+import uuid
 from datetime import date
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from app.models.order import Order, ProductionStage, OrderHistory, OrderStatus, Vendor, SampleClass, BulkClass
+
+
+def _id_variants(value: str) -> list[str]:
+    values = [value]
+    try:
+        parsed = uuid.UUID(str(value))
+        values.extend([str(parsed), parsed.hex])
+    except (TypeError, ValueError):
+        pass
+    return list(dict.fromkeys(values))
 
 
 class SampleClassRepository:
@@ -12,12 +24,12 @@ class SampleClassRepository:
     def get_all(db: Session, vendor_id: Optional[str] = None):
         q = db.query(SampleClass).filter(SampleClass.status != "inactive")
         if vendor_id:
-            q = q.filter(SampleClass.vendor_id == vendor_id)
+            q = q.filter(cast(SampleClass.vendor_id, String).in_(_id_variants(vendor_id)))
         return q.order_by(SampleClass.created_at.desc()).all()
 
     @staticmethod
     def get_by_id(db: Session, sc_id: str):
-        return db.query(SampleClass).filter(SampleClass.id == sc_id).first()
+        return db.query(SampleClass).filter(cast(SampleClass.id, String).in_(_id_variants(sc_id))).first()
 
     @staticmethod
     def create(db: Session, data: dict):
@@ -44,7 +56,7 @@ class BulkClassRepository:
 
     @staticmethod
     def get_by_id(db: Session, bc_id: str):
-        return db.query(BulkClass).filter(BulkClass.id == bc_id).first()
+        return db.query(BulkClass).filter(cast(BulkClass.id, String).in_(_id_variants(bc_id))).first()
 
     @staticmethod
     def create(db: Session, data: dict):
@@ -82,13 +94,13 @@ class OrderRepository:
         if track_type:
             q = q.filter(Order.track_type == track_type)
         if vendor_id:
-            q = q.filter(Order.vendor_id == vendor_id)
+            q = q.filter(cast(Order.vendor_id, String).in_(_id_variants(vendor_id)))
         if status:
             q = q.filter(Order.status == status)
         if sample_class_id:
-            q = q.filter(Order.sample_class_id == sample_class_id)
+            q = q.filter(cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)))
         if bulk_class_id:
-            q = q.filter(Order.bulk_class_id == bulk_class_id)
+            q = q.filter(cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)))
 
         
         # Eager load vendor for name access
@@ -97,7 +109,7 @@ class OrderRepository:
     @staticmethod
     def get_by_id(db: Session, order_id: str) -> Optional[Order]:
         return db.query(Order).filter(
-            Order.id == order_id, Order.is_active == True
+            cast(Order.id, String).in_(_id_variants(order_id)), Order.is_active == True
         ).first()
 
     @staticmethod

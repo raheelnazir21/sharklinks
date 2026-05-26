@@ -2,6 +2,7 @@
 Orders & Production Stages API.
 """
 from fastapi import APIRouter, Depends, Query, UploadFile, File
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from typing import Optional
 import shutil, os, uuid
@@ -11,10 +12,10 @@ from app.core.database import get_db
 from app.core.dependencies import require_roles, get_current_user
 from app.models.audit_log import AuditLog
 from app.models.user import RoleEnum, User
-from app.models.order import Attachment, TrackType, OrderHistory
+from app.models.order import Attachment, TrackType, OrderHistory, Order, OrderStatus
 from app.services.order_service import OrderService, StageService
 from app.services.activity_log_service import ActivityLogService
-from app.repositories.order_repo import SampleClassRepository, BulkClassRepository
+from app.repositories.order_repo import SampleClassRepository, BulkClassRepository, _id_variants
 from app.schemas.order import (
     OrderCreate, OrderUpdate, StageCreate, StageUpdate, 
     SampleClassCreate, SampleClassUpdate, BulkClassCreate, BulkClassUpdate, BulkOrderCreate
@@ -108,6 +109,13 @@ def delete_sample_class(
         from fastapi import HTTPException
         raise HTTPException(404, "Sample Class not found.")
     sc.status = "inactive"
+    affected_orders = db.query(Order).filter(
+        cast(Order.sample_class_id, String).in_(_id_variants(str(sc.id))),
+        Order.is_active == True,
+    ).all()
+    for order in affected_orders:
+        order.status = OrderStatus.cancelled
+        order.is_active = False
     db.commit()
     ActivityLogService.record(
         db,
@@ -115,9 +123,9 @@ def delete_sample_class(
         entity_type="Order",
         entity_id=str(sc.id),
         user=current_user,
-        payload={"details": f"Sample project '{sc.name}' was deactivated."},
+        payload={"details": f"Sample project '{sc.name}' was deactivated with {len(affected_orders)} active order(s)."},
     )
-    return success_response(message="Sample Class deactivated.")
+    return success_response(message="Sample Class and related active orders deactivated.")
 
 
 @router.get("/bulk-classes", response_model=dict, summary="List Bulk Projects")
@@ -198,6 +206,13 @@ def delete_bulk_class(
         from fastapi import HTTPException
         raise HTTPException(404, "Bulk Project not found.")
     bc.status = "inactive"
+    affected_orders = db.query(Order).filter(
+        cast(Order.bulk_class_id, String).in_(_id_variants(str(bc.id))),
+        Order.is_active == True,
+    ).all()
+    for order in affected_orders:
+        order.status = OrderStatus.cancelled
+        order.is_active = False
     db.commit()
     ActivityLogService.record(
         db,
@@ -205,9 +220,9 @@ def delete_bulk_class(
         entity_type="Order",
         entity_id=str(bc.id),
         user=current_user,
-        payload={"details": f"Bulk project '{bc.name}' was deactivated."},
+        payload={"details": f"Bulk project '{bc.name}' was deactivated with {len(affected_orders)} active order(s)."},
     )
-    return success_response(message="Bulk Project deactivated.")
+    return success_response(message="Bulk Project and related active orders deactivated.")
 
 
 @router.get("/bulk-classes/{bc_id}", response_model=dict, summary="Get Bulk Project Detail")

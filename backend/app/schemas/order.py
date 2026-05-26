@@ -218,6 +218,12 @@ class StageUpdate(BaseModel):
     attachment_url: Optional[str] = None
 
 
+class StageReworkRequest(BaseModel):
+    repeat_from_stage_id: str
+    reason: str
+    plan: Optional[str] = None
+
+
 class StageOut(BaseModel):
     id: str
     order_id: str

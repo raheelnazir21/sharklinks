@@ -18,7 +18,8 @@ from app.services.activity_log_service import ActivityLogService
 from app.repositories.order_repo import SampleClassRepository, BulkClassRepository, _id_variants
 from app.schemas.order import (
     OrderCreate, OrderUpdate, StageCreate, StageUpdate, 
-    SampleClassCreate, SampleClassUpdate, BulkClassCreate, BulkClassUpdate, BulkOrderCreate
+    SampleClassCreate, SampleClassUpdate, BulkClassCreate, BulkClassUpdate, BulkOrderCreate,
+    StageReworkRequest
 )
 from app.utils.response import success_response
 
@@ -585,6 +586,40 @@ def update_stage(
         payload={"details": f"Production stage '{stage.stage_name.value}' was updated.", "stage_id": stage_id},
     )
     return success_response(message="Stage updated.")
+
+
+@router.post("/stages/{stage_id}/rework", response_model=dict, summary="Reject Stage and Repeat From Selected Stage")
+def reject_stage_for_rework(
+    stage_id: str,
+    payload: StageReworkRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(AllStaff),
+):
+    order = StageService.reject_stage_for_rework(
+        db,
+        stage_id,
+        payload.repeat_from_stage_id,
+        payload.reason,
+        payload.plan or "",
+        str(current_user.id),
+    )
+    ActivityLogService.record(
+        db,
+        action="ORDER_STAGE_REWORK",
+        entity_type="Order",
+        entity_id=str(order.id),
+        user=current_user,
+        payload={
+            "details": f"Order moved to iteration {order.current_iteration} for stage rework.",
+            "reason": payload.reason,
+            "repeat_from_stage_id": payload.repeat_from_stage_id,
+        },
+    )
+    return success_response(
+        data={"id": str(order.id), "current_iteration": order.current_iteration},
+        message=f"Stage rejected. Iteration {order.current_iteration} started."
+    )
 
 
 # ─── File Attachments ──────────────────────────────────────────────────────

@@ -471,3 +471,77 @@ class StageService:
         
         db.commit()
         return updated
+
+    @staticmethod
+    def reject_stage_for_rework(
+        db: Session,
+        qc_stage_id: str,
+        repeat_from_stage_id: str,
+        reason: str,
+        plan: str,
+        user_id: str,
+    ) -> Order:
+        reason = (reason or "").strip()
+        if not reason:
+            raise HTTPException(status_code=400, detail="Rejection reason is required.")
+
+        qc_stage = StageRepository.get_by_id(db, qc_stage_id)
+        repeat_stage = StageRepository.get_by_id(db, repeat_from_stage_id)
+        if not qc_stage or not repeat_stage:
+            raise HTTPException(status_code=404, detail="Stage not found.")
+        if str(qc_stage.order_id) != str(repeat_stage.order_id):
+            raise HTTPException(status_code=400, detail="Repeat stage must belong to the same order.")
+
+        order = OrderRepository.get_by_id(db, str(qc_stage.order_id))
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found.")
+        if order.track_type.value == "sampling" and qc_stage.stage_name.value != "qc_check":
+            raise HTTPException(status_code=400, detail="Sample rejection can only be raised from QC Check.")
+        if repeat_stage.stage_order > qc_stage.stage_order:
+            raise HTTPException(status_code=400, detail="Repeat stage must be the current stage or an earlier stage.")
+
+        previous_iteration = order.current_iteration or 1
+        next_iteration = previous_iteration + 1
+        history = list(order.iteration_history or [])
+        history.append({
+            "iteration": previous_iteration,
+            "rejected_stage": qc_stage.stage_name.value,
+            "repeat_from_stage": repeat_stage.stage_name.value,
+            "reason": reason,
+            "plan": plan,
+            "date": date.today().isoformat(),
+        })
+
+        order.current_iteration = next_iteration
+        order.iteration_reason = reason
+        order.iteration_plan = plan
+        order.iteration_history = history
+        order.status = OrderStatus.in_progress
+        order.current_stage_id = repeat_stage.id
+
+        stages = StageRepository.get_by_order(db, str(order.id))
+        for stage in stages:
+            if stage.stage_order >= repeat_stage.stage_order:
+                stage.status = StageStatus.pending
+                stage.start_date = None
+                stage.completion_date = None
+                note = f"Iteration {next_iteration}: repeating from {repeat_stage.stage_name.value}. Reason: {reason}"
+                stage.remarks = f"{stage.remarks}\n{note}" if stage.remarks else note
+
+        OrderRepository.log_history(
+            db,
+            str(order.id),
+            "stage_rejected_for_rework",
+            user_id,
+            old_value={
+                "iteration": previous_iteration,
+                "rejected_stage": qc_stage.stage_name.value,
+                "repeat_from_stage": repeat_stage.stage_name.value,
+            },
+            new_value={"iteration": next_iteration, "reason": reason, "plan": plan},
+            note=f"{qc_stage.stage_name.value} rejected. Repeating from {repeat_stage.stage_name.value}. Reason: {reason}",
+        )
+
+        db.commit()
+        db.refresh(order)
+        return order

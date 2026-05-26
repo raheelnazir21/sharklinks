@@ -28,6 +28,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingStageAction, setPendingStageAction] = useState<{ stageId: string; status: string; label: string } | null>(null);
+  const [reworkDialog, setReworkDialog] = useState<{ stageId: string; repeatFromStageId: string; reason: string; plan: string } | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; title: string; message: string } | null>(null);
 
   const fetchData = async () => {
@@ -95,6 +96,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleRejectForRework = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!reworkDialog) return;
+    setUpdating(true);
+    try {
+      await api.post(`/orders/stages/${reworkDialog.stageId}/rework`, {
+        repeat_from_stage_id: reworkDialog.repeatFromStageId,
+        reason: reworkDialog.reason,
+        plan: reworkDialog.plan,
+      });
+      await fetchData();
+      setStageData({});
+      setReworkDialog(null);
+      setFeedback({ type: "success", title: "Mission Successful", message: "Stage rejected and new iteration started." });
+    } catch (err: any) {
+      setFeedback({ type: "error", title: "Operation Failed", message: err.response?.data?.detail || "Failed to start rework iteration." });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -129,15 +151,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const currentStage = stages.find(s => s.id === selectedStageId);
   const currentIndex = currentStage ? stages.indexOf(currentStage) : -1;
+  const stageLabel = (value?: string) => value ? value.replace(/_/g, " ") : "";
+
+  // Can always update remarks/data if it's not locked
+  const isSelectable = (idx: number) => idx === 0 || stages[idx - 1].status === "completed";
+  const canUpdateCurrent = currentStage && isSelectable(currentIndex);
+  const canRejectSampleQc = isSampling && currentStage?.stage_name === "qc_check" && canUpdateCurrent;
+  const repeatableStages = canRejectSampleQc
+    ? stages.filter((stage) => stage.stage_order <= currentStage.stage_order && stage.stage_name !== "qc_check")
+    : [];
   const referenceAttachments = order.reference_attachments?.length
     ? order.reference_attachments
     : order.reference_image
       ? [{ url: order.reference_image, requirement: "", filename: order.reference_image.split("/").pop() }]
       : [];
-
-  // Can always update remarks/data if it's not locked
-  const isSelectable = (idx: number) => idx === 0 || stages[idx - 1].status === "completed";
-  const canUpdateCurrent = currentStage && isSelectable(currentIndex);
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in duration-700">
@@ -236,7 +263,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       {isLocked ? <Lock className="w-3.5 h-3.5" /> : idx + 1}
                     </div>
                     <div className="text-left flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest truncate">{s.stage_name.replace(/_/g, ' ')}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest truncate">{stageLabel(s.stage_name)}</p>
                       <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">
                         {isCompleted ? `Comp: ${compDate?.toLocaleDateString()}` : `Tgt: ${targetDate?.toLocaleDateString() || "---"}`}
                       </p>
@@ -316,7 +343,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           {currentStage.status}
                         </span>
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                          <GitBranch className="w-4 h-4" /> Sequential Stage {currentStage.stage_order}
+                          <GitBranch className="w-4 h-4" /> Iteration {order.current_iteration || 1} • Sequential Stage {currentStage.stage_order}
                         </span>
                       </div>
                     </div>
@@ -342,6 +369,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         >
                           <CheckCircle2 className="w-5 h-5" /> Confirm Completion
                         </button>
+                        {canRejectSampleQc && repeatableStages.length > 0 && (
+                          <button
+                            onClick={() => setReworkDialog({
+                              stageId: currentStage.id,
+                              repeatFromStageId: repeatableStages[repeatableStages.length - 1].id,
+                              reason: stageData.remarks || "",
+                              plan: "",
+                            })}
+                            disabled={updating}
+                            className="w-full px-8 py-4 bg-red-500 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-red-400 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 justify-center"
+                          >
+                            <RefreshCcw className="w-5 h-5" /> Reject / Repeat Stage
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 rounded-2xl">
@@ -496,6 +537,54 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         message={feedback?.message || ""}
         onClose={() => setFeedback(null)}
       />
+      <Modal isOpen={Boolean(reworkDialog)} onClose={() => !updating && setReworkDialog(null)} title="Reject QC and Repeat Stage">
+        <form onSubmit={handleRejectForRework} className="space-y-5">
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Repeat From Stage</label>
+            <select
+              required
+              value={reworkDialog?.repeatFromStageId || ""}
+              onChange={(event) => reworkDialog && setReworkDialog({ ...reworkDialog, repeatFromStageId: event.target.value })}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
+            >
+              {repeatableStages.map((stage) => (
+                <option key={stage.id} value={stage.id}>
+                  {stage.stage_order}. {stageLabel(stage.stage_name)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Rejection Reason</label>
+            <textarea
+              required
+              rows={4}
+              value={reworkDialog?.reason || ""}
+              onChange={(event) => reworkDialog && setReworkDialog({ ...reworkDialog, reason: event.target.value })}
+              placeholder="Example: Rejected due to cutting measurement issue."
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Correction Plan</label>
+            <textarea
+              rows={3}
+              value={reworkDialog?.plan || ""}
+              onChange={(event) => reworkDialog && setReworkDialog({ ...reworkDialog, plan: event.target.value })}
+              placeholder="Example: Repeat cutting, re-check measurement, then move forward again."
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setReworkDialog(null)} disabled={updating} className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={updating || !reworkDialog?.reason.trim()} className="rounded-xl bg-red-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:bg-red-500 disabled:opacity-50">
+              {updating ? "Starting..." : "Start Rework Iteration"}
+            </button>
+          </div>
+        </form>
+      </Modal>
       <OrderHistoryModal orderId={historyOpen ? id : null} onClose={() => setHistoryOpen(false)} />
     </div>
   );

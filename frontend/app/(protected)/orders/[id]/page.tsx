@@ -251,7 +251,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     key={s.id}
                     onClick={() => !isLocked && setSelectedStageId(s.id)}
                     disabled={isLocked}
-                    className={`w-full group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isSelected ? `bg-${themeColor}-600 border-${themeColor}-400 text-white shadow-xl scale-[1.02] z-10` :
+                    style={isSelected ? { backgroundColor: themeHex, borderColor: themeHex, color: "#ffffff" } : undefined}
+                    className={`w-full group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isSelected ? "text-white shadow-xl scale-[1.02] z-10" :
                         isLocked ? "bg-slate-950/20 border-slate-900 text-slate-800 opacity-40 cursor-not-allowed" :
                           isDelayed ? "bg-red-500/10 border-red-500/30 text-red-500 hover:border-red-500/50" :
                             isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" :

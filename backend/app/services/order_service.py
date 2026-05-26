@@ -95,7 +95,7 @@ class OrderService:
         current_target_dt = dt.combine(base_date, dt.min.time())
         track = order.track_type.value
 
-        if payload.stages:
+        if payload.stages is not None:
             # Use manually assigned stages and days
             for s_in in payload.stages:
                 if s_in.target_days:

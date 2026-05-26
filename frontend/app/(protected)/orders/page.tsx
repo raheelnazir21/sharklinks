@@ -89,6 +89,22 @@ function createBlankBulkItem(): BulkItem {
   };
 }
 
+function buildStagePayload(
+  stages: Array<{ name: string; label: string }>,
+  stageDays: Record<string, number>,
+  moduleType: "sampling" | "bulk"
+) {
+  return stages
+    .filter((stage) => Number(stageDays[stage.name]) > 0)
+    .map((stage, index) => ({
+      stage_name: stage.name,
+      stage_order: index + 1,
+      target_days: Number(stageDays[stage.name]),
+      module_type: moduleType,
+      is_required: true,
+    }));
+}
+
 export default function OrdersPage() {
   return (
     <Suspense fallback={
@@ -325,6 +341,12 @@ function OrdersContent() {
       }
 
       if (!isSampling) {
+        const selectedStages = buildStagePayload(DEFAULT_BULK_STAGES, stageDays, "bulk");
+        if (!selectedStages.length) {
+          setFeedback({ type: "error", title: "Operation Failed", message: "Add predicted days for at least one bulk stage." });
+          return;
+        }
+
         const payload = {
           bulk_class_id: bulkClassId,
           items: bulkItems.map(item => ({
@@ -340,13 +362,7 @@ function OrdersContent() {
               floor_id: item.floor_id,
               line_ids: item.line_ids
             }] : [],
-            stages: DEFAULT_BULK_STAGES.map((s, idx) => ({
-              stage_name: s.name,
-              stage_order: idx + 1,
-              target_days: stageDays[s.name] || 0,
-              module_type: "bulk",
-              is_required: true
-            }))
+            stages: selectedStages
           }))
         };
         await api.post("/orders/bulk", payload);
@@ -354,16 +370,16 @@ function OrdersContent() {
         fetchData();
         setFeedback({ type: "success", title: "Mission Successful", message: "Bulk orders created successfully." });
       } else {
+        const selectedStages = buildStagePayload(DEFAULT_SAMPLE_STAGES, stageDays, "sampling");
+        if (!selectedStages.length) {
+          setFeedback({ type: "error", title: "Operation Failed", message: "Add predicted days for at least one sample stage." });
+          return;
+        }
+
         const res = await api.post("/orders/", {
           ...sanitizedData,
           quantity: parseInt(formData.quantity) || 0,
-          stages: DEFAULT_SAMPLE_STAGES.map((s, idx) => ({
-            stage_name: s.name,
-            stage_order: idx + 1,
-            target_days: stageDays[s.name] || 0,
-            module_type: "sampling",
-            is_required: true
-          }))
+          stages: selectedStages
         });
         setIsModalOpen(false);
         setFeedback({ type: "success", title: "Mission Successful", message: "Sample order created successfully." });
@@ -692,16 +708,20 @@ function OrdersContent() {
 
               <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-8">
                 <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
-                  <Plus className="w-4 h-4 text-blue-500" /> Timeline SLA (Days)
+                  <Plus className="w-4 h-4 text-blue-500" /> Predicted Stage Days
                 </h4>
+                <p className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  Blank stages are skipped for this order.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {DEFAULT_SAMPLE_STAGES.map((s, idx) => (
                     <div key={s.name} className="flex items-center justify-between bg-slate-950 border border-slate-900 rounded-2xl px-6 py-4">
                       <span className="text-[10px] font-black text-white uppercase tracking-widest">{idx + 1}. {s.label}</span>
                       <input 
                         type="number" min="0"
+                        placeholder="Skip"
                         className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-blue-400 text-center"
-                        value={stageDays[s.name] || 0}
+                        value={stageDays[s.name] || ""}
                         onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
                       />
                     </div>
@@ -792,16 +812,20 @@ function OrdersContent() {
 
               <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-8">
                 <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
-                  <Plus className="w-4 h-4 text-emerald-500" /> Timeline SLA (Days)
+                  <Plus className="w-4 h-4 text-emerald-500" /> Predicted Stage Days
                 </h4>
+                <p className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  Blank stages are skipped for this order.
+                </p>
                 <div className="space-y-4">
                   {DEFAULT_BULK_STAGES.map((s, idx) => (
                     <div key={s.name} className="flex items-center justify-between bg-slate-950 border border-slate-900 rounded-2xl px-6 py-4">
                       <span className="text-[10px] font-black text-white uppercase tracking-widest">{idx + 1}. {s.label}</span>
                       <input 
                         type="number" min="0"
+                        placeholder="Skip"
                         className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-emerald-400 text-center"
-                        value={stageDays[s.name] || 0}
+                        value={stageDays[s.name] || ""}
                         onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
                       />
                     </div>

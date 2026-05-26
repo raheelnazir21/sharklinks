@@ -76,29 +76,30 @@ def _current_stage(stages: list[ProductionStage]) -> dict:
 
     ordered = sorted(stages, key=lambda stage: stage.stage_order or 0)
     required = [stage for stage in ordered if stage.is_required]
+    stage_pool = required or ordered
     completed = [
-        stage for stage in required
+        stage for stage in stage_pool
         if stage.status == StageStatus.completed or _value(stage.status) == "completed"
     ]
     active = next(
         (
-            stage for stage in required
+            stage for stage in stage_pool
             if stage.status == StageStatus.in_progress or _value(stage.status) == "in_progress"
         ),
         None,
     )
     current = active or next(
         (
-            stage for stage in required
+            stage for stage in stage_pool
             if stage.status not in (StageStatus.completed, StageStatus.skipped)
             and _value(stage.status) not in ("completed", "skipped")
         ),
         None,
     )
     if not current:
-        current = required[-1]
+        current = stage_pool[-1]
 
-    progress = round((len(completed) / len(required)) * 100) if required else 0
+    progress = round((len(completed) / len(stage_pool)) * 100) if stage_pool else 0
     return {
         "stage_name": _value(current.stage_name),
         "stage_label": _label(_value(current.stage_name)),

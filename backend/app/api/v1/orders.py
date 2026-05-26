@@ -101,7 +101,7 @@ def update_sample_class(
 def delete_sample_class(
     sample_class_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(ManagerAccess),
+    current_user: User = Depends(AllStaff),
 ):
     sc = SampleClassRepository.get_by_id(db, sample_class_id)
     if not sc:
@@ -191,8 +191,7 @@ def update_bulk_class(
 def delete_bulk_class(
     bc_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _=Depends(ManagerAccess),
+    current_user: User = Depends(AllStaff),
 ):
     bc = BulkClassRepository.get_by_id(db, bc_id)
     if not bc:
@@ -325,8 +324,7 @@ def create_order(
 def delete_order(
     order_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _=Depends(ManagerAccess),
+    current_user: User = Depends(AllStaff),
 ):
     order = OrderService.delete_order(db, order_id, str(current_user.id))
     ActivityLogService.record(

@@ -17,6 +17,26 @@ import {
 } from "@/components/ui/PagePrimitives";
 import { Activity, AlertCircle, ArrowRight, Calendar, Edit3, Layers, Plus, Search, Timer, Trash2 } from "lucide-react";
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+      details?: string;
+    };
+  };
+};
+
+function getApiError(err: unknown, fallback: string) {
+  const apiError = err as ApiError;
+  return (
+    apiError.response?.data?.detail ||
+    apiError.response?.data?.message ||
+    apiError.response?.data?.details ||
+    fallback
+  );
+}
+
 export default function BulkProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +115,11 @@ export default function BulkProjectsPage() {
       fetchData();
       setFeedback({ type: "success", title: "Mission Successful", message: "Bulk project deactivated successfully." });
     } catch (err) {
-      setFeedback({ type: "error", title: "Operation Failed", message: "Failed to deactivate bulk project." });
+      setFeedback({
+        type: "error",
+        title: "Operation Failed",
+        message: getApiError(err, "Failed to deactivate bulk project."),
+      });
     } finally {
       setIsSubmitting(false);
     }

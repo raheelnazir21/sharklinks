@@ -17,6 +17,26 @@ import {
 } from "@/components/ui/PagePrimitives";
 import { Activity, ArrowRight, Building2, Calendar, Edit3, Filter, Package, Plus, Search, Trash2 } from "lucide-react";
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+      details?: string;
+    };
+  };
+};
+
+function getApiError(err: unknown, fallback: string) {
+  const apiError = err as ApiError;
+  return (
+    apiError.response?.data?.detail ||
+    apiError.response?.data?.message ||
+    apiError.response?.data?.details ||
+    fallback
+  );
+}
+
 export default function SamplesPage() {
   const [samples, setSamples] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -103,7 +123,11 @@ export default function SamplesPage() {
       fetchData();
       setFeedback({ type: "success", title: "Mission Successful", message: "Sample class deactivated successfully." });
     } catch (err) {
-      setFeedback({ type: "error", title: "Operation Failed", message: "Failed to deactivate sample class." });
+      setFeedback({
+        type: "error",
+        title: "Operation Failed",
+        message: getApiError(err, "Failed to deactivate sample class."),
+      });
     } finally {
       setIsSubmitting(false);
     }

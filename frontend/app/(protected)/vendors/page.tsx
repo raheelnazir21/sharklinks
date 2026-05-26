@@ -53,6 +53,26 @@ function buildPhone(countryCode: string, localNumber: string) {
   return digits ? `${countryCode} ${digits}` : "";
 }
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+      details?: string;
+    };
+  };
+};
+
+function getApiError(err: unknown, fallback: string) {
+  const apiError = err as ApiError;
+  return (
+    apiError.response?.data?.detail ||
+    apiError.response?.data?.message ||
+    apiError.response?.data?.details ||
+    fallback
+  );
+}
+
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,8 +159,12 @@ export default function VendorsPage() {
       setDeleteTarget(null);
       fetchVendors();
       setFeedback({ type: "success", title: "Mission Successful", message: "Vendor deactivated successfully." });
-    } catch (err) {
-      setFeedback({ type: "error", title: "Operation Failed", message: "Failed to deactivate vendor." });
+    } catch (err: any) {
+      setFeedback({
+        type: "error",
+        title: "Operation Failed",
+        message: getApiError(err, "Failed to deactivate vendor."),
+      });
     } finally {
       setIsSubmitting(false);
     }

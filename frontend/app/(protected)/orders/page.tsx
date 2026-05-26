@@ -448,7 +448,7 @@ function OrdersContent() {
       setFeedback({
         type: "error",
         title: "Operation Failed",
-        message: err?.response?.data?.detail || "Failed to cancel order.",
+        message: err?.response?.data?.detail || err?.response?.data?.message || "Failed to cancel order.",
       });
     } finally {
       setIsSubmitting(false);

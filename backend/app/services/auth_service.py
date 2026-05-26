@@ -15,6 +15,10 @@ from app.core.config import settings
 from app.models.user import User, RefreshToken
 
 
+def normalize_email(email: str) -> str:
+    return str(email).strip().lower()
+
+
 class AuthService:
 
     @staticmethod
@@ -23,7 +27,7 @@ class AuthService:
         Check if the email and password are correct.
         Returns the User object if valid, None if not.
         """
-        user = db.query(User).filter(User.email == email, User.is_active == True).first()
+        user = db.query(User).filter(User.email == normalize_email(email), User.is_active == True).first()
         if not user or not verify_password(password, user.password_hash):
             return None
         return user

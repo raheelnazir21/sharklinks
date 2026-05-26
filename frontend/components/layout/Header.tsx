@@ -114,7 +114,13 @@ function getPageHeading(pathname: string) {
     highlight: "Logs",
     subtitle: "Trace user actions, production changes and quality events",
   };
-  if (pathname.startsWith("/orders")) return {
+  if (pathname === "/orders") return {
+    eyebrow: "Production Flow",
+    title: "Order",
+    highlight: "Execution",
+    subtitle: "Stage timing, attachments, comments and current production status",
+  };
+  if (pathname.startsWith("/orders/")) return {
     eyebrow: "Production Flow",
     title: "Order",
     highlight: "Detail",

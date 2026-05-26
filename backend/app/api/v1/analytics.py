@@ -25,7 +25,7 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
-AnalyticsAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.viewer])
+AnalyticsAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 
 @router.get("/dashboard-summary", response_model=dict, summary="Get Dashboard Summary")
 def get_dashboard_summary(

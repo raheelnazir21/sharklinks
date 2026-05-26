@@ -10,6 +10,7 @@ from app.core.dependencies import get_current_user, require_roles
 from app.core.security import hash_password
 from app.models.user import User, Role, RoleEnum
 from app.schemas.user import UserCreate, UserUpdate, UserOut
+from app.services.auth_service import normalize_email
 from app.services.activity_log_service import ActivityLogService
 from app.utils.response import success_response
 
@@ -47,7 +48,8 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(AdminOnly),
 ):
-    existing = db.query(User).filter(User.email == payload.email).first()
+    email = normalize_email(payload.email)
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
 
@@ -56,7 +58,7 @@ def create_user(
         raise HTTPException(status_code=400, detail=f"Role '{payload.role}' not found.")
 
     user = User(
-        email=payload.email,
+        email=email,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
         role_id=role.id,
@@ -90,11 +92,12 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    if payload.email is not None and payload.email != user.email:
-        existing = db.query(User).filter(User.email == payload.email, User.id != user.id).first()
+    if payload.email is not None and normalize_email(payload.email) != user.email:
+        email = normalize_email(payload.email)
+        existing = db.query(User).filter(User.email == email, User.id != user.id).first()
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered.")
-        user.email = payload.email
+        user.email = email
     if payload.full_name is not None:
         user.full_name = payload.full_name
     if payload.password:

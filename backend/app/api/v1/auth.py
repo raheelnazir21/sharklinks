@@ -19,7 +19,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserOut,
 )
-from app.services.auth_service import AuthService
+from app.services.auth_service import AuthService, normalize_email
 from app.services.activity_log_service import ActivityLogService
 from app.utils.response import success_response, error_response
 
@@ -42,7 +42,8 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     Accepts email + password.
     Returns access token (15 min) + refresh token (7 days).
     """
-    user = AuthService.authenticate_user(db, payload.email, payload.password)
+    email = normalize_email(payload.email)
+    user = AuthService.authenticate_user(db, email, payload.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -76,7 +77,8 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     Public signup for the user panel. New accounts start as active viewers;
     admins can promote them later from User Management.
     """
-    existing = db.query(User).filter(User.email == payload.email).first()
+    email = normalize_email(payload.email)
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
 
@@ -88,7 +90,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
         db.refresh(role)
 
     user = User(
-        email=payload.email,
+        email=email,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
         role_id=role.id,
@@ -114,7 +116,7 @@ def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Sessio
     Creates a short-lived reset token. In this local project we return the
     reset link directly so it works without an email service.
     """
-    user = db.query(User).filter(User.email == payload.email, User.is_active == True).first()
+    user = db.query(User).filter(User.email == normalize_email(payload.email), User.is_active == True).first()
     data = {"reset_token": None, "reset_url": None}
     if user:
         token = create_password_reset_token(

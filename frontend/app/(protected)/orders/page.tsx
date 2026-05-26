@@ -720,6 +720,16 @@ function OrdersContent() {
 
               {bulkItems.map((item, idx) => (
                 <div key={idx} className="bg-slate-950/50 border border-slate-800 p-8 rounded-[2rem] relative">
+                  {bulkItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveBulkItem(idx)}
+                      className="absolute right-6 top-6 rounded-full border border-red-500/30 bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20"
+                      title="Remove this product"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
                       <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Product Name</label>

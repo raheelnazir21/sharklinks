@@ -36,6 +36,29 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Package Release
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='backend/.env' \
+            --exclude='frontend/.env.local' \
+            --exclude='backend/uploads' \
+            --exclude='release.tgz' \
+            -czf release.tgz .
+
+      - name: Upload Release Bundle
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: release.tgz
+          target: /home/ubuntu
+
       - name: Execute Deployment via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -44,5 +67,61 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            chmod +x /home/ubuntu/factory-management-system/scripts/deploy-production.sh
-            /home/ubuntu/factory-management-system/scripts/deploy-production.sh
+            set -e
+
+            PROJECT_DIR="/home/ubuntu/factory-management-system"
+            RELEASE_DIR="/home/ubuntu/factory-management-system-release"
+            BACKUP_DIR="/home/ubuntu/deploy-backups/factory-management-system-$(date +%Y%m%d%H%M%S)"
+            ENV_DIR="/home/ubuntu/deploy-env"
+
+            mkdir -p "$ENV_DIR/backend" "$ENV_DIR/frontend" /home/ubuntu/deploy-backups
+
+            if [ -f "$PROJECT_DIR/backend/.env" ]; then
+              cp "$PROJECT_DIR/backend/.env" "$ENV_DIR/backend/.env"
+            fi
+
+            if [ -f "$PROJECT_DIR/frontend/.env.local" ]; then
+              cp "$PROJECT_DIR/frontend/.env.local" "$ENV_DIR/frontend/.env.local"
+            fi
+
+            if [ -d "$PROJECT_DIR/backend/uploads" ]; then
+              rm -rf "$ENV_DIR/backend/uploads"
+              cp -a "$PROJECT_DIR/backend/uploads" "$ENV_DIR/backend/uploads"
+            fi
+
+            rm -rf "$RELEASE_DIR"
+            mkdir -p "$RELEASE_DIR"
+            tar -xzf /home/ubuntu/release.tgz -C "$RELEASE_DIR"
+
+            if [ -d "$PROJECT_DIR" ]; then
+              cd "$PROJECT_DIR"
+              docker compose down || true
+              mv "$PROJECT_DIR" "$BACKUP_DIR"
+            fi
+
+            mv "$RELEASE_DIR" "$PROJECT_DIR"
+
+            if [ -f "$ENV_DIR/backend/.env" ]; then
+              cp "$ENV_DIR/backend/.env" "$PROJECT_DIR/backend/.env"
+            else
+              echo "Missing backend/.env on server."
+              exit 1
+            fi
+
+            if [ -f "$ENV_DIR/frontend/.env.local" ]; then
+              cp "$ENV_DIR/frontend/.env.local" "$PROJECT_DIR/frontend/.env.local"
+            else
+              echo "Missing frontend/.env.local on server."
+              exit 1
+            fi
+
+            if [ -d "$ENV_DIR/backend/uploads" ]; then
+              cp -a "$ENV_DIR/backend/uploads" "$PROJECT_DIR/backend/uploads"
+            fi
+
+            cd "$PROJECT_DIR"
+            docker compose up -d --build
+            docker compose exec -T backend alembic upgrade head || echo "Migration skipped or failed."
+            docker image prune -f
+            rm -f /home/ubuntu/release.tgz
+            docker compose ps

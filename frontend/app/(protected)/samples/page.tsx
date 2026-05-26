@@ -303,7 +303,7 @@ function SampleCard({ sample, onEdit, onDelete }: { sample: any; onEdit: (sample
       </div>
 
       <Link
-        href={`/orders?track=sampling&sample_class_id=${sample.id}`}
+        href={`/orders?track=sampling`}
         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-700"
       >
         View Orders <ArrowRight className="h-4 w-4" />

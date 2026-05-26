@@ -86,7 +86,7 @@ function getPageHeading(pathname: string) {
   };
   if (pathname.startsWith("/tracking-dashboard")) return {
     eyebrow: "Vendor Floor Line Tracking",
-    title: "Bulk Order",
+    title: "Order",
     highlight: "Tracking",
     subtitle: "One frame for product class, current stage and delay risk",
   };
@@ -116,7 +116,7 @@ function getPageHeading(pathname: string) {
   };
   if (pathname.startsWith("/orders")) return {
     eyebrow: "Production Flow",
-    title: "Bulk Order",
+    title: "Order",
     highlight: "Detail",
     subtitle: "Stage timing, attachments, comments and current production status",
   };

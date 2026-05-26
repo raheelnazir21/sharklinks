@@ -55,7 +55,8 @@ def _base_query(db: Session):
     return db.query(AuditLog).options(joinedload(AuditLog.user))
 
 
-@router.get("/", response_model=dict, summary="List Activity Logs")
+@router.get("", response_model=dict, summary="List Activity Logs")
+@router.get("/", response_model=dict, summary="List Activity Logs", include_in_schema=False)
 def list_activity_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),

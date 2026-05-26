@@ -424,6 +424,8 @@ def get_order(
         "qa_audit_status": order.qa_audit_status,
         "delay_days": order.delay_days,
         "sample_class_id": str(order.sample_class_id) if order.sample_class_id else None,
+        "sample_class_name": order.sample_class.name if order.sample_class else None,
+        "order_placement_date": str(order.order_placement_date) if getattr(order, 'order_placement_date', None) else None,
         "attachments": [
             {
                 "id": str(a.id),

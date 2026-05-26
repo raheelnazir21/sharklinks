@@ -30,7 +30,8 @@ def _serialize_user(user: User) -> dict:
     }
 
 
-@router.get("/", response_model=dict, summary="List All Users")
+@router.get("", response_model=dict, summary="List All Users")
+@router.get("/", response_model=dict, summary="List All Users", include_in_schema=False)
 def list_users(
     db: Session = Depends(get_db),
     _=Depends(AdminOnly),
@@ -39,7 +40,8 @@ def list_users(
     return success_response(data=[_serialize_user(u) for u in users])
 
 
-@router.post("/", response_model=dict, summary="Create New User")
+@router.post("", response_model=dict, summary="Create New User")
+@router.post("/", response_model=dict, summary="Create New User", include_in_schema=False)
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),

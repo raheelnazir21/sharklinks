@@ -43,11 +43,12 @@ class AuthService:
     @staticmethod
     def save_refresh_token(db: Session, user_id, token: str):
         """Store the hashed refresh token in the database."""
-        from app.core.security import hash_password as hash_token
+        import hashlib
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         db_token = RefreshToken(
             user_id=user_id,
-            token_hash=hash_token(token),
+            token_hash=token_hash,
             expires_at=expires_at,
         )
         db.add(db_token)

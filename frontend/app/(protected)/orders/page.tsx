@@ -157,10 +157,10 @@ function OrdersContent() {
       const [ordersRes, vendorsRes] = await Promise.all([
         api.get("/orders/", { 
           params: { 
-            status: statusFilter,
+            status: statusFilter || undefined,
             track_type: track,
-            sample_class_id: sampleClassId,
-            bulk_class_id: bulkClassId
+            ...(sampleClassId ? { sample_class_id: sampleClassId } : {}),
+            ...(bulkClassId ? { bulk_class_id: bulkClassId } : {}),
           } 
         }),
         api.get("/vendors/")

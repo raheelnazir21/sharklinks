@@ -42,13 +42,7 @@ jobs:
 
       - name: Package Release
         run: |
-          tar \
-            --exclude='.git' \
-            --exclude='backend/.env' \
-            --exclude='frontend/.env.local' \
-            --exclude='backend/uploads' \
-            --exclude='release.tgz' \
-            -czf release.tgz .
+          git archive --format=tar.gz -o release.tgz HEAD
 
       - name: Upload Release Bundle
         uses: appleboy/scp-action@v0.1.7

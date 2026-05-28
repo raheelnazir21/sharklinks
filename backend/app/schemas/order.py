@@ -19,10 +19,10 @@ class VendorCreate(BaseModel):
     address: Optional[str] = None
     assigned_manager_id: Optional[str] = None
 
-    @field_validator('email', 'assigned_manager_id', 'phone', 'country', 'contact_person', mode='before')
+    @field_validator('email', 'assigned_manager_id', 'phone', 'country', 'contact_person', 'address', mode='before')
     @classmethod
     def empty_str_to_none(cls, v):
-        if v == '':
+        if isinstance(v, str) and not v.strip():
             return None
         return v
 
@@ -37,10 +37,10 @@ class VendorUpdate(BaseModel):
     assigned_manager_id: Optional[str] = None
     is_active: Optional[bool] = None
 
-    @field_validator('email', 'assigned_manager_id', 'phone', 'country', 'contact_person', mode='before')
+    @field_validator('name', 'email', 'assigned_manager_id', 'phone', 'country', 'contact_person', 'address', mode='before')
     @classmethod
     def empty_str_to_none(cls, v):
-        if v == '':
+        if isinstance(v, str) and not v.strip():
             return None
         return v
 

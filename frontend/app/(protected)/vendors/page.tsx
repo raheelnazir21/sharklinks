@@ -165,7 +165,7 @@ export default function VendorsPage() {
         message: editingVendor ? "Vendor updated successfully." : "Vendor created successfully.",
       });
     } catch (err) {
-      setFeedback({ type: "error", title: "Operation Failed", message: "Failed to save vendor." });
+      setFeedback({ type: "error", title: "Operation Failed", message: getApiError(err, "Failed to save vendor.") });
     } finally {
       setIsSubmitting(false);
     }

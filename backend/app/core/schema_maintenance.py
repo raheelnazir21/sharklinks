@@ -135,7 +135,7 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN created_by CHAR(36)"))
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
-                    text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
+                    text("UPDATE production_stages SET stage_name = CAST(:new_name AS stagename) WHERE stage_name::text = :old_name"),
                     {"new_name": new_name, "old_name": old_name},
                 )
             conn.commit()

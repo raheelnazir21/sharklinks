@@ -4,7 +4,7 @@ Pydantic validates all data coming in from the API.
 """
 from typing import Optional, List
 from datetime import date, datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from app.models.order import OrderStatus, OrderPriority, StageStatus, StageName, TrackType
 
 
@@ -19,6 +19,13 @@ class VendorCreate(BaseModel):
     address: Optional[str] = None
     assigned_manager_id: Optional[str] = None
 
+    @field_validator('email', 'assigned_manager_id', 'phone', 'country', 'contact_person', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == '':
+            return None
+        return v
+
 
 class VendorUpdate(BaseModel):
     name: Optional[str] = None
@@ -29,6 +36,13 @@ class VendorUpdate(BaseModel):
     address: Optional[str] = None
     assigned_manager_id: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator('email', 'assigned_manager_id', 'phone', 'country', 'contact_person', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == '':
+            return None
+        return v
 
 
 class VendorOut(BaseModel):

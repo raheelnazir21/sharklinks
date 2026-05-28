@@ -224,7 +224,10 @@ def list_floors(
 ):
     vendor = assert_vendor_access(db, vendor_id, current_user)
 
-    floors = [f for f in vendor.floors if f.is_active]
+    floors = db.query(VendorFloor).filter(
+        cast(VendorFloor.vendor_id, String).in_(_id_variants(str(vendor.id))),
+        VendorFloor.is_active == True,
+    ).all()
     if idle_only:
         floors = [f for f in floors if _compute_floor_status(f) in ("idle", "partial")]
 

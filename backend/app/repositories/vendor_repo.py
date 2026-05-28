@@ -52,8 +52,7 @@ class VendorRepository:
     @staticmethod
     def update(db: Session, vendor: Vendor, data: dict) -> Vendor:
         for key, value in data.items():
-            if value is not None:
-                setattr(vendor, key, value)
+            setattr(vendor, key, value)
         db.commit()
         db.refresh(vendor)
         return vendor

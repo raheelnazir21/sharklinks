@@ -109,6 +109,12 @@ def ensure_runtime_schema(engine: Engine) -> None:
             }
             if "reference_attachments" not in order_cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN reference_attachments JSON"))
+            attachment_cols = {
+                row[1]
+                for row in conn.execute(text("PRAGMA table_info(order_attachments)")).fetchall()
+            }
+            if "uploaded_by" not in attachment_cols:
+                conn.execute(text("ALTER TABLE order_attachments ADD COLUMN uploaded_by CHAR(36)"))
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
@@ -120,6 +126,7 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN floor_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN line_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS reference_attachments JSONB DEFAULT '[]'::jsonb"))
+            conn.execute(text("ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS uploaded_by UUID"))
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),

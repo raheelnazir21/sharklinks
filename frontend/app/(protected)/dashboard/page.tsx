@@ -152,6 +152,7 @@ const BULK_STAGES = [
   { id: "pp_sample_development", label: "PP Dev" },
   { id: "customer_approval", label: "Approval" },
   { id: "fabric_shade_continuity_approval", label: "Shade" },
+  { id: "sublimation", label: "Sublimation" },
   { id: "bulk_fabric_cutting", label: "Cutting" },
   { id: "printing_embroidery_embellishment", label: "Print/Emb" },
   { id: "stitching", label: "Stitching" },
@@ -578,7 +579,7 @@ function StatusPill({ status }: { status: "pass" | "warning" | "fail" }) {
 
 function PhaseStatus({ orders }: { orders: ReturnType<typeof flattenOrders> }) {
   const total = Math.max(orders.length, 1);
-  const prep = orders.filter((order) => ["customer_order_wrapping_card", "pp_sample_development", "customer_approval", "fabric_shade_continuity_approval", "bulk_start", "sample_start", "fabrication", "fabric_cutting", "bulk_cutting", "bulk_fabric_cutting"].includes(stageColumnId(order))).length;
+  const prep = orders.filter((order) => ["customer_order_wrapping_card", "pp_sample_development", "customer_approval", "fabric_shade_continuity_approval", "sublimation", "bulk_start", "sample_start", "fabrication", "fabric_cutting", "bulk_cutting", "bulk_fabric_cutting"].includes(stageColumnId(order))).length;
   const production = orders.filter((order) => ["printing_embroidery_embellishment", "embellishment", "stitching", "washing"].includes(stageColumnId(order))).length;
   const qc = orders.filter((order) => ["end_line_qc", "top_sample_picked_from_bulk", "finishing", "qc_check", "final_random_qa_audit", "final_random_inspection"].includes(stageColumnId(order))).length;
   const delayed = orders.filter((order) => order.is_delayed).length;

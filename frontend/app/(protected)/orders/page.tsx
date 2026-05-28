@@ -18,6 +18,7 @@ const DEFAULT_BULK_STAGES = [
   { name: "pp_sample_development", label: "PP Sample Development" },
   { name: "customer_approval", label: "Customer Approval" },
   { name: "fabric_shade_continuity_approval", label: "Fabric Shade Continuity Approval" },
+  { name: "sublimation", label: "Sublimation" },
   { name: "bulk_fabric_cutting", label: "Bulk Fabric Cutting" },
   { name: "printing_embroidery_embellishment", label: "Printing / Embroidery / Embellishment" },
   { name: "stitching", label: "Stitching" },
@@ -51,14 +52,18 @@ type ReferenceAttachment = {
   filename?: string;
 };
 
+type FloorLineAssignment = {
+  floor_id: string;
+  line_ids: string[];
+};
+
 type BulkItem = {
   order_no: string;
   product_name: string;
   vendor_id: string;
   quantity: string;
   ex_factory_date: string;
-  floor_id: string;
-  line_ids: string[];
+  floor_assignments: FloorLineAssignment[];
   reference_attachments: ReferenceAttachment[];
 };
 
@@ -83,8 +88,7 @@ function createBlankBulkItem(): BulkItem {
     vendor_id: "",
     quantity: "",
     ex_factory_date: "",
-    floor_id: "",
-    line_ids: [],
+    floor_assignments: [],
     reference_attachments: [],
   };
 }
@@ -208,12 +212,14 @@ function OrdersContent() {
     const newItems = [...bulkItems];
     (newItems[index] as any)[field] = value;
     if (field === 'vendor_id') {
-      newItems[index].floor_id = "";
-      newItems[index].line_ids = [];
+      newItems[index].floor_assignments = [];
     }
-    if (field === 'floor_id') {
-      newItems[index].line_ids = [];
-    }
+    setBulkItems(newItems);
+  };
+
+  const updateBulkFloorAssignments = (index: number, assignments: FloorLineAssignment[]) => {
+    const newItems = [...bulkItems];
+    newItems[index].floor_assignments = assignments;
     setBulkItems(newItems);
   };
 
@@ -358,10 +364,12 @@ function OrdersContent() {
             ex_factory_date: item.ex_factory_date || null,
             reference_image: item.reference_attachments[0]?.url || null,
             reference_attachments: item.reference_attachments,
-            assignments: item.floor_id ? [{
-              floor_id: item.floor_id,
-              line_ids: item.line_ids
-            }] : [],
+            assignments: item.floor_assignments
+              .filter((assignment) => assignment.floor_id)
+              .map((assignment) => ({
+                floor_id: assignment.floor_id,
+                line_ids: assignment.line_ids,
+              })),
             stages: selectedStages
           }))
         };
@@ -776,7 +784,7 @@ function OrdersContent() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 italic">Vendor</label>
                       <select required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.vendor_id} onChange={(e) => updateBulkItem(idx, 'vendor_id', e.target.value)}>
@@ -784,17 +792,12 @@ function OrdersContent() {
                         {vendors.map((v: any) => (<option key={v.id} value={v.id}>{v.name}</option>))}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 italic">Floor</label>
-                      <VendorFloorSelector vendorId={item.vendor_id} value={item.floor_id} onChange={(floorId) => updateBulkItem(idx, 'floor_id', floorId)} />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 italic">Line</label>
-                      <VendorLineSelector
+                    <div className="md:col-span-1">
+                      <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 italic">Floors & Lines</label>
+                      <VendorFloorLineSelector
                         vendorId={item.vendor_id}
-                        floorId={item.floor_id}
-                        value={item.line_ids[0] || ""}
-                        onChange={(lineId) => updateBulkItem(idx, 'line_ids', lineId ? [lineId] : [])}
+                        value={item.floor_assignments}
+                        onChange={(assignments) => updateBulkFloorAssignments(idx, assignments)}
                       />
                     </div>
                   </div>
@@ -865,23 +868,6 @@ function OrdersContent() {
       `}</style>
     </div>
   );
-}
-
-function VendorFloorSelector({ vendorId, value, onChange }: { vendorId: string, value: string, onChange: (id: string) => void }) {
-    const [floors, setFloors] = useState<any[]>([]);
-    useEffect(() => {
-        if (!vendorId) {
-          setFloors([]);
-          return;
-        }
-        api.get(`/vendors/${vendorId}/floors`).then(res => setFloors(res.data.data || []));
-    }, [vendorId]);
-    return (
-        <select required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={value} onChange={(e) => onChange(e.target.value)}>
-            <option value="">Select Floor</option>
-            {floors.map((f: any) => (<option key={f.id} value={f.id}>{f.name}</option>))}
-        </select>
-    );
 }
 
 function ExFactoryBufferButtons({ baseLabel, onSelect }: { baseLabel: string, onSelect: (days: number) => void }) {
@@ -984,33 +970,102 @@ function ReferenceAttachmentButton({
     );
 }
 
-function VendorLineSelector({ vendorId, floorId, value, onChange }: { vendorId: string, floorId: string, value: string, onChange: (id: string) => void }) {
-    const [lines, setLines] = useState<any[]>([]);
+function VendorFloorLineSelector({
+  vendorId,
+  value,
+  onChange,
+}: {
+  vendorId: string;
+  value: FloorLineAssignment[];
+  onChange: (assignments: FloorLineAssignment[]) => void;
+}) {
+    const [floors, setFloors] = useState<any[]>([]);
 
     useEffect(() => {
-        if (!vendorId || !floorId) {
-          setLines([]);
+        if (!vendorId) {
+          setFloors([]);
+          onChange([]);
           return;
         }
+        api.get(`/vendors/${vendorId}/floors`)
+          .then(res => setFloors(res.data.data || []))
+          .catch(() => setFloors([]));
+    }, [vendorId]);
 
-        api.get(`/vendors/${vendorId}/floors`).then(res => {
-          const floors = res.data.data || [];
-          const selectedFloor = floors.find((floor: any) => floor.id === floorId);
-          setLines(selectedFloor?.lines || []);
-        });
-    }, [vendorId, floorId]);
+    const isFloorSelected = (floorId: string) => value.some((assignment) => assignment.floor_id === floorId);
+    const floorAssignment = (floorId: string) => value.find((assignment) => assignment.floor_id === floorId);
+
+    const toggleFloor = (floorId: string) => {
+      if (isFloorSelected(floorId)) {
+        onChange(value.filter((assignment) => assignment.floor_id !== floorId));
+        return;
+      }
+      onChange([...value, { floor_id: floorId, line_ids: [] }]);
+    };
+
+    const toggleLine = (floorId: string, lineId: string) => {
+      onChange(value.map((assignment) => {
+        if (assignment.floor_id !== floorId) return assignment;
+        const exists = assignment.line_ids.includes(lineId);
+        return {
+          ...assignment,
+          line_ids: exists
+            ? assignment.line_ids.filter((id) => id !== lineId)
+            : [...assignment.line_ids, lineId],
+        };
+      }));
+    };
+
+    if (!vendorId) {
+      return <div className="rounded-xl border border-slate-800 bg-slate-950 px-5 py-4 text-xs font-bold text-slate-500">Select vendor first</div>;
+    }
 
     return (
-        <select
-          required
-          disabled={!floorId}
-          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-xs font-bold text-white focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        >
-            <option value="">{floorId ? "Select Line" : "Select Floor First"}</option>
-            {lines.map((line: any) => (<option key={line.id} value={line.id}>{line.name}</option>))}
-        </select>
+        <div className="max-h-64 space-y-3 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 p-3">
+          {floors.length === 0 ? (
+            <p className="px-2 py-3 text-xs font-bold text-slate-500">No active floors found.</p>
+          ) : floors.map((floor: any) => {
+            const selected = isFloorSelected(floor.id);
+            const assignment = floorAssignment(floor.id);
+            return (
+              <div key={floor.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => toggleFloor(floor.id)}
+                    className="h-4 w-4 accent-emerald-500"
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white">{floor.name}</span>
+                  <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-slate-500">
+                    {selected ? `${assignment?.line_ids.length || 0} lines` : "not assigned"}
+                  </span>
+                </label>
+                {selected && (
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {(floor.lines || []).map((line: any) => (
+                      <label key={line.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={assignment?.line_ids.includes(line.id) || false}
+                          onChange={() => toggleLine(floor.id, line.id)}
+                          className="h-3.5 w-3.5 accent-emerald-500"
+                        />
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">{line.name}</span>
+                      </label>
+                    ))}
+                    {(!floor.lines || floor.lines.length === 0) && (
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">No lines. Full floor assignment.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <p className="px-2 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+            Select a floor with no lines checked to assign the full floor.
+          </p>
+        </div>
     );
 }
 

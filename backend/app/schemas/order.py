@@ -104,7 +104,7 @@ class BulkClassOut(BaseModel):
 
 
 class ProductionAssignmentCreate(BaseModel):
-    floor_id: str
+    floor_id: Optional[str] = None
     line_ids: Optional[List[str]] = []
     notes: Optional[str] = None
 

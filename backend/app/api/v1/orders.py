@@ -1,7 +1,7 @@
 """
 Orders & Production Stages API.
 """
-from fastapi import APIRouter, Depends, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -27,9 +27,28 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
+AdminAccess = {RoleEnum.super_admin.value, RoleEnum.admin.value}
 
 UPLOAD_DIR = "uploads/attachments"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def _is_admin_user(user: User) -> bool:
+    return bool(user.role and user.role.name.value in AdminAccess)
+
+
+def _assert_order_access(db: Session, order_id: str, user: User) -> Order:
+    order = OrderService.get_order(db, order_id)
+    if _is_admin_user(user):
+        return order
+    if str(order.created_by) == str(user.id):
+        return order
+    raise HTTPException(status_code=403, detail="You can only access your own orders.")
+
+
+def _assert_stage_order_access(db: Session, stage_id: str, user: User) -> Order:
+    stage = StageService.get_stage(db, stage_id)
+    return _assert_order_access(db, str(stage.order_id), user)
 
 
 # ─── Project Container Endpoints (Static Routes First) ──────────────────────
@@ -283,12 +302,14 @@ def list_orders(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db),
-    _=Depends(AllStaff),
+    current_user: User = Depends(AllStaff),
 ):
+    created_by = None if _is_admin_user(current_user) else str(current_user.id)
     orders = OrderService.list_orders(
         db, client_id=vendor_id, status=status, 
         track_type=track_type, skip=skip, limit=limit,
-        sample_class_id=sample_class_id, bulk_class_id=bulk_class_id
+        sample_class_id=sample_class_id, bulk_class_id=bulk_class_id,
+        created_by=created_by,
     )
     return success_response(data=[
         {
@@ -342,6 +363,7 @@ def delete_order(
     db: Session = Depends(get_db),
     current_user: User = Depends(AllStaff),
 ):
+    _assert_order_access(db, order_id, current_user)
     order = OrderService.delete_order(db, order_id, str(current_user.id))
     ActivityLogService.record(
         db,
@@ -358,8 +380,9 @@ def delete_order(
 def get_order_history(
     order_id: str,
     db: Session = Depends(get_db),
-    _=Depends(AllStaff),
+    current_user: User = Depends(AllStaff),
 ):
+    _assert_order_access(db, order_id, current_user)
     order_events = db.query(OrderHistory).filter(OrderHistory.order_id == order_id).order_by(OrderHistory.created_at.desc()).all()
     audit_events = db.query(AuditLog).filter(
         AuditLog.entity_type == "Order",
@@ -409,9 +432,9 @@ def get_order_history(
 def get_order(
     order_id: str,
     db: Session = Depends(get_db),
-    _=Depends(AllStaff),
+    current_user: User = Depends(AllStaff),
 ):
-    order = OrderService.get_order(db, order_id)
+    order = _assert_order_access(db, order_id, current_user)
     return success_response(data={
         "id": str(order.id), 
         "order_no": order.order_no,
@@ -461,6 +484,7 @@ def update_order(
     current_user: User = Depends(get_current_user),
     _=Depends(ManagerAccess),
 ):
+    _assert_order_access(db, order_id, current_user)
     OrderService.update_order(db, order_id, payload, str(current_user.id))
     ActivityLogService.record(
         db,
@@ -479,8 +503,9 @@ def update_order(
 def get_stages(
     order_id: str,
     db: Session = Depends(get_db),
-    _=Depends(AllStaff),
+    current_user: User = Depends(AllStaff),
 ):
+    _assert_order_access(db, order_id, current_user)
     stages = StageService.get_stages(db, order_id)
     return success_response(data=[
         {
@@ -505,8 +530,9 @@ def get_stages(
 def get_order_assignments(
     order_id: str,
     db: Session = Depends(get_db),
-    _=Depends(AllStaff),
+    current_user: User = Depends(AllStaff),
 ):
+    _assert_order_access(db, order_id, current_user)
     from app.models.order import OrderProductionAssignment
     assignments = db.query(OrderProductionAssignment).filter(
         OrderProductionAssignment.order_id == order_id
@@ -528,6 +554,7 @@ def reiterate_order(
     current_user: User = Depends(get_current_user),
     _=Depends(AllStaff),
 ):
+    _assert_order_access(db, order_id, current_user)
     reason = payload.get("reason", "No reason provided")
     plan = payload.get("plan", "No plan provided")
     order = OrderService.reiterate_order(db, order_id, reason, plan, str(current_user.id))
@@ -553,6 +580,7 @@ def add_stage(
     current_user: User = Depends(get_current_user),
     _=Depends(ManagerAccess),
 ):
+    _assert_order_access(db, order_id, current_user)
     stage = StageService.add_stage(db, order_id, payload, str(current_user.id))
     ActivityLogService.record(
         db,
@@ -576,6 +604,7 @@ def update_stage(
     current_user: User = Depends(get_current_user),
     _=Depends(AllStaff),
 ):
+    _assert_stage_order_access(db, stage_id, current_user)
     stage = StageService.update_stage(db, stage_id, payload, str(current_user.id))
     ActivityLogService.record(
         db,
@@ -583,7 +612,12 @@ def update_stage(
         entity_type="Order",
         entity_id=str(stage.order_id),
         user=current_user,
-        payload={"details": f"Production stage '{stage.stage_name.value}' was updated.", "stage_id": stage_id},
+        payload={
+            "details": f"Stage '{stage.stage_name.value}' was marked {stage.status.value}.",
+            "stage_id": stage_id,
+            "stage": stage.stage_name.value,
+            "status": stage.status.value,
+        },
     )
     return success_response(message="Stage updated.")
 
@@ -596,6 +630,7 @@ def reject_stage_for_rework(
     current_user: User = Depends(get_current_user),
     _=Depends(AllStaff),
 ):
+    _assert_stage_order_access(db, stage_id, current_user)
     order = StageService.reject_stage_for_rework(
         db,
         stage_id,
@@ -634,6 +669,7 @@ def upload_attachment(
     current_user: User = Depends(get_current_user),
     _=Depends(AllStaff),
 ):
+    _assert_order_access(db, order_id, current_user)
     if file.content_type not in ALLOWED_TYPES:
         from app.utils.response import error_response
         from fastapi import HTTPException
@@ -655,6 +691,14 @@ def upload_attachment(
     )
     db.add(attachment)
     db.commit()
+    ActivityLogService.record(
+        db,
+        action="ORDER_ATTACHMENT_ADDED",
+        entity_type="Order",
+        entity_id=order_id,
+        user=current_user,
+        payload={"details": f"Attachment '{file.filename}' was added."},
+    )
 
     return success_response(
         data={"file_name": file.filename, "file_path": filepath},

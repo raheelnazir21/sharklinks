@@ -157,8 +157,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const isSelectable = (idx: number) => idx === 0 || stages[idx - 1].status === "completed";
   const canUpdateCurrent = currentStage && isSelectable(currentIndex);
   const canRejectSampleQc = isSampling && currentStage?.stage_name === "qc_check" && canUpdateCurrent;
-  const repeatableStages = canRejectSampleQc
-    ? stages.filter((stage) => stage.stage_order <= currentStage.stage_order && stage.stage_name !== "qc_check")
+  const canRejectBulkApproval = !isSampling && canUpdateCurrent && [
+    "pp_sample_development",
+    "customer_approval",
+    "fabric_shade_continuity_approval",
+  ].includes(currentStage?.stage_name);
+  const canRejectCurrentStage = Boolean(canRejectSampleQc || canRejectBulkApproval);
+  const repeatableStages = canRejectCurrentStage
+    ? stages.filter((stage) => {
+        if (!currentStage) return false;
+        if (canRejectSampleQc) return stage.stage_order <= currentStage.stage_order && stage.stage_name !== "qc_check";
+        if (currentStage.stage_name === "customer_approval") return stage.stage_order <= currentStage.stage_order;
+        return stage.id === currentStage.id;
+      })
     : [];
   const referenceAttachments = order.reference_attachments?.length
     ? order.reference_attachments
@@ -252,7 +263,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     onClick={() => !isLocked && setSelectedStageId(s.id)}
                     disabled={isLocked}
                     style={isSelected ? { backgroundColor: themeHex, borderColor: themeHex, color: "#ffffff" } : undefined}
-                    className={`w-full group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isSelected ? "text-white shadow-xl scale-[1.02] z-10" :
+                    className={`w-full min-w-0 group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isSelected ? "text-white shadow-xl scale-[1.02] z-10" :
                         isLocked ? "bg-slate-950/20 border-slate-900 text-slate-800 opacity-40 cursor-not-allowed" :
                           isDelayed ? "bg-red-500/10 border-red-500/30 text-red-500 hover:border-red-500/50" :
                             isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" :
@@ -263,8 +274,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       }`}>
                       {isLocked ? <Lock className="w-3.5 h-3.5" /> : idx + 1}
                     </div>
-                    <div className="text-left flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest truncate">{stageLabel(s.stage_name)}</p>
+                    <div className="min-w-0 text-left flex-1">
+                      <p className="break-words text-[10px] font-black uppercase tracking-widest leading-5">{stageLabel(s.stage_name)}</p>
                       <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">
                         {isCompleted ? `Comp: ${compDate?.toLocaleDateString()}` : `Tgt: ${targetDate?.toLocaleDateString() || "---"}`}
                       </p>
@@ -370,11 +381,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         >
                           <CheckCircle2 className="w-5 h-5" /> Confirm Completion
                         </button>
-                        {canRejectSampleQc && repeatableStages.length > 0 && (
+                        {canRejectCurrentStage && repeatableStages.length > 0 && (
                           <button
                             onClick={() => setReworkDialog({
                               stageId: currentStage.id,
-                              repeatFromStageId: repeatableStages[repeatableStages.length - 1].id,
+                              repeatFromStageId: canRejectBulkApproval && currentStage.stage_name !== "customer_approval" ? currentStage.id : repeatableStages[repeatableStages.length - 1].id,
                               reason: stageData.remarks || "",
                               plan: "",
                             })}
@@ -386,9 +397,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 rounded-2xl">
+                      <div className="flex flex-wrap items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 rounded-2xl">
                         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                         <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Phase Completed</span>
+                        {canRejectCurrentStage && repeatableStages.length > 0 && (
+                          <button
+                            onClick={() => setReworkDialog({
+                              stageId: currentStage.id,
+                              repeatFromStageId: canRejectBulkApproval && currentStage.stage_name !== "customer_approval" ? currentStage.id : repeatableStages[repeatableStages.length - 1].id,
+                              reason: stageData.remarks || "",
+                              plan: "",
+                            })}
+                            disabled={updating}
+                            className="text-[9px] font-black text-white bg-red-600 px-4 py-2 rounded-xl hover:bg-red-500 transition-all border border-red-500/40"
+                          >
+                            Reject / Repeat
+                          </button>
+                        )}
                         <button
                           onClick={() => setPendingStageAction({ stageId: currentStage.id, status: "completed", label: "save this completed phase" })}
                           disabled={updating}
@@ -538,7 +563,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         message={feedback?.message || ""}
         onClose={() => setFeedback(null)}
       />
-      <Modal isOpen={Boolean(reworkDialog)} onClose={() => !updating && setReworkDialog(null)} title="Reject QC and Repeat Stage">
+      <Modal isOpen={Boolean(reworkDialog)} onClose={() => !updating && setReworkDialog(null)} title="Reject and Repeat Stage">
         <form onSubmit={handleRejectForRework} className="space-y-5">
           <div>
             <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Repeat From Stage</label>

@@ -94,6 +94,7 @@ const BULK_STAGES = [
   { id: "pp_sample_development", label: "PP Dev" },
   { id: "customer_approval", label: "Approval" },
   { id: "fabric_shade_continuity_approval", label: "Shade" },
+  { id: "sublimation", label: "Sublimation" },
   { id: "bulk_fabric_cutting", label: "Cutting" },
   { id: "printing_embroidery_embellishment", label: "Emb." },
   { id: "stitching", label: "Stitching" },

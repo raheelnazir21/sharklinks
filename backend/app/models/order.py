@@ -50,6 +50,7 @@ class StageName(str, enum.Enum):
     pp_sample_development = "pp_sample_development"
     customer_approval = "customer_approval"
     fabric_shade_approval = "fabric_shade_continuity_approval"
+    sublimation = "sublimation"
     bulk_fabric_cutting = "bulk_fabric_cutting"
     end_line_qc = "end_line_qc"
     pressing = "pressing"
@@ -206,6 +207,7 @@ class Attachment(Base):
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_type = Column(String(100), nullable=True)
+    uploaded_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     order = relationship("Order", back_populates="attachments")
@@ -247,14 +249,16 @@ class OrderProductionAssignment(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False)
     vendor_id = Column(GUID(), ForeignKey("vendors.id"), nullable=False)
-    floor_id = Column(GUID(), nullable=True)
-    line_id = Column(GUID(), nullable=True)
+    floor_id = Column(GUID(), ForeignKey("vendor_floors.id"), nullable=True)
+    line_id = Column(GUID(), ForeignKey("vendor_lines.id"), nullable=True)
     department_id = Column(GUID(), ForeignKey("vendor_departments.id"), nullable=True)
     assignment_type = Column(String(50), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     order = relationship("Order", back_populates="assignments")
+    floor = relationship("VendorFloor", foreign_keys=[floor_id])
+    line = relationship("VendorLine", foreign_keys=[line_id])
     department = relationship("VendorDepartment")
 
 class VendorDepartment(Base):

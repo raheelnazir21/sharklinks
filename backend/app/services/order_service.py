@@ -49,6 +49,7 @@ class OrderService:
         track_type: Optional[str] = None,
         sample_class_id: Optional[str] = None,
         bulk_class_id: Optional[str] = None,
+        created_by: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> List[Order]:
@@ -59,6 +60,7 @@ class OrderService:
             track_type=track_type, 
             sample_class_id=sample_class_id,
             bulk_class_id=bulk_class_id,
+            created_by=created_by,
             skip=skip, 
             limit=limit
         )
@@ -373,16 +375,17 @@ class StageService:
             (2, StageName.pp_sample_development),
             (3, StageName.customer_approval),
             (4, StageName.fabric_shade_approval),
-            (5, StageName.bulk_fabric_cutting),
-            (6, StageName.bulk_embellishment),
-            (7, StageName.stitching),
-            (8, StageName.end_line_qc),
-            (9, StageName.washing),
-            (10, StageName.pressing),
-            (11, StageName.finishing),
-            (12, StageName.packing),
-            (13, StageName.final_random_inspection),
-            (14, StageName.shipment),
+            (5, StageName.sublimation),
+            (6, StageName.bulk_fabric_cutting),
+            (7, StageName.bulk_embellishment),
+            (8, StageName.stitching),
+            (9, StageName.end_line_qc),
+            (10, StageName.washing),
+            (11, StageName.pressing),
+            (12, StageName.finishing),
+            (13, StageName.packing),
+            (14, StageName.final_random_inspection),
+            (15, StageName.shipment),
         ]
 
     @staticmethod
@@ -409,6 +412,13 @@ class StageService:
         if not order:
             raise HTTPException(status_code=404, detail="Order not found.")
         return StageService.ensure_default_stages(db, order)
+
+    @staticmethod
+    def get_stage(db: Session, stage_id: str) -> ProductionStage:
+        stage = StageRepository.get_by_id(db, stage_id)
+        if not stage:
+            raise HTTPException(status_code=404, detail="Stage not found.")
+        return stage
 
     @staticmethod
     def add_stage(db: Session, order_id: str, payload: StageCreate, user_id: str) -> ProductionStage:
@@ -502,6 +512,16 @@ class StageService:
             raise HTTPException(status_code=404, detail="Order not found.")
         if order.track_type.value == "sampling" and qc_stage.stage_name.value != "qc_check":
             raise HTTPException(status_code=400, detail="Sample rejection can only be raised from QC Check.")
+        if order.track_type.value == "bulk":
+            allowed_bulk_rejections = {
+                "pp_sample_development",
+                "customer_approval",
+                "fabric_shade_continuity_approval",
+            }
+            if qc_stage.stage_name.value not in allowed_bulk_rejections:
+                raise HTTPException(status_code=400, detail="Bulk rejection is currently allowed only for PP Sample, Customer Approval, and Fabric Shade Approval.")
+            if qc_stage.stage_name.value in {"pp_sample_development", "fabric_shade_continuity_approval"} and repeat_stage.id != qc_stage.id:
+                raise HTTPException(status_code=400, detail="This bulk stage can only repeat from itself.")
         if repeat_stage.stage_order > qc_stage.stage_order:
             raise HTTPException(status_code=400, detail="Repeat stage must be the current stage or an earlier stage.")
 

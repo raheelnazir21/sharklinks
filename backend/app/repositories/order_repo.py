@@ -87,6 +87,7 @@ class OrderRepository:
         track_type: Optional[str] = None,
         sample_class_id: Optional[str] = None,
         bulk_class_id: Optional[str] = None,
+        created_by: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> List[Order]:
@@ -101,6 +102,8 @@ class OrderRepository:
             q = q.filter(cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)))
         if bulk_class_id:
             q = q.filter(cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)))
+        if created_by:
+            q = q.filter(cast(Order.created_by, String).in_(_id_variants(created_by)))
 
         
         # Eager load vendor for name access

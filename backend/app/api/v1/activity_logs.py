@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles
+from app.core.access_control import is_admin_user
 from app.models.audit_log import AuditLog
 from app.models.user import RoleEnum, User
 from app.utils.response import success_response
@@ -66,9 +67,11 @@ def list_activity_logs(
     date_from: Optional[datetime] = Query(None),
     date_to: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
-    _=Depends(ActivityLogAccess),
+    current_user: User = Depends(ActivityLogAccess),
 ):
     query = _base_query(db)
+    if not is_admin_user(current_user):
+        query = query.filter(AuditLog.user_id == current_user.id)
 
     if action:
         query = query.filter(AuditLog.action == action)
@@ -100,18 +103,24 @@ def list_activity_logs(
 def recent_activity_logs(
     limit: int = Query(6, ge=1, le=20),
     db: Session = Depends(get_db),
-    _=Depends(ActivityLogAccess),
+    current_user: User = Depends(ActivityLogAccess),
 ):
-    logs = _base_query(db).order_by(AuditLog.created_at.desc()).limit(limit).all()
+    query = _base_query(db)
+    if not is_admin_user(current_user):
+        query = query.filter(AuditLog.user_id == current_user.id)
+    logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
     return success_response(data=[_serialize_log(log) for log in logs])
 
 
 @router.get("/export.csv", summary="Export Activity Logs CSV")
 def export_activity_logs(
     db: Session = Depends(get_db),
-    _=Depends(ActivityLogAccess),
+    current_user: User = Depends(ActivityLogAccess),
 ):
-    logs = _base_query(db).order_by(AuditLog.created_at.desc()).limit(5000).all()
+    query = _base_query(db)
+    if not is_admin_user(current_user):
+        query = query.filter(AuditLog.user_id == current_user.id)
+    logs = query.order_by(AuditLog.created_at.desc()).limit(5000).all()
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(["Time", "Action", "Entity Type", "Entity ID", "User", "Email", "Details"])

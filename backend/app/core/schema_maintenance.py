@@ -115,6 +115,24 @@ def ensure_runtime_schema(engine: Engine) -> None:
             }
             if "uploaded_by" not in attachment_cols:
                 conn.execute(text("ALTER TABLE order_attachments ADD COLUMN uploaded_by CHAR(36)"))
+            vendor_cols = {
+                row[1]
+                for row in conn.execute(text("PRAGMA table_info(vendors)")).fetchall()
+            }
+            if "assigned_manager_id" not in vendor_cols:
+                conn.execute(text("ALTER TABLE vendors ADD COLUMN assigned_manager_id CHAR(36)"))
+            sample_class_cols = {
+                row[1]
+                for row in conn.execute(text("PRAGMA table_info(sample_classes)")).fetchall()
+            }
+            if "created_by" not in sample_class_cols:
+                conn.execute(text("ALTER TABLE sample_classes ADD COLUMN created_by CHAR(36)"))
+            bulk_class_cols = {
+                row[1]
+                for row in conn.execute(text("PRAGMA table_info(bulk_classes)")).fetchall()
+            }
+            if "created_by" not in bulk_class_cols:
+                conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN created_by CHAR(36)"))
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
@@ -127,6 +145,9 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN line_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS reference_attachments JSONB DEFAULT '[]'::jsonb"))
             conn.execute(text("ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS uploaded_by UUID"))
+            conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS assigned_manager_id UUID"))
+            conn.execute(text("ALTER TABLE sample_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
+            conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),

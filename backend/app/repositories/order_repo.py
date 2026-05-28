@@ -21,10 +21,12 @@ def _id_variants(value: str) -> list[str]:
 
 class SampleClassRepository:
     @staticmethod
-    def get_all(db: Session, vendor_id: Optional[str] = None):
+    def get_all(db: Session, vendor_id: Optional[str] = None, allowed_vendor_ids: Optional[list[str]] = None):
         q = db.query(SampleClass).filter(SampleClass.status != "inactive")
         if vendor_id:
             q = q.filter(cast(SampleClass.vendor_id, String).in_(_id_variants(vendor_id)))
+        if allowed_vendor_ids is not None:
+            q = q.filter(cast(SampleClass.vendor_id, String).in_(allowed_vendor_ids))
         return q.order_by(SampleClass.created_at.desc()).all()
 
     @staticmethod
@@ -51,8 +53,15 @@ class SampleClassRepository:
 
 class BulkClassRepository:
     @staticmethod
-    def get_all(db: Session):
-        return db.query(BulkClass).filter(BulkClass.status != "inactive").order_by(BulkClass.created_at.desc()).all()
+    def get_all(db: Session, created_by: Optional[str] = None, allowed_vendor_ids: Optional[list[str]] = None):
+        q = db.query(BulkClass).filter(BulkClass.status != "inactive")
+        if created_by:
+            q = q.filter(cast(BulkClass.created_by, String).in_(_id_variants(created_by)))
+        if allowed_vendor_ids is not None:
+            q = q.outerjoin(Order, Order.bulk_class_id == BulkClass.id).filter(
+                (cast(Order.vendor_id, String).in_(allowed_vendor_ids)) | (cast(BulkClass.created_by, String).in_(_id_variants(created_by or "")))
+            ).distinct()
+        return q.order_by(BulkClass.created_at.desc()).all()
 
     @staticmethod
     def get_by_id(db: Session, bc_id: str):
@@ -88,6 +97,7 @@ class OrderRepository:
         sample_class_id: Optional[str] = None,
         bulk_class_id: Optional[str] = None,
         created_by: Optional[str] = None,
+        allowed_vendor_ids: Optional[list[str]] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> List[Order]:
@@ -104,6 +114,8 @@ class OrderRepository:
             q = q.filter(cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)))
         if created_by:
             q = q.filter(cast(Order.created_by, String).in_(_id_variants(created_by)))
+        if allowed_vendor_ids is not None:
+            q = q.filter(cast(Order.vendor_id, String).in_(allowed_vendor_ids))
 
         
         # Eager load vendor for name access

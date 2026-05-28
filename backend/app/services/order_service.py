@@ -50,6 +50,7 @@ class OrderService:
         sample_class_id: Optional[str] = None,
         bulk_class_id: Optional[str] = None,
         created_by: Optional[str] = None,
+        allowed_vendor_ids: Optional[list[str]] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> List[Order]:
@@ -61,6 +62,7 @@ class OrderService:
             sample_class_id=sample_class_id,
             bulk_class_id=bulk_class_id,
             created_by=created_by,
+            allowed_vendor_ids=allowed_vendor_ids,
             skip=skip, 
             limit=limit
         )
@@ -151,7 +153,10 @@ class OrderService:
         elif payload.assignments:
             for asgn in payload.assignments:
                 # Basic assignment logic (simplified from floors.py)
-                floor = db.query(VendorFloor).filter(VendorFloor.id == asgn.floor_id).first()
+                floor = db.query(VendorFloor).filter(
+                    VendorFloor.id == asgn.floor_id,
+                    VendorFloor.vendor_id == order.vendor_id,
+                ).first()
                 if not floor: continue
 
                 if not asgn.line_ids:
@@ -200,13 +205,15 @@ class OrderService:
         return created_orders
 
     @staticmethod
-    def create_bulk_class(db: Session, payload: BulkClassCreate) -> BulkClass:
+    def create_bulk_class(db: Session, payload: BulkClassCreate, user_id: Optional[str] = None) -> BulkClass:
         from app.models.order import BulkClass
-        return BulkClassRepository.create(db, payload.model_dump())
+        data = payload.model_dump()
+        data["created_by"] = user_id
+        return BulkClassRepository.create(db, data)
 
     @staticmethod
-    def list_bulk_classes(db: Session):
-        return BulkClassRepository.get_all(db)
+    def list_bulk_classes(db: Session, created_by: Optional[str] = None, allowed_vendor_ids: Optional[list[str]] = None):
+        return BulkClassRepository.get_all(db, created_by=created_by, allowed_vendor_ids=allowed_vendor_ids)
 
 
 

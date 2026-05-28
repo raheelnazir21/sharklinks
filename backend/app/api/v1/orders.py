@@ -10,6 +10,7 @@ import json
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles, get_current_user
+from app.core.access_control import assert_vendor_access, is_admin_user, scoped_vendor_query
 from app.models.audit_log import AuditLog
 from app.models.user import RoleEnum, User
 from app.models.order import Attachment, TrackType, OrderHistory, Order, OrderStatus
@@ -27,23 +28,28 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
-AdminAccess = {RoleEnum.super_admin.value, RoleEnum.admin.value}
 
 UPLOAD_DIR = "uploads/attachments"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def _is_admin_user(user: User) -> bool:
-    return bool(user.role and user.role.name.value in AdminAccess)
+    return is_admin_user(user)
+
+
+def _allowed_vendor_ids(db: Session, user: User) -> Optional[list[str]]:
+    if _is_admin_user(user):
+        return None
+    return [str(vendor.id) for vendor in scoped_vendor_query(db, user).all()]
 
 
 def _assert_order_access(db: Session, order_id: str, user: User) -> Order:
     order = OrderService.get_order(db, order_id)
     if _is_admin_user(user):
         return order
-    if str(order.created_by) == str(user.id):
+    if order.vendor_id and str(order.vendor_id) in (_allowed_vendor_ids(db, user) or []):
         return order
-    raise HTTPException(status_code=403, detail="You can only access your own orders.")
+    raise HTTPException(status_code=403, detail="You can only access orders for your assigned vendors.")
 
 
 def _assert_stage_order_access(db: Session, stage_id: str, user: User) -> Order:
@@ -57,9 +63,11 @@ def _assert_stage_order_access(db: Session, stage_id: str, user: User) -> Order:
 def list_sample_classes(
     vendor_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    _=Depends(AllStaff),
+    current_user: User = Depends(AllStaff),
 ):
-    scs = SampleClassRepository.get_all(db, vendor_id)
+    if vendor_id:
+        assert_vendor_access(db, vendor_id, current_user)
+    scs = SampleClassRepository.get_all(db, vendor_id, allowed_vendor_ids=_allowed_vendor_ids(db, current_user))
     return success_response(data=[{
         "id": str(s.id), "name": s.name, "serial_number": s.serial_number,
         "customer": s.customer, "status": s.status, "remarks": s.remarks,
@@ -75,7 +83,11 @@ def create_sample_class(
     db: Session = Depends(get_db),
     current_user: User = Depends(ManagerAccess),
 ):
-    sc = SampleClassRepository.create(db, payload.model_dump())
+    if payload.vendor_id:
+        assert_vendor_access(db, payload.vendor_id, current_user)
+    data = payload.model_dump()
+    data["created_by"] = str(current_user.id)
+    sc = SampleClassRepository.create(db, data)
     ActivityLogService.record(
         db,
         action="SAMPLE_PROJECT_CREATED",
@@ -98,6 +110,10 @@ def update_sample_class(
     if not sc:
         from fastapi import HTTPException
         raise HTTPException(404, "Sample Class not found.")
+    if sc.vendor_id:
+        assert_vendor_access(db, str(sc.vendor_id), current_user)
+    if payload.vendor_id:
+        assert_vendor_access(db, payload.vendor_id, current_user)
     old_value = {
         "name": sc.name,
         "serial_number": sc.serial_number,
@@ -128,6 +144,8 @@ def delete_sample_class(
     if not sc:
         from fastapi import HTTPException
         raise HTTPException(404, "Sample Class not found.")
+    if sc.vendor_id:
+        assert_vendor_access(db, str(sc.vendor_id), current_user)
     sc.status = "inactive"
     affected_orders = db.query(Order).filter(
         cast(Order.sample_class_id, String).in_(_id_variants(str(sc.id))),
@@ -154,13 +172,19 @@ def list_bulk_classes(
     current_user: User = Depends(get_current_user),
     _=Depends(AllStaff),
 ):
-    classes = OrderService.list_bulk_classes(db)
+    allowed_vendor_ids = _allowed_vendor_ids(db, current_user)
+    classes = OrderService.list_bulk_classes(
+        db,
+        created_by=None if _is_admin_user(current_user) else str(current_user.id),
+        allowed_vendor_ids=allowed_vendor_ids,
+    )
     return success_response(data=[{
         "id": str(bc.id),
         "name": bc.name,
         "serial_number": bc.serial_number,
         "customer": bc.customer,
         "status": bc.status,
+        "vendor_names": sorted({order.vendor.name for order in bc.orders if order.is_active and order.vendor}),
         "created_at": bc.created_at.isoformat(),
     } for bc in classes])
 
@@ -172,7 +196,7 @@ def create_bulk_class(
     current_user: User = Depends(get_current_user),
     _=Depends(ManagerAccess),
 ):
-    bc = OrderService.create_bulk_class(db, payload)
+    bc = OrderService.create_bulk_class(db, payload, str(current_user.id))
     ActivityLogService.record(
         db,
         action="BULK_PROJECT_CREATED",
@@ -196,6 +220,8 @@ def update_bulk_class(
     if not bc:
         from fastapi import HTTPException
         raise HTTPException(404, "Bulk Project not found.")
+    if not _is_admin_user(current_user) and str(bc.created_by) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="You can only update your own bulk projects.")
     old_value = {
         "name": bc.name,
         "serial_number": bc.serial_number,
@@ -225,6 +251,8 @@ def delete_bulk_class(
     if not bc:
         from fastapi import HTTPException
         raise HTTPException(404, "Bulk Project not found.")
+    if not _is_admin_user(current_user) and str(bc.created_by) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="You can only deactivate your own bulk projects.")
     bc.status = "inactive"
     affected_orders = db.query(Order).filter(
         cast(Order.bulk_class_id, String).in_(_id_variants(str(bc.id))),
@@ -256,6 +284,10 @@ def get_bulk_class(
     if not bc:
         from fastapi import HTTPException
         raise HTTPException(404, "Bulk Project not found.")
+    if not _is_admin_user(current_user) and str(bc.created_by) != str(current_user.id):
+        allowed_vendor_ids = set(_allowed_vendor_ids(db, current_user) or [])
+        if not any(str(order.vendor_id) in allowed_vendor_ids for order in bc.orders if order.is_active):
+            raise HTTPException(status_code=403, detail="You can only access your assigned bulk projects.")
     return success_response(data={
         "id": str(bc.id),
         "name": bc.name,
@@ -263,6 +295,7 @@ def get_bulk_class(
         "customer": bc.customer,
         "status": bc.status,
         "remarks": bc.remarks,
+        "vendor_names": sorted({order.vendor.name for order in bc.orders if order.is_active and order.vendor}),
         "order_count": len(bc.orders),
     })
 
@@ -274,6 +307,8 @@ def bulk_create_orders(
     current_user: User = Depends(get_current_user),
     _=Depends(ManagerAccess),
 ):
+    for item in payload.items:
+        assert_vendor_access(db, item.vendor_id, current_user)
     orders = OrderService.bulk_create_orders(db, payload, str(current_user.id))
     ActivityLogService.record(
         db,
@@ -304,12 +339,14 @@ def list_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(AllStaff),
 ):
-    created_by = None if _is_admin_user(current_user) else str(current_user.id)
+    if vendor_id:
+        assert_vendor_access(db, vendor_id, current_user)
+    allowed_vendor_ids = _allowed_vendor_ids(db, current_user)
     orders = OrderService.list_orders(
         db, client_id=vendor_id, status=status, 
         track_type=track_type, skip=skip, limit=limit,
         sample_class_id=sample_class_id, bulk_class_id=bulk_class_id,
-        created_by=created_by,
+        allowed_vendor_ids=allowed_vendor_ids,
     )
     return success_response(data=[
         {
@@ -342,6 +379,7 @@ def create_order(
     current_user: User = Depends(get_current_user),
     _=Depends(ManagerAccess),
 ):
+    assert_vendor_access(db, payload.vendor_id, current_user)
     order = OrderService.create_order(db, payload, str(current_user.id))
     ActivityLogService.record(
         db,
@@ -485,6 +523,8 @@ def update_order(
     _=Depends(ManagerAccess),
 ):
     _assert_order_access(db, order_id, current_user)
+    if payload.vendor_id:
+        assert_vendor_access(db, payload.vendor_id, current_user)
     OrderService.update_order(db, order_id, payload, str(current_user.id))
     ActivityLogService.record(
         db,

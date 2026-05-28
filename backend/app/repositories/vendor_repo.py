@@ -22,10 +22,12 @@ def _id_variants(value: str) -> list[str]:
 class VendorRepository:
 
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100, search: str = "") -> List[Vendor]:
+    def get_all(db: Session, skip: int = 0, limit: int = 100, search: str = "", assigned_manager_id: Optional[str] = None) -> List[Vendor]:
         q = db.query(Vendor).filter(Vendor.is_active == True)
         if search:
             q = q.filter(Vendor.name.ilike(f"%{search}%"))
+        if assigned_manager_id:
+            q = q.filter(cast(Vendor.assigned_manager_id, String).in_(_id_variants(assigned_manager_id)))
         return q.offset(skip).limit(limit).all()
 
     @staticmethod

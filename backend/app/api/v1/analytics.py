@@ -2,6 +2,7 @@
 Analytics API — endpoints for dashboard data and performance reports.
 """
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import String, cast
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 from datetime import date
@@ -9,6 +10,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles
+from app.core.access_control import is_admin_user, scoped_vendor_query
 from app.models.user import RoleEnum, User
 from app.models.order import (
     Order,
@@ -27,11 +29,8 @@ from app.utils.response import success_response
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 AnalyticsAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
-AdminAccess = {RoleEnum.super_admin.value, RoleEnum.admin.value}
-
-
 def _is_admin_user(user: User) -> bool:
-    return bool(user.role and user.role.name.value in AdminAccess)
+    return is_admin_user(user)
 
 @router.get("/dashboard-summary", response_model=dict, summary="Get Dashboard Summary")
 def get_dashboard_summary(
@@ -134,7 +133,8 @@ def get_order_tracking(
     if vendor_id:
         orders_q = orders_q.filter(Order.vendor_id == vendor_id)
     if not _is_admin_user(current_user):
-        orders_q = orders_q.filter(Order.created_by == current_user.id)
+        allowed_vendor_ids = [str(vendor.id) for vendor in scoped_vendor_query(db, current_user).all()]
+        orders_q = orders_q.filter(cast(Order.vendor_id, String).in_(allowed_vendor_ids))
 
     orders = orders_q.order_by(Order.created_at.desc()).all()
     floors = {str(floor.id): floor for floor in db.query(VendorFloor).all()}

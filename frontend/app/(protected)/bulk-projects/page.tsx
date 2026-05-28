@@ -15,7 +15,7 @@ import {
   StatusBadge,
   formControlClass,
 } from "@/components/ui/PagePrimitives";
-import { Activity, AlertCircle, ArrowRight, Calendar, Edit3, Layers, Plus, Search, Timer, Trash2 } from "lucide-react";
+import { Activity, ArrowRight, Building2, Calendar, Edit3, Layers, Plus, Search, Timer, Trash2 } from "lucide-react";
 
 type ApiError = {
   response?: {
@@ -130,7 +130,8 @@ export default function BulkProjectsPage() {
     return projects.filter((project) =>
       project.name?.toLowerCase().includes(query) ||
       project.customer?.toLowerCase().includes(query) ||
-      project.serial_number?.toLowerCase().includes(query)
+      project.serial_number?.toLowerCase().includes(query) ||
+      project.vendor_names?.join(" ")?.toLowerCase().includes(query)
     );
   }, [projects, searchTerm]);
 
@@ -274,6 +275,7 @@ function BulkCard({ project, onEdit, onDelete }: { project: any; onEdit: (projec
       </div>
 
       <div className="mt-5 grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs font-semibold text-slate-600">
+        <span className="flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-600" /> {project.vendor_names?.length ? project.vendor_names.join(", ") : "Vendor not assigned yet"}</span>
         <span className="flex items-center gap-2"><Calendar className="h-4 w-4 text-blue-600" /> {project.created_at ? new Date(project.created_at).toLocaleDateString() : "No date"}</span>
         <span className="flex items-center gap-2"><Timer className="h-4 w-4 text-cyan-600" /> Production tracking active</span>
       </div>

@@ -14,7 +14,15 @@ type Vendor = {
   phone?: string;
   country?: string;
   contact_person?: string;
+  assigned_manager_id?: string | null;
+  assigned_manager_name?: string | null;
   total_orders?: number;
+};
+
+type UserOption = {
+  id: string;
+  full_name: string;
+  role: string;
 };
 
 const emptyVendorForm = {
@@ -24,7 +32,8 @@ const emptyVendorForm = {
   phone_country_code: "+92",
   phone_number: "",
   country: "",
-  contact_person: ""
+  contact_person: "",
+  assigned_manager_id: "",
 };
 
 const COUNTRY_CODES = [
@@ -75,6 +84,7 @@ function getApiError(err: unknown, fallback: string) {
 
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [managers, setManagers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,6 +110,15 @@ export default function VendorsPage() {
     fetchVendors();
   }, [search]);
 
+  useEffect(() => {
+    api.get("/users/")
+      .then((res) => {
+        const users = res.data.data || [];
+        setManagers(users.filter((user: UserOption) => ["manager", "admin", "super_admin"].includes(user.role)));
+      })
+      .catch(() => setManagers([]));
+  }, []);
+
   const openCreate = () => {
     setEditingVendor(null);
     setFormData(emptyVendorForm);
@@ -117,6 +136,7 @@ export default function VendorsPage() {
       phone_number: phoneParts.phone_number,
       country: vendor.country || "",
       contact_person: vendor.contact_person || "",
+      assigned_manager_id: vendor.assigned_manager_id || "",
     });
     setIsModalOpen(true);
   };
@@ -242,6 +262,9 @@ export default function VendorsPage() {
                 <div className="flex items-center gap-3 text-slate-600 text-xs font-bold">
                   <Phone className="w-4 h-4 text-slate-600" /> {vendor.phone || 'No phone provided'}
                 </div>
+                <div className="flex items-center gap-3 text-slate-600 text-xs font-bold">
+                  <Building2 className="w-4 h-4 text-slate-600" /> {vendor.assigned_manager_name || 'No manager assigned'}
+                </div>
               </div>
 
               <div className="pt-6 border-t border-slate-200 flex items-center justify-between">
@@ -336,6 +359,23 @@ export default function VendorsPage() {
               placeholder="e.g. Bangladesh, Turkey"
             />
           </div>
+          {managers.length > 0 && (
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Assigned Manager</label>
+              <select
+                className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 text-sm text-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                value={formData.assigned_manager_id}
+                onChange={(e) => setFormData({ ...formData, assigned_manager_id: e.target.value })}
+              >
+                <option value="">Admin pool / unassigned</option>
+                {managers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.full_name} ({manager.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <button 
             type="submit" 
             disabled={isSubmitting}

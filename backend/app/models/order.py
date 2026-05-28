@@ -83,6 +83,7 @@ class Vendor(Base):
     phone = Column(String(50), nullable=True)
     country = Column(String(100), nullable=True)
     address = Column(Text, nullable=True)
+    assigned_manager_id = Column(GUID(), ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -90,6 +91,7 @@ class Vendor(Base):
     orders = relationship("Order", back_populates="vendor")
     floors = relationship("VendorFloor", back_populates="vendor")
     departments = relationship("VendorDepartment", back_populates="vendor")
+    assigned_manager = relationship("User", foreign_keys=[assigned_manager_id])
 
 class SampleClass(Base):
     __tablename__ = "sample_classes"
@@ -100,6 +102,7 @@ class SampleClass(Base):
     vendor_id = Column(GUID(), ForeignKey("vendors.id"), nullable=True)
     status = Column(String(50), default="active")
     remarks = Column(Text, nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     vendor = relationship("Vendor", back_populates="sample_classes")
@@ -113,6 +116,7 @@ class BulkClass(Base):
     customer = Column(String(100), nullable=True)
     status = Column(String(50), default="active")
     remarks = Column(Text, nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     orders = relationship("Order", back_populates="bulk_class")

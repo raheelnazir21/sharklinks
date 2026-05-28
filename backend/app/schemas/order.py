@@ -17,6 +17,7 @@ class VendorCreate(BaseModel):
     phone: Optional[str] = None
     country: Optional[str] = None
     address: Optional[str] = None
+    assigned_manager_id: Optional[str] = None
 
 
 class VendorUpdate(BaseModel):
@@ -26,6 +27,7 @@ class VendorUpdate(BaseModel):
     phone: Optional[str] = None
     country: Optional[str] = None
     address: Optional[str] = None
+    assigned_manager_id: Optional[str] = None
     is_active: Optional[bool] = None
 
 

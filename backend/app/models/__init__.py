@@ -6,6 +6,7 @@ Add every new model file here as the project grows.
 # Step 1 — Auth & Users
 from app.models.user import User, Role, RefreshToken, RoleEnum  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.password_reset_request import PasswordResetRequest, ResetRequestStatus  # noqa: F401
 
 # Step 2 — Vendors, Orders, Production
 from app.models.order import (  # noqa: F401

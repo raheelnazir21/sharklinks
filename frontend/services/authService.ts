@@ -16,8 +16,7 @@ export interface SignupPayload {
 }
 
 export interface ForgotPasswordResponse {
-  reset_token: string | null;
-  reset_url: string | null;
+  message: string;
 }
 
 export interface AuthUser {
@@ -48,10 +47,10 @@ export const authService = {
     return data.data;
   },
 
-  /** Request a reset link. Local dev returns the link directly. */
+  /** Submit a password reset request to the admin queue. */
   forgotPassword: async (email: string): Promise<ForgotPasswordResponse> => {
     const { data } = await api.post("/auth/forgot-password", { email });
-    return data.data;
+    return { message: data.message };
   },
 
   /** Complete password reset with the token from the reset link */

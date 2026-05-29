@@ -52,25 +52,14 @@ const ACTIONS = [
 
 const ENTITY_TYPES = ["", "User", "Vendor", "Order", "Stage", "QCReport"];
 
+import { formatLocalDateTime, formatRelativeTime } from "@/services/dateUtils";
+
 function formatDate(value?: string) {
-  if (!value) return "--";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatLocalDateTime(value);
 }
 
 function relativeTime(value?: string) {
-  if (!value) return "just now";
-  const diff = Date.now() - new Date(value).getTime();
-  const minutes = Math.max(1, Math.floor(diff / 60000));
-  if (minutes < 60) return `${minutes} minutes ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hours ago`;
-  return `${Math.floor(hours / 24)} days ago`;
+  return formatRelativeTime(value);
 }
 
 function actionTone(action: string): "success" | "warning" | "danger" | "info" | "neutral" {

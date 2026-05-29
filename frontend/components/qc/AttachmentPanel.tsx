@@ -2,6 +2,7 @@
 import React, { useRef, useState } from "react";
 import { Paperclip, Upload, X, Download, FileText, Image, File } from "lucide-react";
 import api from "@/services/api";
+import { formatLocalDateTime } from "@/services/dateUtils";
 
 interface Attachment {
   id: string;
@@ -144,7 +145,7 @@ export default function AttachmentPanel({
               <div className="flex-1 min-w-0">
                 <p className="text-white text-xs font-bold truncate">{att.file_name}</p>
                 <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest">
-                  {formatBytes(att.file_size)} · {new Date(att.uploaded_at).toLocaleDateString()}
+                  {formatBytes(att.file_size)} · {formatLocalDateTime(att.uploaded_at)}
                 </p>
               </div>
               <button

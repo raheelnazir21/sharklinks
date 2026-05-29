@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import Modal from "@/components/ui/Modal";
+import { formatLocalDateTime } from "@/services/dateUtils";
 
 type HistoryEvent = {
   id: string;
@@ -59,7 +60,7 @@ export default function OrderHistoryModal({
                     <p className="mt-1 text-xs font-semibold text-slate-500">{event.details || "No extra details recorded."}</p>
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    {event.created_at ? new Date(event.created_at).toLocaleString() : "No time"}
+                    {event.created_at ? formatLocalDateTime(event.created_at) : "No time"}
                   </p>
                 </div>
                 <p className="mt-3 text-[11px] font-black uppercase tracking-widest text-slate-500">By {event.user || "System"}</p>

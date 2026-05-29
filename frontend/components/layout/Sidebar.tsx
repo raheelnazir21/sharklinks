@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types/auth";
 import api from "@/services/api";
+import { formatRelativeTime } from "@/services/dateUtils";
 
 interface NavItem {
   label: string;
@@ -149,13 +150,7 @@ interface HistorianEvent {
 }
 
 function formatRelative(value?: string) {
-  if (!value) return "just now";
-  const diff = Date.now() - new Date(value).getTime();
-  const minutes = Math.max(1, Math.floor(diff / 60000));
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hours ago`;
-  return `${Math.floor(hours / 24)} days ago`;
+  return formatRelativeTime(value);
 }
 
 function eventTone(action: string) {

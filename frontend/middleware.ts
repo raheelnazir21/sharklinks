@@ -16,6 +16,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow static files, images, and next internal files to bypass authorization redirect
+  if (
+    pathname.includes(".") || 
+    pathname.startsWith("/_next") || 
+    pathname.startsWith("/api")
+  ) {
+    return NextResponse.next();
+  }
+
   // Check for access token in request (set as cookie by login page)
   const token = request.cookies.get("access_token")?.value;
 

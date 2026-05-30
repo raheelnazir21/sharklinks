@@ -718,7 +718,7 @@ def upload_attachment(
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Only PDF and image files are allowed.")
 
-    ext = file.filename.split(".")[-1]
+    ext = file.filename.split(".")[-1].lower()
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 

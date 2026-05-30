@@ -722,7 +722,7 @@ async def upload_attachment(
     if not any(mime.startswith(p) for p in ALLOWED_MIME_PREFIXES):
         raise HTTPException(400, f"File type '{mime}' is not allowed.")
 
-    ext      = os.path.splitext(file.filename or "file")[1]
+    ext      = os.path.splitext(file.filename or "file")[1].lower()
     filename = f"{uuid.uuid4()}{ext}"
     filepath = os.path.join(QC_ATTACHMENTS_DIR, filename)
 

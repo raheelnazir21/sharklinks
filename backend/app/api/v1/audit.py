@@ -83,7 +83,7 @@ def upload_photo(
     if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
         raise HTTPException(400, "Only JPEG/PNG/WEBP images are allowed.")
 
-    ext = file.filename.split(".")[-1]
+    ext = file.filename.split(".")[-1].lower()
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
     with open(filepath, "wb") as f:
@@ -111,7 +111,7 @@ def upload_document(
     if file.content_type not in ALLOWED_DOC_TYPES:
         raise HTTPException(400, "File type not allowed.")
 
-    ext = file.filename.split(".")[-1]
+    ext = file.filename.split(".")[-1].lower()
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
     with open(filepath, "wb") as f:

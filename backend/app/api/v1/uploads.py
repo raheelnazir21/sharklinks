@@ -17,7 +17,7 @@ async def upload_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be an image.")
     
     # Generate unique filename
-    ext = os.path.splitext(file.filename)[1]
+    ext = os.path.splitext(file.filename)[1].lower()
     filename = f"{uuid.uuid4()}{ext}"
     file_path = os.path.join(UPLOAD_DIR, filename)
     

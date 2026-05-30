@@ -41,6 +41,19 @@ import {
   Users,
 } from "lucide-react";
 
+function SafeResponsiveContainer({ children, ...props }: React.ComponentProps<typeof ResponsiveContainer>) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="h-full w-full" />;
+  }
+
+  return <ResponsiveContainer {...props}>{children}</ResponsiveContainer>;
+}
+
 type Stats = {
   overall_pass_rate: number;
   total_inspections: number;
@@ -413,7 +426,7 @@ function FourWeekProductionTrend({
       </div>
 
       <div className="h-[360px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <SafeResponsiveContainer width="100%" height="100%">
           <LineChart
             data={trendData}
             margin={{ top: 10, right: 20, bottom: 10, left: 0 }}
@@ -450,7 +463,7 @@ function FourWeekProductionTrend({
             {showFpy && <Line yAxisId="right" type="monotone" dataKey="fpy" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 3 }} name="FPY (%)" />}
             {showDelay && <Line yAxisId="left" type="monotone" dataKey="delayed" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} name="Delayed Orders" />}
           </LineChart>
-        </ResponsiveContainer>
+        </SafeResponsiveContainer>
       </div>
 
       <div className="mt-4 grid grid-cols-2 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50 md:grid-cols-4">
@@ -1063,14 +1076,14 @@ export default function DashboardPage() {
           {splitData.length ? (
             <div className="grid grid-cols-[160px_1fr] items-center gap-4">
               <div className="h-[190px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <SafeResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={splitData} dataKey="value" innerRadius={46} outerRadius={72} paddingAngle={4}>
                       {splitData.map((_, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                     </Pie>
                     <Tooltip />
                   </PieChart>
-                </ResponsiveContainer>
+                </SafeResponsiveContainer>
               </div>
               <div className="space-y-2">
                 {splitData.map((item, index) => (
@@ -1094,7 +1107,7 @@ export default function DashboardPage() {
         <ChartCard title="Stage Load: Where Products Are Sitting" icon={<Layers className="h-4 w-4 text-emerald-600" />}>
           {stageLoad.length ? (
             <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <SafeResponsiveContainer width="100%" height="100%">
                 <BarChart data={stageLoad}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="stage" fontSize={10} tickLine={false} axisLine={false} />
@@ -1104,7 +1117,7 @@ export default function DashboardPage() {
                   <Bar dataKey="sample" stackId="a" fill="#059669" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="delayed" fill="#dc2626" radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </SafeResponsiveContainer>
             </div>
           ) : (
             <EmptyState label="No stage load data yet" />
@@ -1114,7 +1127,7 @@ export default function DashboardPage() {
         <ChartCard title="Vendor Performance: Healthy vs Delayed" icon={<Users className="h-4 w-4 text-emerald-600" />}>
           {vendorPerformance.length ? (
             <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <SafeResponsiveContainer width="100%" height="100%">
                 <BarChart data={vendorPerformance} layout="vertical" margin={{ left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -1123,7 +1136,7 @@ export default function DashboardPage() {
                   <Bar dataKey="healthy" stackId="a" fill="#059669" radius={[0, 4, 4, 0]} />
                   <Bar dataKey="delayed" stackId="a" fill="#dc2626" radius={[0, 4, 4, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </SafeResponsiveContainer>
             </div>
           ) : (
             <EmptyState label="No vendor performance data yet" />
@@ -1135,7 +1148,7 @@ export default function DashboardPage() {
         <ChartCard title="Top 5 Defects" icon={<AlertTriangle className="h-4 w-4 text-red-600" />}>
           {defectChart.length ? (
             <div className="h-[270px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <SafeResponsiveContainer width="100%" height="100%">
                 <BarChart data={defectChart} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -1143,7 +1156,7 @@ export default function DashboardPage() {
                   <Tooltip />
                   <Bar dataKey="count" fill="#0f766e" radius={[0, 6, 6, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </SafeResponsiveContainer>
             </div>
           ) : (
             <EmptyState label="No defect data yet" />
@@ -1152,7 +1165,7 @@ export default function DashboardPage() {
 
         <ChartCard title="DHU / FPY Trend" icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}>
           <div className="h-[270px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <SafeResponsiveContainer width="100%" height="100%">
               <AreaChart data={flowTrend}>
                 <defs>
                   <linearGradient id="dhu" x1="0" y1="0" x2="0" y2="1">
@@ -1167,18 +1180,18 @@ export default function DashboardPage() {
                 <Area type="monotone" dataKey="dhu" stroke="#f59e0b" fill="url(#dhu)" strokeWidth={2} />
                 <Line type="monotone" dataKey="fpy" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
               </AreaChart>
-            </ResponsiveContainer>
+            </SafeResponsiveContainer>
           </div>
         </ChartCard>
 
         <ChartCard title="AQL / Pass Gauge" icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}>
           <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <SafeResponsiveContainer width="100%" height="100%">
               <RadialBarChart innerRadius="65%" outerRadius="100%" data={[{ name: "Pass", value: aqlPass }]} startAngle={180} endAngle={0}>
                 <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                 <RadialBar dataKey="value" fill={aqlPass >= 90 ? "#059669" : aqlPass >= 75 ? "#f59e0b" : "#dc2626"} background cornerRadius={12} />
               </RadialBarChart>
-            </ResponsiveContainer>
+            </SafeResponsiveContainer>
           </div>
           <div className="-mt-12 text-center">
             <p className="text-4xl font-black text-slate-950">{aqlPass}%</p>

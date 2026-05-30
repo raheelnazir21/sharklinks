@@ -2,9 +2,9 @@
 Textile Production & QC Analysis System — Backend Entry Point.
 Initializes FastAPI, includes routers, and configures middlewares.
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import time
 import os
@@ -71,6 +71,27 @@ UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 os.makedirs("uploads/audit", exist_ok=True)
+
+@app.get("/api/uploads/{filename:path}", tags=["Uploads"])
+def serve_uploaded_file(filename: str):
+    # 1. Exact match (try to find the file exactly as requested)
+    exact_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(exact_path) and os.path.isfile(exact_path):
+        return FileResponse(exact_path)
+        
+    # 2. Case-insensitive lookup (Linux/AWS server casing fallback)
+    dir_name = os.path.dirname(exact_path)
+    base_name = os.path.basename(exact_path)
+    
+    if os.path.exists(dir_name):
+        for f in os.listdir(dir_name):
+            if f.lower() == base_name.lower():
+                matched_path = os.path.join(dir_name, f)
+                if os.path.isfile(matched_path):
+                    return FileResponse(matched_path)
+                    
+    # 3. Fallback to 404
+    raise HTTPException(status_code=404, detail="File not found")
 
 app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 

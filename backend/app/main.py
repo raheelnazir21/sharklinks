@@ -93,7 +93,7 @@ def serve_uploaded_file(filename: str):
     # 3. Fallback to 404
     raise HTTPException(status_code=404, detail="File not found")
 
-app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Include all API routes
 app.include_router(api_router)

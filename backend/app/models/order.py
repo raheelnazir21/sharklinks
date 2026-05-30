@@ -167,6 +167,7 @@ class Order(Base):
     sample_class = relationship("SampleClass", back_populates="orders")
     bulk_class = relationship("BulkClass", back_populates="orders")
     stages = relationship("ProductionStage", back_populates="order", order_by="ProductionStage.stage_order")
+    stage_chunks = relationship("ProductionStageChunk", back_populates="order", cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="order")
     assignments = relationship("OrderProductionAssignment", back_populates="order")
     history = relationship("OrderHistory", back_populates="order")
@@ -179,10 +180,25 @@ class Order(Base):
         delta = date.today() - self.ex_factory_date
         return max(0, delta.days)
 
+class ProductionStageChunk(Base):
+    __tablename__ = "production_stage_chunks"
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    target_days = Column(Integer, nullable=False, default=1)
+    
+    start_date = Column(DateTime, nullable=True)
+    target_date = Column(DateTime, nullable=True)
+    completion_date = Column(DateTime, nullable=True)
+    
+    order = relationship("Order", back_populates="stage_chunks")
+    stages = relationship("ProductionStage", back_populates="chunk", order_by="ProductionStage.stage_order")
+
 class ProductionStage(Base):
     __tablename__ = "production_stages"
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False)
+    chunk_id = Column(GUID(), ForeignKey("production_stage_chunks.id"), nullable=True)
     module_type = Column(Enum(TrackType), nullable=False)
     stage_name = Column(Enum(StageName), nullable=False)
     stage_order = Column(Integer, nullable=False)
@@ -201,6 +217,7 @@ class ProductionStage(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     order = relationship("Order", back_populates="stages")
+    chunk = relationship("ProductionStageChunk", back_populates="stages")
     responsible_person = relationship("User", foreign_keys=[responsible_person_id])
     updater = relationship("User", foreign_keys=[updated_by])
 

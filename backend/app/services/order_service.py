@@ -87,7 +87,7 @@ class OrderService:
 
     @staticmethod
     def create_order(db: Session, payload: OrderCreate, user_id: str) -> Order:
-        data = payload.model_dump(exclude={"stages", "assignments", "sample_department_id"})
+        data = payload.model_dump(exclude={"stages", "assignments", "sample_department_id", "stage_chunks"})
         vendor = db.query(Vendor).filter(cast(Vendor.id, String).in_(_id_variants(str(data["vendor_id"])))).first()
         if not vendor or not vendor.is_active:
             raise HTTPException(status_code=400, detail="Selected vendor is not active or does not exist.")
@@ -97,40 +97,81 @@ class OrderService:
         
         # ─── 1. Initialize Sequential Stages ─────────────────────────────────────
         from datetime import timedelta, datetime as dt
-        from app.models.order import StageName
+        from app.models.order import StageName, ProductionStageChunk
         
         # Determine starting date for SLA calculation (Date Sent or Today)
         base_date = order.order_placement_date or date.today()
         current_target_dt = dt.combine(base_date, dt.min.time())
         track = order.track_type.value
 
+        # Pre-create chunks if specified
+        chunks_dict = {}
+        if payload.stage_chunks:
+            for c_in in payload.stage_chunks:
+                chunk = ProductionStageChunk(
+                    order_id=order.id,
+                    name=c_in.name,
+                    target_days=c_in.target_days
+                )
+                db.add(chunk)
+                db.flush()
+                for s_name in c_in.stage_names:
+                    s_name_str = s_name.value if hasattr(s_name, 'value') else str(s_name)
+                    chunks_dict[s_name_str] = chunk
+
         if payload.stages is not None:
             # Use manually assigned stages and days
             for s_in in payload.stages:
-                if s_in.target_days:
-                    current_target_dt += timedelta(days=s_in.target_days)
+                s_name_str = s_in.stage_name.value if hasattr(s_in.stage_name, 'value') else str(s_in.stage_name)
+                stage_chunk = chunks_dict.get(s_name_str)
                 
+                if stage_chunk:
+                    if not stage_chunk.start_date:
+                        stage_chunk.start_date = current_target_dt
+                        stage_chunk.target_date = current_target_dt + timedelta(days=stage_chunk.target_days)
+                    stage_target_dt = stage_chunk.target_date
+                    current_target_dt = stage_chunk.target_date
+                else:
+                    target_days = s_in.target_days or 0
+                    current_target_dt += timedelta(days=target_days)
+                    stage_target_dt = current_target_dt
+
                 StageRepository.create(db, {
                     "order_id": order.id,
+                    "chunk_id": stage_chunk.id if stage_chunk else None,
                     "module_type": order.track_type,
                     "stage_name": s_in.stage_name,
                     "stage_order": s_in.stage_order,
                     "status": StageStatus.pending,
                     "is_required": s_in.is_required,
-                    "target_date": current_target_dt
+                    "target_date": stage_target_dt
                 })
         else:
             # Use default track stages
             stages_to_create = StageService._default_stage_names(track)
 
             for idx, s_name in stages_to_create:
+                s_name_str = s_name.value if hasattr(s_name, 'value') else str(s_name)
+                stage_chunk = chunks_dict.get(s_name_str)
+                
+                if stage_chunk:
+                    if not stage_chunk.start_date:
+                        stage_chunk.start_date = current_target_dt
+                        stage_chunk.target_date = current_target_dt + timedelta(days=stage_chunk.target_days)
+                    stage_target_dt = stage_chunk.target_date
+                    current_target_dt = stage_chunk.target_date
+                else:
+                    stage_target_dt = None
+
                 StageRepository.create(db, {
                     "order_id": order.id,
+                    "chunk_id": stage_chunk.id if stage_chunk else None,
                     "module_type": order.track_type,
                     "stage_name": s_name,
                     "stage_order": idx,
                     "status": StageStatus.pending,
-                    "is_required": True
+                    "is_required": True,
+                    "target_date": stage_target_dt
                 })
 
 

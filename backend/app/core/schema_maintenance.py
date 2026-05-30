@@ -133,6 +133,27 @@ def ensure_runtime_schema(engine: Engine) -> None:
             }
             if "created_by" not in bulk_class_cols:
                 conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN created_by CHAR(36)"))
+            
+            # --- Chunks schema updates for SQLite ---
+            # Check if production_stage_chunks exists
+            table_check = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='production_stage_chunks'")).scalar()
+            if not table_check:
+                conn.execute(text("""
+                    CREATE TABLE production_stage_chunks (
+                        id CHAR(36) NOT NULL PRIMARY KEY,
+                        order_id CHAR(36) NOT NULL,
+                        name VARCHAR(200) NOT NULL,
+                        target_days INTEGER NOT NULL DEFAULT 1,
+                        start_date DATETIME,
+                        target_date DATETIME,
+                        completion_date DATETIME
+                    )
+                """))
+            # Check if chunk_id exists in production_stages
+            ps_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(production_stages)")).fetchall()}
+            if "chunk_id" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN chunk_id CHAR(36)"))
+
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
@@ -148,6 +169,21 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS assigned_manager_id UUID"))
             conn.execute(text("ALTER TABLE sample_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
             conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
+            
+            # --- Chunks schema updates for Postgres ---
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS production_stage_chunks (
+                    id UUID NOT NULL PRIMARY KEY,
+                    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                    name VARCHAR(200) NOT NULL,
+                    target_days INTEGER NOT NULL DEFAULT 1,
+                    start_date TIMESTAMP,
+                    target_date TIMESTAMP,
+                    completion_date TIMESTAMP
+                )
+            """))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS chunk_id UUID REFERENCES production_stage_chunks(id) ON DELETE SET NULL"))
+
             for old_name, new_name in legacy_stage_names.items():
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = CAST(:new_name AS stagename) WHERE stage_name::text = :old_name"),

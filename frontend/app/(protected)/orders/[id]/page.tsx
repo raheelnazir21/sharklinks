@@ -177,6 +177,34 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       ? [{ url: order.reference_image, requirement: "", filename: order.reference_image.split("/").pop() }]
       : [];
 
+  // Group consecutive stages by chunk
+  const groupedTimeline: any[] = [];
+  let currentChunk: any = null;
+
+  stages.forEach((s, idx) => {
+    if (s.chunk_id) {
+      if (currentChunk && currentChunk.id === s.chunk_id) {
+        currentChunk.stages.push({ s, idx });
+      } else {
+        currentChunk = {
+          type: "chunk",
+          id: s.chunk_id,
+          name: s.chunk_name,
+          target_days: s.chunk_target_days,
+          stages: [{ s, idx }]
+        };
+        groupedTimeline.push(currentChunk);
+      }
+    } else {
+      currentChunk = null;
+      groupedTimeline.push({
+        type: "standalone",
+        s,
+        idx
+      });
+    }
+  });
+
   return (
     <div className="space-y-8 pb-20 animate-in fade-in duration-700">
       {/* Header */}
@@ -243,48 +271,113 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8 flex items-center gap-3 opacity-60">
               <Timer className="w-4 h-4" /> Production Timeline
             </h3>
-            <div className="space-y-3">
-              {stages.map((s, idx) => {
-                const isCompleted = s.status === "completed";
-                const isCurrent = s.status === "in_progress";
-                const isSelected = selectedStageId === s.id;
-                const isLocked = !isSelectable(idx);
+            <div className="space-y-4">
+              {groupedTimeline.map((item, groupIdx) => {
+                if (item.type === "standalone") {
+                  const s = item.s;
+                  const idx = item.idx;
+                  const isCompleted = s.status === "completed";
+                  const isCurrent = s.status === "in_progress";
+                  const isSelected = selectedStageId === s.id;
+                  const isLocked = !isSelectable(idx);
 
-                // SLA Logic
-                const today = new Date();
-                const targetDate = s.target_date ? new Date(s.target_date) : null;
-                const compDate = s.completion_date ? new Date(s.completion_date) : null;
-                const isDelayed = !isCompleted && targetDate && today > targetDate;
-                const isOverdue = isCompleted && targetDate && compDate && compDate > targetDate;
+                  // SLA Logic
+                  const today = new Date();
+                  const targetDate = s.target_date ? new Date(s.target_date) : null;
+                  const compDate = s.completion_date ? new Date(s.completion_date) : null;
+                  const isDelayed = !isCompleted && targetDate && today > targetDate;
+                  const isOverdue = isCompleted && targetDate && compDate && compDate > targetDate;
 
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => !isLocked && setSelectedStageId(s.id)}
-                    disabled={isLocked}
-                    style={isSelected ? { backgroundColor: themeHex, borderColor: themeHex, color: "#ffffff" } : undefined}
-                    className={`w-full min-w-0 group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isSelected ? "text-white shadow-xl scale-[1.02] z-10" :
-                        isLocked ? "bg-slate-950/20 border-slate-900 text-slate-800 opacity-40 cursor-not-allowed" :
-                          isDelayed ? "bg-red-500/10 border-red-500/30 text-red-500 hover:border-red-500/50" :
-                            isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" :
-                              "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"
-                      }`}
-                  >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black shadow-inner ${isSelected ? "bg-white/20" : isLocked ? "bg-slate-950" : isDelayed ? "bg-red-500/20" : isCompleted ? "bg-emerald-500/20" : "bg-slate-950"
-                      }`}>
-                      {isLocked ? <Lock className="w-3.5 h-3.5" /> : idx + 1}
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => !isLocked && setSelectedStageId(s.id)}
+                      disabled={isLocked}
+                      style={isSelected ? { backgroundColor: themeHex, borderColor: themeHex, color: "#ffffff" } : undefined}
+                      className={`w-full min-w-0 group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${isSelected ? "text-white shadow-xl scale-[1.02] z-10" :
+                          isLocked ? "bg-slate-950/20 border-slate-900 text-slate-800 opacity-40 cursor-not-allowed" :
+                            isDelayed ? "bg-red-500/10 border-red-500/30 text-red-500 hover:border-red-500/50" :
+                              isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" :
+                                "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"
+                        }`}
+                    >
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black shadow-inner ${isSelected ? "bg-white/20" : isLocked ? "bg-slate-950" : isDelayed ? "bg-red-500/20" : isCompleted ? "bg-emerald-500/20" : "bg-slate-950"
+                        }`}>
+                        {isLocked ? <Lock className="w-3.5 h-3.5" /> : idx + 1}
+                      </div>
+                      <div className="min-w-0 text-left flex-1">
+                        <p className="break-words text-[10px] font-black uppercase tracking-widest leading-5">{stageLabel(s.stage_name)}</p>
+                        <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">
+                          {isCompleted ? `Comp: ${compDate?.toLocaleDateString()}` : `Tgt: ${targetDate?.toLocaleDateString() || "---"}`}
+                        </p>
+                      </div>
+                      {isCompleted && !isOverdue && <CheckCircle className="w-4 h-4" />}
+                      {isDelayed && <AlertCircle className="w-4 h-4 animate-pulse" />}
+                      {isCurrent && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  );
+                } else {
+                  // Render a chunk block
+                  const chunkCompleted = item.stages.every((p: any) => p.s.status === "completed");
+                  const chunkCurrent = item.stages.some((p: any) => p.s.status === "in_progress");
+                  const firstStage = item.stages[0].s;
+                  const chunkTargetDate = firstStage.target_date ? new Date(firstStage.target_date) : null;
+                  
+                  return (
+                    <div key={item.id} className="bg-slate-950/40 border border-slate-850 rounded-[2rem] p-4 space-y-3 relative overflow-hidden">
+                      <div className="flex items-center justify-between mb-1 px-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2.5 w-2.5 rounded-full ${chunkCompleted ? 'bg-emerald-500' : chunkCurrent ? 'bg-indigo-500 animate-pulse' : 'bg-slate-700'}`}></span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 truncate max-w-[130px]">{item.name}</span>
+                        </div>
+                        <span className="text-[8px] font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                          {item.target_days}D Chunk
+                        </span>
+                      </div>
+                      <div className="space-y-2 pl-2 border-l border-slate-800">
+                        {item.stages.map(({ s, idx }: any) => {
+                          const isCompleted = s.status === "completed";
+                          const isCurrent = s.status === "in_progress";
+                          const isSelected = selectedStageId === s.id;
+                          const isLocked = !isSelectable(idx);
+
+                          // SLA Logic
+                          const today = new Date();
+                          const targetDate = s.target_date ? new Date(s.target_date) : null;
+                          const compDate = s.completion_date ? new Date(s.completion_date) : null;
+                          const isDelayed = !isCompleted && targetDate && today > targetDate;
+                          const isOverdue = isCompleted && targetDate && compDate && compDate > targetDate;
+
+                          return (
+                            <button
+                              key={s.id}
+                              onClick={() => !isLocked && setSelectedStageId(s.id)}
+                              disabled={isLocked}
+                              style={isSelected ? { backgroundColor: themeHex, borderColor: themeHex, color: "#ffffff" } : undefined}
+                              className={`w-full min-w-0 group relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${isSelected ? "text-white shadow-xl scale-[1.01] z-10" :
+                                  isLocked ? "bg-slate-950/20 border-slate-900 text-slate-800 opacity-40 cursor-not-allowed" :
+                                    isDelayed ? "bg-red-500/10 border-red-500/30 text-red-500 hover:border-red-500/50" :
+                                      isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" :
+                                        "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"
+                                }`}
+                            >
+                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[8px] font-black shadow-inner ${isSelected ? "bg-white/20" : isLocked ? "bg-slate-950" : isDelayed ? "bg-red-500/20" : isCompleted ? "bg-emerald-500/20" : "bg-slate-950"
+                                }`}>
+                                {isLocked ? <Lock className="w-2.5 h-2.5" /> : idx + 1}
+                              </div>
+                              <div className="min-w-0 text-left flex-1">
+                                <p className="break-words text-[9px] font-black uppercase tracking-widest leading-4">{stageLabel(s.stage_name)}</p>
+                              </div>
+                              {isCompleted && !isOverdue && <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
+                              {isDelayed && <AlertCircle className="w-3.5 h-3.5 text-red-500 animate-pulse" />}
+                              {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="min-w-0 text-left flex-1">
-                      <p className="break-words text-[10px] font-black uppercase tracking-widest leading-5">{stageLabel(s.stage_name)}</p>
-                      <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">
-                        {isCompleted ? `Comp: ${compDate?.toLocaleDateString()}` : `Tgt: ${targetDate?.toLocaleDateString() || "---"}`}
-                      </p>
-                    </div>
-                    {isCompleted && !isOverdue && <CheckCircle className="w-4 h-4" />}
-                    {isDelayed && <AlertCircle className="w-4 h-4 animate-pulse" />}
-                    {isCurrent && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-                  </button>
-                );
+                  );
+                }
               })}
             </div>
           </div>
@@ -309,31 +402,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Stage Detail Panel */}
         <div className="lg:col-span-3 space-y-8">
-          {referenceAttachments.length > 0 && (
-            <div className="bg-slate-900/40 border border-slate-800 rounded-[3rem] p-8 shadow-2xl">
-              <h3 className="mb-6 flex items-center gap-3 text-white font-black text-sm uppercase tracking-widest italic">
-                <Paperclip className="h-5 w-5 text-indigo-500" /> Reference Pictures & Requirements
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {referenceAttachments.map((attachment: any, index: number) => (
-                  <div key={`${attachment.url}-${index}`} className="overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-950">
-                    <a href={attachment.url} target="_blank" rel="noreferrer" className="block bg-slate-900">
-                      <img src={attachment.url} alt={attachment.requirement || `Reference ${index + 1}`} className="h-48 w-full object-cover" />
-                    </a>
-                    <div className="p-5">
-                      <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-600">
-                        {attachment.filename || attachment.url.split("/").pop() || `Picture ${index + 1}`}
-                      </p>
-                      <p className="mt-3 text-xs font-bold leading-6 text-slate-300">
-                        {attachment.requirement || "No requirement added for this picture."}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {currentStage && (
             <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-[3rem] p-10 shadow-2xl relative overflow-hidden">
               <div className={`absolute top-0 right-0 w-96 h-96 bg-${themeColor}-500/5 blur-[120px] -mr-48 -mt-48 rounded-full`}></div>
@@ -497,6 +565,31 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <p className="text-white/80 text-xs font-bold leading-relaxed italic">"{currentStage.remarks}"</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {referenceAttachments.length > 0 && (
+            <div className="bg-slate-900/40 border border-slate-800 rounded-[3rem] p-8 shadow-2xl">
+              <h3 className="mb-6 flex items-center gap-3 text-white font-black text-sm uppercase tracking-widest italic">
+                <Paperclip className="h-5 w-5 text-indigo-500" /> Reference Pictures & Requirements
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {referenceAttachments.map((attachment: any, index: number) => (
+                  <div key={`${attachment.url}-${index}`} className="overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-950">
+                    <a href={attachment.url} target="_blank" rel="noreferrer" className="block bg-slate-950 text-center">
+                      <img src={attachment.url} alt={attachment.requirement || `Reference ${index + 1}`} className="w-full h-auto max-h-[500px] object-contain mx-auto" />
+                    </a>
+                    <div className="p-5">
+                      <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-600">
+                        {attachment.filename || attachment.url.split("/").pop() || `Picture ${index + 1}`}
+                      </p>
+                      <p className="mt-3 text-xs font-bold leading-6 text-slate-300">
+                        {attachment.requirement || "No requirement added for this picture."}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

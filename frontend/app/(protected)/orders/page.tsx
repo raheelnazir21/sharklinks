@@ -96,14 +96,15 @@ function createBlankBulkItem(): BulkItem {
 function buildStagePayload(
   stages: Array<{ name: string; label: string }>,
   stageDays: Record<string, number>,
-  moduleType: "sampling" | "bulk"
+  moduleType: "sampling" | "bulk",
+  chunkedStageNames: string[] = []
 ) {
   return stages
-    .filter((stage) => Number(stageDays[stage.name]) > 0)
+    .filter((stage) => Number(stageDays[stage.name]) > 0 || chunkedStageNames.includes(stage.name))
     .map((stage, index) => ({
       stage_name: stage.name,
       stage_order: index + 1,
-      target_days: Number(stageDays[stage.name]),
+      target_days: chunkedStageNames.includes(stage.name) ? 0 : Number(stageDays[stage.name]),
       module_type: moduleType,
       is_required: true,
     }));
@@ -150,6 +151,19 @@ function OrdersContent() {
   const [stageDays, setStageDays] = useState<Record<string, number>>(
     (isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES).reduce((acc, s) => ({ ...acc, [s.name]: 0 }), {})
   );
+
+  // Stage Chunking State
+  interface ChunkType {
+    id: string;
+    name: string;
+    target_days: number;
+    stage_names: string[];
+  }
+  const [chunks, setChunks] = useState<ChunkType[]>([]);
+  const [selectedMergeStages, setSelectedMergeStages] = useState<string[]>([]);
+  const [mergingName, setMergingName] = useState("");
+  const [mergingDays, setMergingDays] = useState<number>(0);
+  const [isMergePanelOpen, setIsMergePanelOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     order_no: "",
@@ -346,8 +360,15 @@ function OrdersContent() {
         return;
       }
 
+      const chunkedStageNames = chunks.flatMap(c => c.stage_names);
+      const stageChunksPayload = chunks.map(c => ({
+        name: c.name,
+        target_days: c.target_days,
+        stage_names: c.stage_names,
+      }));
+
       if (!isSampling) {
-        const selectedStages = buildStagePayload(DEFAULT_BULK_STAGES, stageDays, "bulk");
+        const selectedStages = buildStagePayload(DEFAULT_BULK_STAGES, stageDays, "bulk", chunkedStageNames);
         if (!selectedStages.length) {
           setFeedback({ type: "error", title: "Operation Failed", message: "Add predicted days for at least one bulk stage." });
           return;
@@ -370,7 +391,8 @@ function OrdersContent() {
                 floor_id: assignment.floor_id,
                 line_ids: assignment.line_ids,
               })),
-            stages: selectedStages
+            stages: selectedStages,
+            stage_chunks: stageChunksPayload,
           }))
         };
         await api.post("/orders/bulk", payload);
@@ -378,7 +400,7 @@ function OrdersContent() {
         fetchData();
         setFeedback({ type: "success", title: "Mission Successful", message: "Bulk orders created successfully." });
       } else {
-        const selectedStages = buildStagePayload(DEFAULT_SAMPLE_STAGES, stageDays, "sampling");
+        const selectedStages = buildStagePayload(DEFAULT_SAMPLE_STAGES, stageDays, "sampling", chunkedStageNames);
         if (!selectedStages.length) {
           setFeedback({ type: "error", title: "Operation Failed", message: "Add predicted days for at least one sample stage." });
           return;
@@ -387,7 +409,8 @@ function OrdersContent() {
         const res = await api.post("/orders/", {
           ...sanitizedData,
           quantity: parseInt(formData.quantity) || 0,
-          stages: selectedStages
+          stages: selectedStages,
+          stage_chunks: stageChunksPayload,
         });
         setIsModalOpen(false);
         setFeedback({ type: "success", title: "Mission Successful", message: "Sample order created successfully." });
@@ -396,6 +419,7 @@ function OrdersContent() {
       }
       
       setBulkItems([createBlankBulkItem()]);
+      setChunks([]);
       setStageDays((isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES).reduce((acc, s) => ({ ...acc, [s.name]: 0 }), {}));
     } catch (err: any) {
       console.error("Failed to create order entry", err);
@@ -411,6 +435,8 @@ function OrdersContent() {
   };
 
   const openEditOrder = (order: any) => {
+    setChunks([]);
+    setSelectedMergeStages([]);
     setEditingOrder(order);
     setFormData({
       order_no: order.order_no || "",
@@ -437,6 +463,8 @@ function OrdersContent() {
   };
 
   const openCreateOrder = () => {
+    setChunks([]);
+    setSelectedMergeStages([]);
     setEditingOrder(null);
     setFormData({
       order_no: "",
@@ -716,25 +744,22 @@ function OrdersContent() {
 
               <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-8">
                 <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
-                  <Plus className="w-4 h-4 text-blue-500" /> Predicted Stage Days
+                  <Plus className="w-4 h-4 text-blue-500" /> Predicted Stage Days (SLA Grouping Enabled)
                 </h4>
                 <p className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Blank stages are skipped for this order.
+                  Select multiple stages to merge them under a combined SLA chunk, or assign days individually.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {DEFAULT_SAMPLE_STAGES.map((s, idx) => (
-                    <div key={s.name} className="flex items-center justify-between bg-slate-950 border border-slate-900 rounded-2xl px-6 py-4">
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{idx + 1}. {s.label}</span>
-                      <input 
-                        type="number" min="0"
-                        placeholder="Skip"
-                        className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-blue-400 text-center"
-                        value={stageDays[s.name] || ""}
-                        onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
-                      />
-                    </div>
-                  ))}
-                </div>
+                <StageMergingComponent
+                  defaultStages={DEFAULT_SAMPLE_STAGES}
+                  stageDays={stageDays}
+                  setStageDays={setStageDays}
+                  chunks={chunks}
+                  setChunks={setChunks}
+                  selectedMergeStages={selectedMergeStages}
+                  setSelectedMergeStages={setSelectedMergeStages}
+                  themeHex="#3b82f6"
+                  themeColor="blue"
+                />
               </div>
             </div>
           )}
@@ -815,25 +840,22 @@ function OrdersContent() {
 
               <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-8">
                 <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
-                  <Plus className="w-4 h-4 text-emerald-500" /> Predicted Stage Days
+                  <Plus className="w-4 h-4 text-emerald-500" /> Predicted Stage Days (SLA Grouping Enabled)
                 </h4>
                 <p className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Blank stages are skipped for this order.
+                  Select multiple stages to merge them under a combined SLA chunk, or assign days individually.
                 </p>
-                <div className="space-y-4">
-                  {DEFAULT_BULK_STAGES.map((s, idx) => (
-                    <div key={s.name} className="flex items-center justify-between bg-slate-950 border border-slate-900 rounded-2xl px-6 py-4">
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{idx + 1}. {s.label}</span>
-                      <input 
-                        type="number" min="0"
-                        placeholder="Skip"
-                        className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-emerald-400 text-center"
-                        value={stageDays[s.name] || ""}
-                        onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
-                      />
-                    </div>
-                  ))}
-                </div>
+                <StageMergingComponent
+                  defaultStages={DEFAULT_BULK_STAGES}
+                  stageDays={stageDays}
+                  setStageDays={setStageDays}
+                  chunks={chunks}
+                  setChunks={setChunks}
+                  selectedMergeStages={selectedMergeStages}
+                  setSelectedMergeStages={setSelectedMergeStages}
+                  themeHex="#10b981"
+                  themeColor="emerald"
+                />
               </div>
             </div>
           )}
@@ -866,6 +888,247 @@ function OrdersContent() {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
       `}</style>
+    </div>
+  );
+}
+
+function StageMergingComponent({
+  defaultStages,
+  stageDays,
+  setStageDays,
+  chunks,
+  setChunks,
+  selectedMergeStages,
+  setSelectedMergeStages,
+  themeHex,
+  themeColor
+}: any) {
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [chunkDaysInput, setChunkDaysInput] = useState<number>(3);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // helper to check if a stage is chunked
+  const isChunked = (stageName: string) => chunks.some((c: any) => c.stage_names.includes(stageName));
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const handleToggleSelect = (stageName: string) => {
+    if (selectedMergeStages.includes(stageName)) {
+      setSelectedMergeStages(selectedMergeStages.filter((n: string) => n !== stageName));
+    } else {
+      setSelectedMergeStages([...selectedMergeStages, stageName]);
+    }
+  };
+
+  const getAutoChunkName = () => {
+    const selectedStagesSorted = defaultStages
+      .filter((s: any) => selectedMergeStages.includes(s.name));
+    if (selectedStagesSorted.length === 0) return "Merged Phase";
+    if (selectedStagesSorted.length === 1) return selectedStagesSorted[0].label;
+    return `${selectedStagesSorted[0].label} to ${selectedStagesSorted[selectedStagesSorted.length - 1].label}`;
+  };
+
+  const handleMergeClick = () => {
+    if (selectedMergeStages.length < 2) return;
+    setChunkDaysInput(3);
+    setShowMergeModal(true);
+  };
+
+  const handleUnmerge = (chunkId: string) => {
+    setChunks(chunks.filter((c: any) => c.id !== chunkId));
+    setToastMessage("Chunk dissolved!");
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Active Chunks List */}
+      {chunks.length > 0 && (
+        <div className="space-y-4">
+          <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 italic">Merged Chunks</h5>
+          {chunks.map((chunk: any) => (
+            <div key={chunk.id} className="bg-slate-950 border border-indigo-500/20 rounded-[2rem] p-6 shadow-lg relative overflow-hidden">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
+                  <div className="min-w-0">
+                    <h4 className="text-white text-xs font-black uppercase tracking-wider truncate" title={chunk.name}>
+                      {chunk.name}
+                    </h4>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mt-0.5">{chunk.stage_names.length} Stages Merged</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleUnmerge(chunk.id)}
+                  className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-widest text-red-400 hover:bg-red-500/20 transition-all active:scale-95 shrink-0"
+                >
+                  Unmerge
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl px-6 py-4 mb-4">
+                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Total Chunk SLA Days</span>
+                <input 
+                  type="number" min="1"
+                  required
+                  className="w-16 bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] font-black text-indigo-400 text-center focus:outline-none"
+                  value={chunk.target_days}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 1;
+                    setChunks(chunks.map((c: any) => c.id === chunk.id ? { ...c, target_days: val } : c));
+                  }}
+                />
+              </div>
+
+              <div className="pl-4 border-l border-indigo-500/10 space-y-2">
+                {chunk.stage_names.map((sName: string) => {
+                  const s = defaultStages.find((st: any) => st.name === sName);
+                  return s ? (
+                    <div key={sName} className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-700"></span>
+                      {s.label}
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Standalone / Merging Selector list */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 italic">Individual & Available Stages</h5>
+          {selectedMergeStages.length >= 2 && (
+            <button
+              type="button"
+              onClick={handleMergeClick}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-full px-4 py-2 text-[9px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-2"
+            >
+              Merge Selected ({selectedMergeStages.length})
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {defaultStages.map((s: any, idx: number) => {
+            const chunked = isChunked(s.name);
+            if (chunked) return null; // skip chunked stages from standalone list
+            const isSelected = selectedMergeStages.includes(s.name);
+
+            return (
+              <div 
+                key={s.name} 
+                className={`flex items-center justify-between bg-slate-950 border transition-all duration-300 rounded-2xl px-6 py-4 ${
+                  isSelected ? "border-indigo-500 bg-slate-950 shadow-indigo-500/5 shadow-2xl" : "border-slate-900 hover:border-slate-800"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleToggleSelect(s.name)}
+                    className="h-4 w-4 accent-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                    {idx + 1}. {s.label}
+                  </span>
+                </div>
+                
+                <input 
+                  type="number" min="0"
+                  placeholder="Skip"
+                  disabled={isSelected}
+                  className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-center disabled:opacity-40"
+                  style={{ color: themeHex }}
+                  value={stageDays[s.name] || ""}
+                  onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* SLA Duration Custom Merge Dialog */}
+      {showMergeModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in zoom-in duration-300">
+            <div className="text-center space-y-2">
+              <h3 className="text-white font-black text-lg uppercase tracking-wider">Set SLA Days</h3>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-normal max-h-12 overflow-y-auto">
+                Grouping: {getAutoChunkName()}
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="block text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">
+                Total Target Days
+              </label>
+              <input 
+                type="number" min="1"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 text-lg font-black text-center text-indigo-400 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                value={chunkDaysInput}
+                onChange={(e) => setChunkDaysInput(parseInt(e.target.value) || 1)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowMergeModal(false)}
+                className="rounded-full border border-slate-800 bg-slate-950 px-5 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-900 hover:text-white transition-all active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const chunkName = getAutoChunkName();
+                  const newChunk = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: chunkName,
+                    target_days: chunkDaysInput,
+                    stage_names: [...selectedMergeStages]
+                  };
+                  setChunks([...chunks, newChunk]);
+                  
+                  // Clear individual predicted days for these merged stages
+                  const updatedDays = { ...stageDays };
+                  selectedMergeStages.forEach((name: string) => {
+                    updatedDays[name] = 0;
+                  });
+                  setStageDays(updatedDays);
+                  
+                  setSelectedMergeStages([]);
+                  setShowMergeModal(false);
+                  setToastMessage("Stages merged successfully!");
+                }}
+                className="rounded-full text-white px-5 py-3 text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl hover:opacity-90"
+                style={{ backgroundColor: themeHex }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-disappearing toast notification */}
+      {toastMessage && (
+        <div className="fixed bottom-10 right-10 z-[10000] bg-slate-900 border border-emerald-500/20 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom duration-300">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span className="text-xs font-black uppercase tracking-widest text-emerald-400">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

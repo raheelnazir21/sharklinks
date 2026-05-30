@@ -561,6 +561,9 @@ def get_stages(
             "attachment_url": s.attachment_url,
             "responsible_person": s.responsible_person.full_name if s.responsible_person else None,
             "updated_by": s.updater.full_name if s.updater else None,
+            "chunk_id": str(s.chunk_id) if s.chunk_id else None,
+            "chunk_name": s.chunk.name if s.chunk else None,
+            "chunk_target_days": s.chunk.target_days if s.chunk else None,
         }
         for s in stages
     ])

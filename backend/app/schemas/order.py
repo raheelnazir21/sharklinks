@@ -129,6 +129,11 @@ class ReferenceAttachment(BaseModel):
     requirement: Optional[str] = None
     filename: Optional[str] = None
 
+class StageChunkCreate(BaseModel):
+    name: str
+    target_days: int
+    stage_names: List[StageName]
+
 class OrderCreate(BaseModel):
     vendor_id: str
     order_no: Optional[str] = None
@@ -151,6 +156,7 @@ class OrderCreate(BaseModel):
     bulk_class_id: Optional[str] = None
     sample_department_id: Optional[str] = None
     stages: Optional[List['StageCreate']] = None
+    stage_chunks: Optional[List[StageChunkCreate]] = None
     assignments: Optional[List[ProductionAssignmentCreate]] = None
 
 class BulkOrderCreate(BaseModel):
@@ -177,6 +183,7 @@ class OrderUpdate(BaseModel):
     requirements: Optional[str] = None
     reference_image: Optional[str] = None
     reference_attachments: Optional[List[ReferenceAttachment]] = None
+    stage_chunks: Optional[List[StageChunkCreate]] = None
 
 
 class OrderOut(BaseModel):
@@ -254,6 +261,20 @@ class StageOut(BaseModel):
     remarks: Optional[str]
     attachment_url: Optional[str]
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class StageChunkOut(BaseModel):
+    id: str
+    order_id: str
+    name: str
+    target_days: int
+    start_date: Optional[datetime] = None
+    target_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = None
+    stage_names: List[str]
 
     class Config:
         from_attributes = True

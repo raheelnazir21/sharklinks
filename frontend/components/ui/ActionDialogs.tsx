@@ -83,16 +83,31 @@ export function FeedbackDialog({
   type = "success",
   onClose,
 }: FeedbackDialogProps) {
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   React.useEffect(() => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open || type !== "success") return;
+
+    const timer = setTimeout(() => {
+      onCloseRef.current();
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [open, type]);
 
   if (!open) return null;
   const isSuccess = type === "success";

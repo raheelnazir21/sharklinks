@@ -171,6 +171,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
         </div>
         <Link
           href="/activity-logs"
+          prefetch={false}
           className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-emerald-700 transition hover:border-emerald-200 hover:bg-emerald-50"
         >
           Open
@@ -181,7 +182,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
         {historian.length === 0 ? (
           <p className="rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">No activity recorded yet.</p>
         ) : historian.map((event) => (
-          <Link key={event.id} href="/activity-logs" className="group flex gap-3">
+          <Link key={event.id} href="/activity-logs" prefetch={false} className="group flex gap-3">
             <div className="flex flex-col items-center">
               <span className={`flex h-8 w-8 items-center justify-center rounded-full ${eventTone(event.action)}`}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -290,6 +291,7 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
                     title={collapsed ? item.label : undefined}
                     className={`group relative flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${
                       isActive

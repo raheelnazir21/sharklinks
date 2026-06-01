@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types/auth";
@@ -250,19 +251,42 @@ export default function Sidebar() {
     <aside className={`flex min-h-screen shrink-0 flex-col border-r border-slate-200 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur transition-all duration-300 ${collapsed ? "w-20" : "w-72"}`}>
       {/* Brand */}
       <div className={`flex items-center gap-3 border-b border-slate-200 px-4 py-5 ${collapsed ? "justify-center" : ""}`}>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 shadow-sm">
-          <svg className="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
-        </div>
-        {!collapsed && <div className="min-w-0">
-          <p className="text-sm font-black leading-tight text-slate-950">Textile QC</p>
-          <p className="text-xs font-medium text-slate-500">Production System</p>
-        </div>}
+        {collapsed ? (
+          <Image
+            src="/cc_logo_icon.png"
+            alt="CC Logo Icon"
+            width={44}
+            height={44}
+            className="h-11 w-11 object-contain"
+            priority
+          />
+        ) : (
+          <div className="flex items-center gap-3 w-full">
+            <Image
+              src="/cc_logo_icon.png"
+              alt="CC Logo Icon"
+              width={52}
+              height={52}
+              className="h-[52px] w-[52px] object-contain shrink-0"
+              priority
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[17px] font-black tracking-tight text-slate-900 leading-none">
+                CC Production
+              </span>
+              <span className="text-[14px] font-extrabold text-teal-600 mt-1 leading-none tracking-tight">
+                &amp; QMS
+              </span>
+              <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider leading-none">
+                Cotton to Customer
+              </span>
+            </div>
+          </div>
+        )}
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="ml-auto rounded-xl border border-slate-200 px-2 py-1 text-xs font-black text-slate-500 transition hover:bg-slate-50"
+            className="ml-auto rounded-xl border border-slate-200 px-2 py-1 text-xs font-black text-slate-500 transition hover:bg-slate-50 shrink-0"
             title="Collapse sidebar"
           >
             ‹

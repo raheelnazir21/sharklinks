@@ -32,6 +32,7 @@ function getNextHourSlot(slots: string[]) {
 export default function NewInlineQCReport() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [hourSlots, setHourSlots] = useState(DEFAULT_HOUR_SLOTS);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   
@@ -72,6 +73,19 @@ export default function NewInlineQCReport() {
   // Load Vendors
   useEffect(() => {
     api.get("/vendors/").then(res => setVendors(res.data.data));
+  }, []);
+
+  useEffect(() => {
+    const reportId = new URLSearchParams(window.location.search).get("edit");
+    if (!reportId) return;
+    api.get(`/advanced-qc/inline/${reportId}`).then((res) => {
+      const data = res.data.data;
+      const slots = data.operations?.[0]?.defect_rows?.[0]?.hourly_data?.map((item: any) => item.hour);
+      setEditId(reportId);
+      setHeader((prev) => ({ ...prev, ...data }));
+      setOperations(data.operations || []);
+      if (slots?.length) setHourSlots(slots);
+    }).catch(() => alert("Failed to load Inline QC report."));
   }, []);
 
   // Load Floors when Vendor changes
@@ -254,18 +268,22 @@ export default function NewInlineQCReport() {
         vendor_id: header.vendor_id || null,
         floor_id: header.floor_id || null,
         line_id: header.line_id || null,
-        operations: operations.map(op => ({
+        operations: operations.map((op, index) => ({
+            op_order: index + 1,
             operation_name: op.operation_name,
             operator_name: op.operator_name,
             defect_rows: op.defect_rows.map((row: any) => ({
               defect_name: row.defect_name,
+              defect_id: row.defect_id,
               severity: row.severity,
               hourly_data: row.hourly_data
             }))
           }))
         };
-        const res = await api.post("/advanced-qc/inline/", payload);
-        const reportId = res.data?.data?.id;
+        const res = editId
+          ? await api.put(`/advanced-qc/inline/${editId}`, payload)
+          : await api.post("/advanced-qc/inline/", payload);
+        const reportId = editId || res.data?.data?.id;
         if (reportId && pendingFiles.length > 0) {
           for (const file of pendingFiles) {
             const fd = new FormData();
@@ -316,7 +334,7 @@ export default function NewInlineQCReport() {
           meta="Production Quality"
           onSave={handleSave}
           saving={saving}
-          saveLabel="Submit Report"
+          saveLabel={editId ? "Update Report" : "Submit Report"}
           savingLabel="Processing..."
         />
 
@@ -724,6 +742,7 @@ export default function NewInlineQCReport() {
         </ReportCanvas>
 
         <AttachmentPanel
+          reportId={editId || undefined}
           pendingFiles={pendingFiles}
           onPendingChange={setPendingFiles}
         />
@@ -743,7 +762,7 @@ export default function NewInlineQCReport() {
               <>Processing...</>
             ) : (
               <>
-                Submit Report <ChevronRight className="w-4 h-4" />
+                {editId ? "Update Report" : "Submit Report"} <ChevronRight className="w-4 h-4" />
               </>
             )}
           </button>

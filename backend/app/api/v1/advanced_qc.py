@@ -2,6 +2,7 @@
 API endpoints for Inline QC Reports, Finish QC Reports, and Endline QC Reports.
 Supports full CRUD, DHU auto-calculation, AQL computation, and traffic light validation.
 """
+import os
 import uuid
 from datetime import date
 from typing import List, Optional, Any
@@ -19,6 +20,7 @@ from app.models.inline_qc import (
     BatchAuditReport, BatchAuditReportRow,
     TrafficLightStatus, AQLResult, FinishReportType
 )
+from app.models.qc_report import QCReportAttachment
 from app.utils.response import success_response
 
 router = APIRouter(prefix="/advanced-qc", tags=["Advanced QC"])
@@ -55,6 +57,13 @@ def get_traffic_light(dhu: float) -> TrafficLightStatus:
     if dhu <= 3.0: return TrafficLightStatus.green
     if dhu <= 7.0: return TrafficLightStatus.yellow
     return TrafficLightStatus.red
+
+def _delete_report_attachments(db: Session, report_id: str) -> None:
+    attachments = db.query(QCReportAttachment).filter(QCReportAttachment.report_id == report_id).all()
+    for attachment in attachments:
+        if os.path.exists(attachment.file_path):
+            os.remove(attachment.file_path)
+        db.delete(attachment)
 
 
 # ─── PYDANTIC SCHEMAS ─────────────────────────────────────────────────────────
@@ -590,6 +599,111 @@ def create_inline_report(payload: InlineQCReportCreate, db: Session = Depends(ge
     return success_response(data=_serialize_inline_report(report), message="Inline QC report created.")
 
 
+@router.put("/inline/{report_id}", summary="Update Inline QC Report")
+def update_inline_report(report_id: str, payload: InlineQCReportCreate, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(InlineQCReport).options(
+        joinedload(InlineQCReport.operations).joinedload(InlineQCOperation.defect_rows),
+    ).filter(InlineQCReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Inline QC report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to edit this report.")
+
+    # Update header fields
+    for field in ["vendor_id","floor_id","line_id","floor","line_number","style_no","po_number",
+                  "article_code","product_color","department","section","shift","qc_name","qc_code",
+                  "inspection_level","aql_standard","table_number","remarks","prepared_by","checked_by","approved_by"]:
+        val = getattr(payload, field, None)
+        if val is not None:
+            setattr(report, field, val)
+    if payload.inspection_date:
+        report.inspection_date = payload.inspection_date
+
+    # Delete old operations & defect rows (cascade)
+    for op in report.operations:
+        db.delete(op)
+    db.flush()
+
+    total_checked = 0; total_defects = 0; total_minor = 0; total_major = 0; total_critical = 0
+
+    for op_in in payload.operations:
+        op = InlineQCOperation(
+            id=uuid.uuid4(), report_id=report.id,
+            op_order=op_in.op_order, operation_name=op_in.operation_name,
+            operator_name=op_in.operator_name,
+        )
+        db.add(op); db.flush()
+
+        op_checked = 0; op_defects = 0
+
+        for row_in in op_in.defect_rows:
+            row_checked = sum(h.checked for h in row_in.hourly_data)
+            row_defects = sum(h.defects for h in row_in.hourly_data)
+            row_dhu = (row_defects / row_checked * 100) if row_checked else 0
+
+            defect_row = InlineQCDefectRow(
+                id=uuid.uuid4(), operation_id=op.id,
+                defect_name=row_in.defect_name, defect_id=row_in.defect_id,
+                severity=row_in.severity,
+                hourly_data=[h.model_dump() for h in row_in.hourly_data],
+                total_checked=row_checked, total_defects=row_defects,
+                dhu_percent=row_dhu,
+            )
+            db.add(defect_row)
+
+            op_checked = max(op_checked, row_checked)
+            op_defects += row_defects
+
+            sev = row_in.severity.lower()
+            if sev == "minor": total_minor += row_defects
+            elif sev == "major": total_major += row_defects
+            elif sev == "critical": total_critical += row_defects
+            total_defects += row_defects
+
+        op.total_checked = op_checked
+        op.total_defects = op_defects
+        op.dhu_percent = (op_defects / op_checked * 100) if op_checked else 0
+        op.traffic_status = get_traffic_light(op.dhu_percent)
+        total_checked += op_checked
+
+    report.total_checked_pcs = total_checked
+    report.total_defects = total_defects
+    report.total_minor = total_minor
+    report.total_major = total_major
+    report.total_critical = total_critical
+    report.dhu_percent = (total_defects / total_checked * 100) if total_checked else 0
+    report.overall_reject_pct = report.dhu_percent
+    report.overall_pass_pct = max(0, 100 - report.dhu_percent)
+
+    s, ac, re, aql_res = compute_aql(total_checked, total_defects, payload.aql_standard)
+    report.aql_sample_size = s; report.aql_acceptance_qty = ac
+    report.aql_rejection_qty = re; report.aql_observed = total_defects
+    report.aql_result = aql_res
+
+    db.commit(); db.refresh(report)
+    return success_response(data=_serialize_inline_report(report), message="Inline QC report updated.")
+
+
+@router.delete("/inline/{report_id}", summary="Delete Inline QC Report")
+def delete_inline_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(InlineQCReport).filter(InlineQCReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Inline QC report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to delete this report.")
+
+    _delete_report_attachments(db, report_id)
+    db.delete(report)
+    db.commit()
+    return success_response(message="Inline QC report deleted.")
+
+
 # ─── CUT PANEL QC ENDPOINTS ──────────────────────────────────────────────────
 
 @router.get("/cut-panel/", summary="List Cut Panel Reports")
@@ -684,6 +798,76 @@ def create_cut_panel_report(payload: CutPanelReportCreate, db: Session = Depends
     db.commit()
     db.refresh(report)
     return success_response(data=_serialize_cut_panel_report(report), message="Cut panel report created.")
+
+
+@router.put("/cut-panel/{report_id}", summary="Update Cut Panel Report")
+def update_cut_panel_report(report_id: str, payload: CutPanelReportCreate, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(CutPanelReport).filter(CutPanelReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Cut panel report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to edit this report.")
+
+    for field in ["vendor_id","floor_id","line_id","style_no","po_number","article_code","product_color",
+                  "shift","qc_name","department","model_number","customer","stm","lot_number","lot_qty",
+                  "remarks","quality_inspector","quality_supervisor","production_supervisor"]:
+        val = getattr(payload, field, None)
+        if val is not None:
+            setattr(report, field, val)
+    if payload.report_date:
+        report.report_date = payload.report_date
+    report.defect_columns = payload.defect_columns
+
+    # Delete old rows and recreate
+    db.query(CutPanelReportRow).filter(CutPanelReportRow.report_id == report_id).delete()
+
+    total_checked = 0
+    total_defects = 0
+    for index, row_in in enumerate(payload.rows):
+        row_defects = sum(int(value or 0) for value in row_in.defect_counts.values())
+        row_percent = (row_defects / row_in.pcs * 100) if row_in.pcs else 0
+        row = CutPanelReportRow(
+            id=uuid.uuid4(),
+            report_id=report.id,
+            row_order=index + 1,
+            bundle_number=row_in.bundle_number,
+            size=row_in.size,
+            pcs=row_in.pcs,
+            defect_counts=row_in.defect_counts,
+            total_defects=row_defects,
+            defect_percent=row_percent,
+        )
+        db.add(row)
+        total_checked += row_in.pcs
+        total_defects += row_defects
+
+    report.total_checked = total_checked
+    report.total_defects = total_defects
+    report.defect_percent = (total_defects / total_checked * 100) if total_checked else 0
+
+    db.commit()
+    db.refresh(report)
+    return success_response(data=_serialize_cut_panel_report(report), message="Cut panel report updated.")
+
+
+@router.delete("/cut-panel/{report_id}", summary="Delete Cut Panel Report")
+def delete_cut_panel_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(CutPanelReport).filter(CutPanelReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Cut panel report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to delete this report.")
+
+    _delete_report_attachments(db, report_id)
+    db.delete(report)
+    db.commit()
+    return success_response(message="Cut panel report deleted.")
 
 
 # ─── BATCH AUDIT ENDPOINTS ───────────────────────────────────────────────────
@@ -791,6 +975,87 @@ def create_batch_audit_report(payload: BatchAuditReportCreate, db: Session = Dep
     return success_response(data=_serialize_batch_audit_report(report), message="Batch audit report created.")
 
 
+@router.put("/batch-audit/{report_id}", summary="Update Batch Audit Report")
+def update_batch_audit_report(report_id: str, payload: BatchAuditReportCreate, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(BatchAuditReport).filter(BatchAuditReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Batch audit report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to edit this report.")
+
+    for field in ["vendor_id","floor_id","line_id","unit_number","stm","style_no","customer",
+                  "product_name","product_color","auditor_number","shift","qc_name","department",
+                  "inspection_level","aql_critical","aql_major","zero_tolerance","remarks"]:
+        val = getattr(payload, field, None)
+        if val is not None:
+            setattr(report, field, val)
+    if payload.report_date:
+        report.report_date = payload.report_date
+    if payload.issue_date:
+        report.issue_date = payload.issue_date
+    report.fault_library = payload.fault_library
+    report.fault_columns = payload.fault_columns
+    report.first_pass_qty = payload.first_pass_qty
+    report.second_pass_qty = payload.second_pass_qty
+
+    # Delete old rows and recreate
+    db.query(BatchAuditReportRow).filter(BatchAuditReportRow.report_id == report_id).delete()
+
+    total_quantity = 0
+    total_sample_qty = 0
+    total_faults = 0
+    for index, row_in in enumerate(payload.rows):
+        row_faults = sum(int(value or 0) for value in row_in.fault_counts.values())
+        row = BatchAuditReportRow(
+            id=uuid.uuid4(),
+            report_id=report.id,
+            row_order=index + 1,
+            batch_number=row_in.batch_number,
+            batch_quantity=row_in.batch_quantity,
+            sample_size=row_in.sample_size,
+            fault_counts=row_in.fault_counts,
+            total_faults=row_faults,
+            aql_accept=row_in.aql_accept,
+            aql_reject=row_in.aql_reject,
+            result=row_in.result,
+            remarks=row_in.remarks,
+        )
+        db.add(row)
+        total_quantity += row_in.batch_quantity
+        total_sample_qty += row_in.sample_size
+        total_faults += row_faults
+
+    report.total_quantity = total_quantity
+    report.total_sample_qty = total_sample_qty
+    report.total_faults = total_faults
+    report.oqi_percent = (total_faults / total_sample_qty * 100) if total_sample_qty else 0
+    report.fpy_percent = (payload.first_pass_qty / total_quantity * 100) if total_quantity else 0
+
+    db.commit()
+    db.refresh(report)
+    return success_response(data=_serialize_batch_audit_report(report), message="Batch audit report updated.")
+
+
+@router.delete("/batch-audit/{report_id}", summary="Delete Batch Audit Report")
+def delete_batch_audit_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(BatchAuditReport).filter(BatchAuditReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Batch audit report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to delete this report.")
+
+    _delete_report_attachments(db, report_id)
+    db.delete(report)
+    db.commit()
+    return success_response(message="Batch audit report deleted.")
+
+
 # ─── FINISH / ENDLINE QC ENDPOINTS ───────────────────────────────────────────
 
 @router.get("/finish-endline/", summary="List Finish/Endline QC Reports")
@@ -885,9 +1150,11 @@ def update_finish_report(report_id: str, payload: FinishQCCreate, db: Session = 
         raise HTTPException(403, "You do not have permission to access this report.")
 
     # Update header
-    for field in ["style_no","po_number","article_code","product_color","shift","line","qc_name","department","inspection_level","remarks","prepared_by","checked_by", "vendor_id", "floor_id", "line_id"]:
+    for field in ["style_no","po_number","article_code","product_color","shift","line","qc_name","department","inspection_level","aql_standard","remarks","prepared_by","checked_by", "vendor_id", "floor_id", "line_id"]:
         val = getattr(payload, field, None)
         if val is not None: setattr(report, field, val)
+    if payload.report_date:
+        report.report_date = payload.report_date
     report.defect_columns = payload.defect_columns
 
     # Delete old rows and recreate
@@ -914,3 +1181,20 @@ def update_finish_report(report_id: str, payload: FinishQCCreate, db: Session = 
 
     db.commit(); db.refresh(report)
     return success_response(data=_serialize_finish_report(report), message="Report updated.")
+
+
+@router.delete("/finish-endline/{report_id}", summary="Delete Finish/Endline QC Report")
+def delete_finish_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(FinishEndlineQCReport).filter(FinishEndlineQCReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to delete this report.")
+
+    _delete_report_attachments(db, report_id)
+    db.delete(report)
+    db.commit()
+    return success_response(message="Finish/Endline QC report deleted.")

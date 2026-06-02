@@ -50,6 +50,7 @@ function FinishEndlineQCContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reportType = searchParams.get("type") || "finish";
+  const editId = searchParams.get("edit");
   const isEndline = reportType === "endline";
 
   const [saving, setSaving] = useState(false);
@@ -84,6 +85,20 @@ function FinishEndlineQCContent() {
   useEffect(() => {
     api.get("/vendors/").then(res => setVendors(res.data.data));
   }, []);
+
+  useEffect(() => {
+    if (!editId) return;
+    api.get(`/advanced-qc/finish-endline/${editId}`).then((res) => {
+      const data = res.data.data;
+      setHeader((prev) => ({ ...prev, ...data }));
+      setDefectCols(data.defect_columns || []);
+      setRows((data.hourly_rows || []).map((row: any) => ({
+        hour: row.hour_slot,
+        pcs: row.total_pcs,
+        defects: row.defect_counts || {},
+      })));
+    }).catch(() => alert("Failed to load Finish/Endline QC report."));
+  }, [editId]);
 
   // Load Floors when Vendor changes
   useEffect(() => {
@@ -168,8 +183,10 @@ function FinishEndlineQCContent() {
           defect_counts: r.defects,
         })),
       };
-      const res = await api.post("/advanced-qc/finish-endline/", payload);
-      const reportId = res.data?.data?.id;
+      const res = editId
+        ? await api.put(`/advanced-qc/finish-endline/${editId}`, payload)
+        : await api.post("/advanced-qc/finish-endline/", payload);
+      const reportId = editId || res.data?.data?.id;
       if (reportId && pendingFiles.length > 0) {
         for (const file of pendingFiles) {
           const fd = new FormData();
@@ -220,6 +237,7 @@ function FinishEndlineQCContent() {
         meta={isEndline ? "End Line Inspection" : "Finishing Quality"}
         onSave={handleSave}
         saving={saving}
+        saveLabel={editId ? "Update Report" : "Submit Report"}
       />
 
       {/* Report Card */}
@@ -454,6 +472,7 @@ function FinishEndlineQCContent() {
         </div>
 
         <AttachmentPanel
+          reportId={editId || undefined}
           pendingFiles={pendingFiles}
           onPendingChange={setPendingFiles}
         />
@@ -473,7 +492,7 @@ function FinishEndlineQCContent() {
               <>Processing...</>
             ) : (
               <>
-                Submit Report <ChevronRight className="w-4 h-4" />
+                {editId ? "Update Report" : "Submit Report"} <ChevronRight className="w-4 h-4" />
               </>
             )}
           </button>

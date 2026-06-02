@@ -188,11 +188,11 @@ export default function LoginPage() {
             <div className="flex flex-col items-center mb-8">
               <div className="mb-8 flex justify-center w-full px-2">
                 <Image
-                  src="/cc_logo.png"
+                  src="/cc_logo_icon.png"
                   alt="CC Production & QMS"
-                  width={400}
-                  height={100}
-                  className="w-[90%] max-w-[360px] h-auto object-contain mix-blend-multiply"
+                  width={120}
+                  height={120}
+                  className="w-[96px] h-[96px] object-contain mix-blend-multiply"
                   priority
                 />
               </div>

@@ -104,6 +104,7 @@ function dhuTone(dhu: number) {
 export default function NewCutPanelReportPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const newDefectIndex = useRef(0);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -136,6 +137,18 @@ export default function NewCutPanelReportPage() {
 
   useEffect(() => {
     api.get("/vendors/").then((res) => setVendors(res.data.data || []));
+  }, []);
+
+  useEffect(() => {
+    const reportId = new URLSearchParams(window.location.search).get("edit");
+    if (!reportId) return;
+    api.get(`/advanced-qc/cut-panel/${reportId}`).then((res) => {
+      const data = res.data.data;
+      setEditId(reportId);
+      setHeader((prev) => ({ ...prev, ...data }));
+      setDefects(data.defect_columns || []);
+      setRows(data.rows || []);
+    }).catch(() => alert("Failed to load Cut Panel report."));
   }, []);
 
   useEffect(() => {
@@ -226,7 +239,7 @@ export default function NewCutPanelReportPage() {
 
     setSaving(true);
     try {
-      const res = await api.post("/advanced-qc/cut-panel/", {
+      const payload = {
         ...header,
         lot_qty: Number(header.lot_qty) || 0,
         defect_columns: defects,
@@ -235,8 +248,11 @@ export default function NewCutPanelReportPage() {
           pcs: Number(row.pcs) || 0,
           defect_counts: row.defect_counts,
         })),
-      });
-      const reportId = res.data?.data?.id;
+      };
+      const res = editId
+        ? await api.put(`/advanced-qc/cut-panel/${editId}`, payload)
+        : await api.post("/advanced-qc/cut-panel/", payload);
+      const reportId = editId || res.data?.data?.id;
       if (reportId && pendingFiles.length > 0) {
         for (const file of pendingFiles) {
           const fd = new FormData();
@@ -287,6 +303,7 @@ export default function NewCutPanelReportPage() {
         meta="Production Quality"
         onSave={handleSave}
         saving={saving}
+        saveLabel={editId ? "Update Report" : "Submit Report"}
       />
 
       <ReportCanvas title="Lot Wise Cut Part Inspection Report">
@@ -535,6 +552,7 @@ export default function NewCutPanelReportPage() {
         </div>
 
         <AttachmentPanel
+          reportId={editId || undefined}
           pendingFiles={pendingFiles}
           onPendingChange={setPendingFiles}
         />
@@ -554,7 +572,7 @@ export default function NewCutPanelReportPage() {
               <>Processing...</>
             ) : (
               <>
-                Submit Report <ChevronRight className="w-4 h-4" />
+                {editId ? "Update Report" : "Submit Report"} <ChevronRight className="w-4 h-4" />
               </>
             )}
           </button>

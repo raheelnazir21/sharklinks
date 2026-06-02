@@ -5,17 +5,54 @@ import api from "@/services/api";
 import { 
   ChevronLeft, Printer, Download, Share2, 
   Building2, Calendar, User, Clock, CheckCircle2,
-  AlertTriangle, FileText, BarChart, Layers, GitBranch, ShieldCheck
+  AlertTriangle, FileText, BarChart, Layers, GitBranch, ShieldCheck,
+  Pencil, Trash2, X
 } from 'lucide-react';
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
+function getEditRoute(reportType: string, reportId: string): string {
+  switch (reportType) {
+    case "inline":
+      return `/qc-reports/inline/new?edit=${reportId}`;
+    case "finish":
+    case "endline":
+      return `/qc-reports/finish-endline/new?type=${reportType}&edit=${reportId}`;
+    case "cut_panel":
+      return `/qc-reports/cut-panel/new?edit=${reportId}`;
+    case "batch_audit":
+      return `/qc-reports/batch-audit/new?edit=${reportId}`;
+    default:
+      return `/qc-reports`;
+  }
+}
+
+function getDeleteEndpoint(reportType: string, reportId: string): string {
+  switch (reportType) {
+    case "inline":
+      return `/advanced-qc/inline/${reportId}`;
+    case "finish":
+    case "endline":
+      return `/advanced-qc/finish-endline/${reportId}`;
+    case "cut_panel":
+      return `/advanced-qc/cut-panel/${reportId}`;
+    case "batch_audit":
+      return `/advanced-qc/batch-audit/${reportId}`;
+    default:
+      return "";
+  }
+}
+
 export default function QCReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -31,6 +68,25 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
     fetchDetail();
   }, [id]);
 
+  const handleDelete = async () => {
+    if (!report) return;
+    const reportType = report.header?.report_type;
+    const endpoint = getDeleteEndpoint(reportType, id);
+    if (!endpoint) return;
+
+    setDeleting(true);
+    try {
+      await api.delete(endpoint);
+      router.push("/qc-reports");
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || "Failed to delete report.";
+      alert(msg);
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   if (loading) return (
     <div className="min-h-[400px] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
@@ -40,6 +96,9 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
   if (!report) return <div className="text-white">Report not found.</div>;
 
   const { header, items } = report;
+  const reportType = header?.report_type;
+  const editRoute = getEditRoute(reportType, id);
+  const deleteEndpoint = getDeleteEndpoint(reportType, id);
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-20">
@@ -49,6 +108,19 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
           <ChevronLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
         <div className="flex gap-3">
+          {deleteEndpoint && (
+            <>
+              <Link href={editRoute} className="px-6 py-3 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-amber-500/30 flex items-center gap-2">
+                <Pencil className="w-4 h-4" /> Edit Report
+              </Link>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="px-6 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/30 flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+            </>
+          )}
           <button onClick={() => window.print()} className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-700 flex items-center gap-2">
             <Printer className="w-4 h-4" /> Print Report
           </button>
@@ -57,6 +129,48 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-[2.5rem] p-10 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-400" />
+                </div>
+                <h3 className="text-white font-black text-sm uppercase tracking-widest">Delete Report</h3>
+              </div>
+              <button onClick={() => setShowDeleteModal(false)} className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-500 hover:text-white transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-slate-400 text-xs font-bold leading-relaxed mb-8">
+              Are you sure you want to permanently delete this <span className="text-white uppercase">{reportType?.replace('_', ' ')}</span> report?
+              This action cannot be undone and all associated data (defect logs, hourly entries, attachments) will be removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-6 py-3.5 bg-red-600 hover:bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <><Trash2 className="w-3.5 h-3.5" /> Delete Permanently</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Report Document */}
       <div className="bg-slate-800/30 border border-slate-700/50 rounded-[4rem] overflow-hidden shadow-2xl printable-area">

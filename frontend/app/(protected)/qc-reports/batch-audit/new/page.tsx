@@ -153,6 +153,7 @@ function qualityTone(dhu: number) {
 export default function BatchAuditReportPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const newFaultIndex = useRef(0);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -188,6 +189,19 @@ export default function BatchAuditReportPage() {
 
   useEffect(() => {
     api.get("/vendors/").then((res) => setVendors(res.data.data || []));
+  }, []);
+
+  useEffect(() => {
+    const reportId = new URLSearchParams(window.location.search).get("edit");
+    if (!reportId) return;
+    api.get(`/advanced-qc/batch-audit/${reportId}`).then((res) => {
+      const data = res.data.data;
+      setEditId(reportId);
+      setHeader((prev) => ({ ...prev, ...data, issue_date: data.issue_date || "" }));
+      setFaultLibrary(data.fault_library || []);
+      setFaultColumns(data.fault_columns || []);
+      setRows(data.rows || []);
+    }).catch(() => alert("Failed to load Batch Audit report."));
   }, []);
 
   useEffect(() => {
@@ -259,7 +273,7 @@ export default function BatchAuditReportPage() {
     }
     setSaving(true);
     try {
-      const res = await api.post("/advanced-qc/batch-audit/", {
+      const payload = {
         ...header,
         issue_date: header.issue_date || null,
         first_pass_qty: Number(header.first_pass_qty) || 0,
@@ -273,8 +287,11 @@ export default function BatchAuditReportPage() {
           aql_accept: Number(row.aql_accept) || 0,
           aql_reject: Number(row.aql_reject) || 0,
         })),
-      });
-      const reportId = res.data?.data?.id;
+      };
+      const res = editId
+        ? await api.put(`/advanced-qc/batch-audit/${editId}`, payload)
+        : await api.post("/advanced-qc/batch-audit/", payload);
+      const reportId = editId || res.data?.data?.id;
       if (reportId && pendingFiles.length > 0) {
         for (const file of pendingFiles) {
           const fd = new FormData();
@@ -325,6 +342,7 @@ export default function BatchAuditReportPage() {
         meta="Quality Audit"
         onSave={handleSave}
         saving={saving}
+        saveLabel={editId ? "Update Report" : "Submit Report"}
       />
 
         <div className="bg-white text-gray-950 rounded-2xl border border-slate-200 p-4 shadow-xl print:hidden">
@@ -557,6 +575,7 @@ export default function BatchAuditReportPage() {
         </div>
 
         <AttachmentPanel
+          reportId={editId || undefined}
           pendingFiles={pendingFiles}
           onPendingChange={setPendingFiles}
         />
@@ -576,7 +595,7 @@ export default function BatchAuditReportPage() {
               <>Processing...</>
             ) : (
               <>
-                Submit Report <ChevronRight className="w-4 h-4" />
+                {editId ? "Update Report" : "Submit Report"} <ChevronRight className="w-4 h-4" />
               </>
             )}
           </button>

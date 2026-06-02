@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Paperclip, Upload, X, Download, FileText, Image, File } from "lucide-react";
 import api from "@/services/api";
 import { formatLocalDateTime } from "@/services/dateUtils";
@@ -33,14 +33,22 @@ function fileIcon(mime?: string) {
 }
 
 const ALLOWED_EXT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.txt";
+const EMPTY_ATTACHMENTS: Attachment[] = [];
 
 export default function AttachmentPanel({
-  reportId, initialAttachments = [], pendingFiles, onPendingChange
+  reportId, initialAttachments = EMPTY_ATTACHMENTS, pendingFiles, onPendingChange
 }: AttachmentPanelProps) {
   const [attachments, setAttachments] = useState<Attachment[]>(initialAttachments);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!reportId) return;
+    api.get(`/qc-reports/${reportId}`)
+      .then(res => setAttachments(res.data.data?.attachments || []))
+      .catch(() => setAttachments(initialAttachments));
+  }, [reportId, initialAttachments]);
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files) return;

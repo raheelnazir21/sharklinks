@@ -17,6 +17,7 @@ class QCReportRepository:
         status: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
+        user_id: Optional[str] = None,
     ) -> List[QCReport]:
         q = db.query(QCReport)
         if vendor_id:
@@ -25,6 +26,8 @@ class QCReportRepository:
             q = q.filter(QCReport.report_type == report_type)
         if status:
             q = q.filter(QCReport.status == status)
+        if user_id:
+            q = q.filter((QCReport.created_by == user_id) | (QCReport.auditor_id == user_id))
         return q.order_by(QCReport.created_at.desc()).offset(skip).limit(limit).all()
 
     @staticmethod
@@ -80,12 +83,15 @@ class QCReportRepository:
         report_type: Optional[str] = None,
         skip: int = 0,
         limit: int = 50,
+        user_id: Optional[str] = None,
     ):
         q = db.query(QCReportItem).join(QCReport)
         if vendor_id:
             q = q.filter(QCReport.vendor_id == vendor_id)
         if report_type:
             q = q.filter(QCReport.report_type == report_type)
+        if user_id:
+            q = q.filter((QCReport.created_by == user_id) | (QCReport.auditor_id == user_id))
             
         total = q.count()
         # Ensure we load defect_entries for the frontend

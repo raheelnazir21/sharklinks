@@ -3,8 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
-import { Building2, Layers, Plus, Trash2 } from "lucide-react";
+import { Building2, Layers, Plus, Trash2, ChevronRight } from "lucide-react";
 import { ReportCanvas, ReportToolbar, ReportWorkspace } from "@/components/qc/ReportUI";
+import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
 type DefectColumn = { id: string; name: string; section: "cutting" | "printing" | "knitting" };
 type CutRow = { bundle_number: string; size: string; pcs: number; defect_counts: Record<string, number> };
@@ -103,6 +104,7 @@ function dhuTone(dhu: number) {
 export default function NewCutPanelReportPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const newDefectIndex = useRef(0);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [floors, setFloors] = useState<VendorFloor[]>([]);
@@ -224,7 +226,7 @@ export default function NewCutPanelReportPage() {
 
     setSaving(true);
     try {
-      await api.post("/advanced-qc/cut-panel/", {
+      const res = await api.post("/advanced-qc/cut-panel/", {
         ...header,
         lot_qty: Number(header.lot_qty) || 0,
         defect_columns: defects,
@@ -234,13 +236,44 @@ export default function NewCutPanelReportPage() {
           defect_counts: row.defect_counts,
         })),
       });
+      const reportId = res.data?.data?.id;
+      if (reportId && pendingFiles.length > 0) {
+        for (const file of pendingFiles) {
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            await api.post(`/qc-reports/${reportId}/attachments`, fd, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          } catch { /* non-fatal */ }
+        }
+      }
       router.push("/qc-reports");
-    } catch (err: unknown) {
-      const message = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string; detail?: string } } }).response?.data?.message
-          || (err as { response?: { data?: { message?: string; detail?: string } } }).response?.data?.detail
-        : null;
-      alert(message || "Failed to save cut panel report.");
+    } catch (err: any) {
+      let errorMsg = "Failed to save cut panel report.";
+      const detail = err?.response?.data?.detail;
+      const message = err?.response?.data?.message;
+      if (message) {
+        errorMsg = typeof message === 'string' ? message : JSON.stringify(message);
+      } else if (detail) {
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          try {
+            errorMsg = detail.map((d: any) => {
+              const field = d.loc ? d.loc[d.loc.length - 1] : "field";
+              return `${field}: ${d.msg}`;
+            }).join("\n");
+          } catch {
+            errorMsg = JSON.stringify(detail);
+          }
+        } else {
+          errorMsg = JSON.stringify(detail);
+        }
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      alert(`Failed: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
@@ -261,7 +294,7 @@ export default function NewCutPanelReportPage() {
           <div className="border border-gray-300">
             <div className="grid grid-cols-2 border-b border-gray-300">
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[110px] flex items-center gap-2"><Building2 size={12}/> Vendor</span>
+                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[110px] flex items-center gap-2"><Building2 size={12}/> Vendor <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600">:</span>
                 <select className="flex-1 px-1 py-2 text-xs font-black outline-none bg-transparent" value={header.vendor_id} onChange={(e) => {
                   setFloors([]);
@@ -272,7 +305,7 @@ export default function NewCutPanelReportPage() {
                 </select>
               </div>
               <div className="flex">
-                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[110px] flex items-center gap-2"><Layers size={12}/> Floor</span>
+                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[110px] flex items-center gap-2"><Layers size={12}/> Floor <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600">:</span>
                 <select className="flex-1 px-1 py-2 text-xs font-black outline-none bg-transparent" value={header.floor_id} onChange={(e) => setHeader((p) => ({ ...p, floor_id: e.target.value, line_id: "" }))}>
                   <option value="">Select Floor</option>
@@ -289,7 +322,7 @@ export default function NewCutPanelReportPage() {
                 ["Line", "line_id", ""],
               ].map(([label, key, placeholder]) => (
                 <div key={key} className="flex border-r border-gray-300 last:border-r-0">
-                  <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[92px]">{label}</span>
+                  <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[92px]">{label} <span className="text-rose-500">*</span></span>
                   <span className="px-2 py-2 text-xs font-semibold text-gray-600">:</span>
                   {key === "line_id" ? (
                     <select className="flex-1 px-1 py-2 text-xs font-black outline-none bg-transparent" value={header.line_id} onChange={(e) => setHeader((p) => ({ ...p, line_id: e.target.value }))}>
@@ -311,7 +344,7 @@ export default function NewCutPanelReportPage() {
                 ["Shift", "shift", "Day Shift"],
               ].map(([label, key, placeholder]) => (
                 <div key={key} className="flex border-r border-gray-300 last:border-r-0">
-                  <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[92px]">{label}</span>
+                  <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[92px]">{label} <span className="text-rose-500">*</span></span>
                   <span className="px-2 py-2 text-xs font-semibold text-gray-600">:</span>
                   <input className="flex-1 min-w-0 px-1 py-2 text-xs font-black outline-none" placeholder={placeholder} value={header[key as HeaderKey]} onChange={(e) => setHeader((p) => ({ ...p, [key as HeaderKey]: e.target.value }))} />
                 </div>
@@ -499,6 +532,32 @@ export default function NewCutPanelReportPage() {
               })}
             </div>
           </div>
+        </div>
+
+        <AttachmentPanel
+          pendingFiles={pendingFiles}
+          onPendingChange={setPendingFiles}
+        />
+
+        {/* Independent Submit Button */}
+        <div className="flex justify-end mt-10">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-12 py-5 rounded-full text-xs font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 ${
+              saving 
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.3)] hover:shadow-[0_0_60px_rgba(79,70,229,0.5)] hover:-translate-y-1"
+            }`}
+          >
+            {saving ? (
+              <>Processing...</>
+            ) : (
+              <>
+                Submit Report <ChevronRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </div>
     </ReportWorkspace>
   );

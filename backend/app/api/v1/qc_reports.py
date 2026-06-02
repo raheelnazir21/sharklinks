@@ -152,9 +152,13 @@ def list_reports(
     report_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    current_user: User = Depends(QCAccess),
 ):
-    reports = QCReportRepository.get_all(db, vendor_id=vendor_id, report_type=report_type, status=status)
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+    user_id_filter = None if is_admin else current_user.id
+
+    reports = QCReportRepository.get_all(db, vendor_id=vendor_id, report_type=report_type, status=status, user_id=user_id_filter)
     data = [
         {
             "id": str(r.id),
@@ -175,6 +179,8 @@ def list_reports(
         inline_q = db.query(InlineQCReport)
         if vendor_id:
             inline_q = inline_q.filter(InlineQCReport.vendor_id == vendor_id)
+        if not is_admin:
+            inline_q = inline_q.filter(InlineQCReport.created_by == current_user.id)
         for r in inline_q.order_by(InlineQCReport.created_at.desc()).all():
             data.append({
                 "id": str(r.id),
@@ -195,6 +201,8 @@ def list_reports(
             finish_q = finish_q.filter(FinishEndlineQCReport.vendor_id == vendor_id)
         if report_type in ("finish", "endline"):
             finish_q = finish_q.filter(FinishEndlineQCReport.report_type == report_type)
+        if not is_admin:
+            finish_q = finish_q.filter(FinishEndlineQCReport.created_by == current_user.id)
         for r in finish_q.order_by(FinishEndlineQCReport.created_at.desc()).all():
             rtype = r.report_type.value if hasattr(r.report_type, "value") else r.report_type
             data.append({
@@ -214,6 +222,8 @@ def list_reports(
         cut_q = db.query(CutPanelReport)
         if vendor_id:
             cut_q = cut_q.filter(CutPanelReport.vendor_id == vendor_id)
+        if not is_admin:
+            cut_q = cut_q.filter(CutPanelReport.created_by == current_user.id)
         for r in cut_q.order_by(CutPanelReport.created_at.desc()).all():
             data.append({
                 "id": str(r.id),
@@ -232,6 +242,8 @@ def list_reports(
         batch_q = db.query(BatchAuditReport)
         if vendor_id:
             batch_q = batch_q.filter(BatchAuditReport.vendor_id == vendor_id)
+        if not is_admin:
+            batch_q = batch_q.filter(BatchAuditReport.created_by == current_user.id)
         for r in batch_q.order_by(BatchAuditReport.created_at.desc()).all():
             data.append({
                 "id": str(r.id),
@@ -331,10 +343,14 @@ def list_detailed_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    current_user: User = Depends(QCAccess),
 ):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+    user_id_filter = None if is_admin else current_user.id
+
     items, total = QCReportRepository.get_flattened_logs(
-        db, vendor_id=vendor_id, report_type=report_type, skip=skip, limit=limit
+        db, vendor_id=vendor_id, report_type=report_type, skip=skip, limit=limit, user_id=user_id_filter
     )
     logs = [
             {
@@ -378,6 +394,8 @@ def list_detailed_logs(
         inline_q = db.query(InlineQCDefectRow).join(InlineQCOperation).join(InlineQCReport)
         if vendor_id:
             inline_q = inline_q.filter(InlineQCReport.vendor_id == vendor_id)
+        if not is_admin:
+            inline_q = inline_q.filter(InlineQCReport.created_by == current_user.id)
         for row in inline_q.order_by(InlineQCReport.inspection_date.desc()).all():
             report = row.operation.report
             first_hour = (row.hourly_data or [{}])[0]
@@ -412,6 +430,8 @@ def list_detailed_logs(
             finish_q = finish_q.filter(FinishEndlineQCReport.vendor_id == vendor_id)
         if report_type in ("finish", "endline"):
             finish_q = finish_q.filter(FinishEndlineQCReport.report_type == report_type)
+        if not is_admin:
+            finish_q = finish_q.filter(FinishEndlineQCReport.created_by == current_user.id)
         for row in finish_q.order_by(FinishEndlineQCReport.report_date.desc(), FinishEndlineQCHourlyRow.row_order.asc()).all():
             report = row.report
             rtype = report.report_type.value if hasattr(report.report_type, "value") else report.report_type
@@ -448,6 +468,8 @@ def list_detailed_logs(
         cut_q = db.query(CutPanelReport)
         if vendor_id:
             cut_q = cut_q.filter(CutPanelReport.vendor_id == vendor_id)
+        if not is_admin:
+            cut_q = cut_q.filter(CutPanelReport.created_by == current_user.id)
         for report in cut_q.order_by(CutPanelReport.report_date.desc()).all():
             for row in report.rows:
                 defects = []
@@ -484,6 +506,8 @@ def list_detailed_logs(
         batch_q = db.query(BatchAuditReport)
         if vendor_id:
             batch_q = batch_q.filter(BatchAuditReport.vendor_id == vendor_id)
+        if not is_admin:
+            batch_q = batch_q.filter(BatchAuditReport.created_by == current_user.id)
         for report in batch_q.order_by(BatchAuditReport.report_date.desc()).all():
             for row in report.rows:
                 defects = []
@@ -524,12 +548,20 @@ def list_detailed_logs(
 # ─── Report Detail ────────────────────────────────────────────────────────────
 
 @router.get("/{report_id:uuid}", summary="Get QC Report Detail")
-def get_report_detail(report_id: UUID, db: Session = Depends(get_db), _=Depends(QCAccess)):
+def get_report_detail(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(QCAccess),
+):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
     report_id_str = str(report_id)
     report = QCReportRepository.get_by_id(db, report_id_str)
     if not report:
         inline = db.query(InlineQCReport).filter(InlineQCReport.id == report_id_str).first()
         if inline:
+            if not is_admin and str(inline.created_by) != str(current_user.id):
+                raise HTTPException(403, "You do not have permission to access this report.")
             items = []
             for op in inline.operations:
                 for row in op.defect_rows:
@@ -546,6 +578,16 @@ def get_report_detail(report_id: UUID, db: Session = Depends(get_db), _=Depends(
                         "severity": row.severity,
                         "remarks": inline.remarks,
                     })
+            attachments = [
+                {
+                    "id":          str(a.id),
+                    "file_name":   a.file_name,
+                    "mime_type":   a.mime_type,
+                    "file_size":   a.file_size,
+                    "uploaded_at": str(a.uploaded_at),
+                }
+                for a in db.query(QCReportAttachment).filter(QCReportAttachment.report_id == report_id_str).all()
+            ]
             return success_response(data={
                 "id": str(inline.id),
                 "header": {
@@ -571,11 +613,13 @@ def get_report_detail(report_id: UUID, db: Session = Depends(get_db), _=Depends(
                     "stage": inline.department,
                 },
                 "items": items,
-                "attachments": [],
+                "attachments": attachments,
             })
 
         finish = db.query(FinishEndlineQCReport).filter(FinishEndlineQCReport.id == report_id_str).first()
         if finish:
+            if not is_admin and str(finish.created_by) != str(current_user.id):
+                raise HTTPException(403, "You do not have permission to access this report.")
             items = []
             for row in finish.hourly_rows:
                 for name, count in (row.defect_counts or {}).items():
@@ -594,6 +638,16 @@ def get_report_detail(report_id: UUID, db: Session = Depends(get_db), _=Depends(
                         "remarks": finish.remarks,
                     })
             rtype = finish.report_type.value if hasattr(finish.report_type, "value") else finish.report_type
+            attachments = [
+                {
+                    "id":          str(a.id),
+                    "file_name":   a.file_name,
+                    "mime_type":   a.mime_type,
+                    "file_size":   a.file_size,
+                    "uploaded_at": str(a.uploaded_at),
+                }
+                for a in db.query(QCReportAttachment).filter(QCReportAttachment.report_id == report_id_str).all()
+            ]
             return success_response(data={
                 "id": str(finish.id),
                 "header": {
@@ -619,7 +673,125 @@ def get_report_detail(report_id: UUID, db: Session = Depends(get_db), _=Depends(
                     "stage": finish.department,
                 },
                 "items": items,
-                "attachments": [],
+                "attachments": attachments,
+            })
+
+        cut = db.query(CutPanelReport).filter(CutPanelReport.id == report_id_str).first()
+        if cut:
+            if not is_admin and str(cut.created_by) != str(current_user.id):
+                raise HTTPException(403, "You do not have permission to access this report.")
+            items = []
+            for row in cut.rows:
+                for name, count in (row.defect_counts or {}).items():
+                    if int(count or 0) <= 0:
+                        continue
+                    items.append({
+                        "id": str(row.id),
+                        "hour": "",
+                        "batch_size": row.pcs,
+                        "item_date": str(cut.report_date),
+                        "operation": f"Bundle: {row.bundle_number or ''} (Size: {row.size or ''})",
+                        "defect_code": None,
+                        "defect_name": name,
+                        "count": int(count or 0),
+                        "severity": "major",
+                        "remarks": cut.remarks,
+                    })
+            attachments = [
+                {
+                    "id":          str(a.id),
+                    "file_name":   a.file_name,
+                    "mime_type":   a.mime_type,
+                    "file_size":   a.file_size,
+                    "uploaded_at": str(a.uploaded_at),
+                }
+                for a in db.query(QCReportAttachment).filter(QCReportAttachment.report_id == report_id_str).all()
+            ]
+            return success_response(data={
+                "id": str(cut.id),
+                "header": {
+                    "report_type": "cut_panel",
+                    "vendor_name": cut.vendor.name if cut.vendor else None,
+                    "floor_name": cut.floor_rel.name if cut.floor_rel else None,
+                    "line_name": cut.line_rel.name if cut.line_rel else cut.line_id,
+                    "order_no": cut.po_number,
+                    "style_name": cut.style_no,
+                    "article_code": cut.article_code,
+                    "product_color": cut.product_color,
+                    "inspection_date": str(cut.report_date),
+                    "shift": cut.shift,
+                    "auditor_name": cut.qc_name,
+                    "quantity_checked": cut.total_checked,
+                    "quantity_passed": max(0, (cut.total_checked or 0) - (cut.total_defects or 0)),
+                    "quantity_rejected": cut.total_defects,
+                    "dhu_percent": round(cut.defect_percent or 0, 2),
+                    "fpy_percent": 0,
+                    "total_defects": cut.total_defects,
+                    "status": "submitted",
+                    "remarks": cut.remarks,
+                    "stage": cut.department,
+                },
+                "items": items,
+                "attachments": attachments,
+            })
+
+        batch = db.query(BatchAuditReport).filter(BatchAuditReport.id == report_id_str).first()
+        if batch:
+            if not is_admin and str(batch.created_by) != str(current_user.id):
+                raise HTTPException(403, "You do not have permission to access this report.")
+            items = []
+            for row in batch.rows:
+                for name, count in (row.fault_counts or {}).items():
+                    if int(count or 0) <= 0:
+                        continue
+                    items.append({
+                        "id": str(row.id),
+                        "hour": "",
+                        "batch_size": row.sample_size,
+                        "item_date": str(batch.report_date),
+                        "operation": f"Batch: {row.batch_number or ''} (Result: {row.result or ''})",
+                        "defect_code": None,
+                        "defect_name": name,
+                        "count": int(count or 0),
+                        "severity": "major",
+                        "remarks": row.remarks or batch.remarks,
+                    })
+            attachments = [
+                {
+                    "id":          str(a.id),
+                    "file_name":   a.file_name,
+                    "mime_type":   a.mime_type,
+                    "file_size":   a.file_size,
+                    "uploaded_at": str(a.uploaded_at),
+                }
+                for a in db.query(QCReportAttachment).filter(QCReportAttachment.report_id == report_id_str).all()
+            ]
+            return success_response(data={
+                "id": str(batch.id),
+                "header": {
+                    "report_type": "batch_audit",
+                    "vendor_name": batch.vendor.name if batch.vendor else None,
+                    "floor_name": batch.floor_rel.name if batch.floor_rel else None,
+                    "line_name": batch.line_rel.name if batch.line_rel else batch.line_id,
+                    "order_no": batch.unit_number,
+                    "style_name": batch.style_no,
+                    "article_code": batch.stm,
+                    "product_color": batch.product_color,
+                    "inspection_date": str(batch.report_date),
+                    "shift": batch.shift,
+                    "auditor_name": batch.qc_name,
+                    "quantity_checked": batch.total_sample_qty,
+                    "quantity_passed": batch.first_pass_qty + batch.second_pass_qty,
+                    "quantity_rejected": batch.total_sample_qty - (batch.first_pass_qty + batch.second_pass_qty),
+                    "dhu_percent": round(batch.oqi_percent or 0, 2),
+                    "fpy_percent": round(batch.fpy_percent or 0, 2),
+                    "total_defects": batch.total_faults,
+                    "status": "submitted",
+                    "remarks": batch.remarks,
+                    "stage": batch.department,
+                },
+                "items": items,
+                "attachments": attachments,
             })
 
         raise HTTPException(404, "Report not found.")
@@ -654,6 +826,9 @@ def get_report_detail(report_id: UUID, db: Session = Depends(get_db), _=Depends(
             "remarks": item.remarks,
             "defects": defects,
         }
+
+    if not is_admin and str(report.created_by) != str(current_user.id) and str(report.auditor_id) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
 
     return success_response(data={
         "id": str(report.id),
@@ -713,9 +888,9 @@ async def upload_attachment(
     current_user: User = Depends(get_current_user),
     _=Depends(QCAccess),
 ):
-    report = db.query(QCReport).filter(QCReport.id == report_id).first()
-    if not report:
-        raise HTTPException(404, "Report not found.")
+    # Accept attachments for any report type (standard qc_reports_v2 or advanced-qc tables)
+    # We don't restrict to qc_reports_v2 so that inline, cut-panel, batch-audit,
+    # and finish-endline reports can also have file attachments.
 
     # Basic mime validation
     mime = file.content_type or ""

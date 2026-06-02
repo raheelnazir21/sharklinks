@@ -47,7 +47,7 @@ def test_missing_required_fields(client):
     assert response.status_code == 422 # Pydantic validation error
 
 def test_rbac_restriction(client, db):
-    # Create a viewer (who should NOT be able to create clients)
+    # Create a viewer (who should NOT be able to create vendors)
     email = "viewer@test.com"
     create_test_user(db, email, "pass", RoleEnum.viewer)
     
@@ -55,10 +55,10 @@ def test_rbac_restriction(client, db):
     login_res = client.post("/api/v1/auth/login", json={"email": email, "password": "pass"})
     token = login_res.json()["data"]["access_token"]
     
-    # Attempt to create a client
+    # Attempt to create a vendor
     response = client.post(
-        "/api/v1/clients/", 
-        json={"name": "Restricted Client"},
+        "/api/v1/vendors/", 
+        json={"name": "Restricted Vendor"},
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 403 # Forbidden

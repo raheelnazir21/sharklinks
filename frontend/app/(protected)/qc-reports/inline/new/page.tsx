@@ -9,6 +9,7 @@ import {
   Building2, Layers
 } from "lucide-react";
 import { ReportCanvas, ReportToolbar, ReportWorkspace } from "@/components/qc/ReportUI";
+import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
 const DEFAULT_HOUR_SLOTS = [
   "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", 
@@ -32,6 +33,7 @@ export default function NewInlineQCReport() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [hourSlots, setHourSlots] = useState(DEFAULT_HOUR_SLOTS);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   
   // Master Data
   const [vendors, setVendors] = useState<any[]>([]);
@@ -263,9 +265,44 @@ export default function NewInlineQCReport() {
           }))
         };
         const res = await api.post("/advanced-qc/inline/", payload);
+        const reportId = res.data?.data?.id;
+        if (reportId && pendingFiles.length > 0) {
+          for (const file of pendingFiles) {
+            const fd = new FormData();
+            fd.append("file", file);
+            try {
+              await api.post(`/qc-reports/${reportId}/attachments`, fd, {
+                headers: { "Content-Type": "multipart/form-data" },
+              });
+            } catch { /* non-fatal */ }
+          }
+        }
         router.push(`/qc-reports`);
-    } catch (err) {
-      alert("Failed to create Inline QC report.");
+    } catch (err: any) {
+      let errorMsg = "Failed to create Inline QC report.";
+      const detail = err?.response?.data?.detail;
+      const message = err?.response?.data?.message;
+      if (message) {
+        errorMsg = typeof message === 'string' ? message : JSON.stringify(message);
+      } else if (detail) {
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          try {
+            errorMsg = detail.map((d: any) => {
+              const field = d.loc ? d.loc[d.loc.length - 1] : "field";
+              return `${field}: ${d.msg}`;
+            }).join("\n");
+          } catch {
+            errorMsg = JSON.stringify(detail);
+          }
+        } else {
+          errorMsg = JSON.stringify(detail);
+        }
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      alert(`Failed: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
@@ -292,7 +329,7 @@ export default function NewInlineQCReport() {
             {/* Vendor Selector */}
             <div className="space-y-3">
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic flex items-center gap-2">
-                <Building2 className="w-3 h-3" /> Vendor
+                <Building2 className="w-3 h-3" /> Vendor <span className="text-rose-500">*</span>
               </label>
               <select 
                 className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
@@ -307,7 +344,7 @@ export default function NewInlineQCReport() {
             {/* Floor Selector */}
             <div className="space-y-3">
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic flex items-center gap-2">
-                <Layers className="w-3 h-3" /> Floor
+                <Layers className="w-3 h-3" /> Floor <span className="text-rose-500">*</span>
               </label>
               <select 
                 className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
@@ -323,7 +360,7 @@ export default function NewInlineQCReport() {
             {/* Line Selector */}
             <div className="space-y-3">
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic flex items-center gap-2">
-                <Settings2 className="w-3 h-3" /> Line
+                <Settings2 className="w-3 h-3" /> Line <span className="text-rose-500">*</span>
               </label>
               <select 
                 className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
@@ -346,7 +383,9 @@ export default function NewInlineQCReport() {
               { label: "QC Name", key: "qc_name", placeholder: "Inspector Name" },
             ].map((f) => (
               <div key={f.key} className="space-y-3">
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic">{f.label}</label>
+                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic">
+                  {f.label} <span className="text-rose-500">*</span>
+                </label>
                 <input 
                   type="text" 
                   className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 placeholder:text-slate-800"
@@ -683,6 +722,32 @@ export default function NewInlineQCReport() {
           </div>
         </div>
         </ReportCanvas>
+
+        <AttachmentPanel
+          pendingFiles={pendingFiles}
+          onPendingChange={setPendingFiles}
+        />
+
+        {/* Independent Submit Button */}
+        <div className="flex justify-end mt-10">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-12 py-5 rounded-full text-xs font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 ${
+              saving 
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.3)] hover:shadow-[0_0_60px_rgba(79,70,229,0.5)] hover:-translate-y-1"
+            }`}
+          >
+            {saving ? (
+              <>Processing...</>
+            ) : (
+              <>
+                Submit Report <ChevronRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
     </ReportWorkspace>
   );
 }

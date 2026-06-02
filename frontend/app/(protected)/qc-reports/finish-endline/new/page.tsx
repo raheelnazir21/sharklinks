@@ -2,8 +2,9 @@
 import React, { Suspense, useState, useEffect, useCallback } from "react";
 import api from "@/services/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Trash2, Building2, Layers, Settings2 } from "lucide-react";
+import { Plus, Trash2, Building2, Layers, Settings2, ChevronRight } from "lucide-react";
 import { ReportCanvas, ReportToolbar, ReportWorkspace } from "@/components/qc/ReportUI";
+import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
 const DEFAULT_HOURS = [
   "09:00 - 10:00","10:00 - 11:00","11:00 - 12:00",
@@ -52,6 +53,7 @@ function FinishEndlineQCContent() {
   const isEndline = reportType === "endline";
 
   const [saving, setSaving] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   
   // Master Data
   const [vendors, setVendors] = useState<any[]>([]);
@@ -167,9 +169,45 @@ function FinishEndlineQCContent() {
         })),
       };
       const res = await api.post("/advanced-qc/finish-endline/", payload);
+      const reportId = res.data?.data?.id;
+      if (reportId && pendingFiles.length > 0) {
+        for (const file of pendingFiles) {
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            await api.post(`/qc-reports/${reportId}/attachments`, fd, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          } catch { /* non-fatal */ }
+        }
+      }
       router.push(`/qc-reports`);
-    } catch (e) { alert("Failed to save report."); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      let errorMsg = "Failed to save report.";
+      const detail = err?.response?.data?.detail;
+      const message = err?.response?.data?.message;
+      if (message) {
+        errorMsg = typeof message === 'string' ? message : JSON.stringify(message);
+      } else if (detail) {
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          try {
+            errorMsg = detail.map((d: any) => {
+              const field = d.loc ? d.loc[d.loc.length - 1] : "field";
+              return `${field}: ${d.msg}`;
+            }).join("\n");
+          } catch {
+            errorMsg = JSON.stringify(detail);
+          }
+        } else {
+          errorMsg = JSON.stringify(detail);
+        }
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      alert(`Failed: ${errorMsg}`);
+    } finally { setSaving(false); }
   };
 
   const title = isEndline ? "ENDLINE QC REPORT" : "FINISHING QC REPORT";
@@ -192,7 +230,7 @@ function FinishEndlineQCContent() {
             {/* Vendor & Floor Row */}
             <div className="grid grid-cols-2 border-b border-gray-300">
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[100px] flex items-center gap-2"><Building2 size={12}/> VENDOR</span>
+                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[100px] flex items-center gap-2"><Building2 size={12}/> VENDOR <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <select className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none bg-transparent" value={header.vendor_id} onChange={e => setHeader(p => ({...p, vendor_id: e.target.value, floor_id: "", line_id: ""}))}>
                   <option value="">Select Vendor</option>
@@ -200,7 +238,7 @@ function FinishEndlineQCContent() {
                 </select>
               </div>
               <div className="flex">
-                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[100px] flex items-center gap-2"><Layers size={12}/> FLOOR</span>
+                <span className="px-3 py-2 font-black text-[10px] uppercase bg-gray-100 border-r border-gray-300 min-w-[100px] flex items-center gap-2"><Layers size={12}/> FLOOR <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <select className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none bg-transparent" value={header.floor_id} onChange={e => setHeader(p => ({...p, floor_id: e.target.value, line_id: ""}))} disabled={!header.vendor_id}>
                   <option value="">Select Floor</option>
@@ -211,29 +249,29 @@ function FinishEndlineQCContent() {
 
             <div className="grid grid-cols-3 border-b border-gray-300">
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">STYLE</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">STYLE <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <input className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none" value={header.style_no} onChange={e => setHeader(p => ({...p, style_no: e.target.value}))} placeholder="ST-24-101" />
               </div>
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[80px]">DATE</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[80px]">DATE <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <input type="date" className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none" value={header.report_date} onChange={e => setHeader(p => ({...p, report_date: e.target.value}))} />
               </div>
               <div className="flex">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">QC NAME</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">QC NAME <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <input className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none" value={header.qc_name} onChange={e => setHeader(p => ({...p, qc_name: e.target.value}))} placeholder="Ali Hassan" />
               </div>
             </div>
             <div className="grid grid-cols-3 border-b border-gray-300">
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">PO NUMBER</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">PO NUMBER <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <input className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none" value={header.po_number} onChange={e => setHeader(p => ({...p, po_number: e.target.value}))} placeholder="PO-45001234" />
               </div>
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[80px]">LINE</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[80px]">LINE <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <select className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none bg-transparent" value={header.line_id} onChange={e => setHeader(p => ({...p, line_id: e.target.value}))} disabled={!header.floor_id}>
                   <option value="">Select Line</option>
@@ -248,12 +286,12 @@ function FinishEndlineQCContent() {
             </div>
             <div className="grid grid-cols-2 border-b border-gray-300">
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">ARTICLE</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">ARTICLE <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <input className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none" value={header.article_code} onChange={e => setHeader(p => ({...p, article_code: e.target.value}))} placeholder="ART-001" />
               </div>
               <div className="flex">
-                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">COLOR</span>
+                <span className="px-3 py-2 font-black text-xs uppercase bg-gray-100 border-r border-gray-300 min-w-[100px]">COLOR <span className="text-rose-500">*</span></span>
                 <span className="px-2 py-2 text-xs font-semibold text-gray-600 mr-2">:</span>
                 <input className="flex-1 px-1 py-2 text-xs font-black text-gray-900 outline-none" value={header.product_color} onChange={e => setHeader(p => ({...p, product_color: e.target.value}))} placeholder="Navy Blue" />
               </div>
@@ -413,6 +451,32 @@ function FinishEndlineQCContent() {
               </div>
             ))}
           </div>
+        </div>
+
+        <AttachmentPanel
+          pendingFiles={pendingFiles}
+          onPendingChange={setPendingFiles}
+        />
+
+        {/* Independent Submit Button */}
+        <div className="flex justify-end mt-10 print:hidden">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-12 py-5 rounded-full text-xs font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 ${
+              saving 
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.3)] hover:shadow-[0_0_60px_rgba(79,70,229,0.5)] hover:-translate-y-1"
+            }`}
+          >
+            {saving ? (
+              <>Processing...</>
+            ) : (
+              <>
+                Submit Report <ChevronRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </div>
 
       <style>{`

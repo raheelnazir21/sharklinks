@@ -475,16 +475,25 @@ def _serialize_batch_audit_report(r: BatchAuditReport) -> dict:
 # ─── INLINE QC ENDPOINTS ──────────────────────────────────────────────────────
 
 @router.get("/inline/", summary="List Inline QC Reports")
-def list_inline_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), _=Depends(AllStaff)):
-    reports = db.query(InlineQCReport).options(
+def list_inline_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    q = db.query(InlineQCReport).options(
         joinedload(InlineQCReport.vendor),
         joinedload(InlineQCReport.floor_rel),
         joinedload(InlineQCReport.line)
-    ).order_by(InlineQCReport.created_at.desc()).offset(skip).limit(limit).all()
+    )
+    if not is_admin:
+        q = q.filter(InlineQCReport.created_by == current_user.id)
+    reports = q.order_by(InlineQCReport.created_at.desc()).offset(skip).limit(limit).all()
     return success_response(data=[_serialize_inline_report(r) for r in reports])
 
 @router.get("/inline/{report_id}", summary="Get Inline QC Report Detail")
-def get_inline_report(report_id: str, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def get_inline_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
     r = db.query(InlineQCReport).options(
         joinedload(InlineQCReport.vendor),
         joinedload(InlineQCReport.floor_rel),
@@ -494,6 +503,8 @@ def get_inline_report(report_id: str, db: Session = Depends(get_db), _=Depends(A
     ).filter(InlineQCReport.id == report_id).first()
     if not r:
         raise HTTPException(404, "Inline QC report not found.")
+    if not is_admin and str(r.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
     return success_response(data=_serialize_inline_report(r))
 
 @router.post("/inline/", summary="Create Inline QC Report")
@@ -582,18 +593,27 @@ def create_inline_report(payload: InlineQCReportCreate, db: Session = Depends(ge
 # ─── CUT PANEL QC ENDPOINTS ──────────────────────────────────────────────────
 
 @router.get("/cut-panel/", summary="List Cut Panel Reports")
-def list_cut_panel_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), _=Depends(AllStaff)):
-    reports = db.query(CutPanelReport).options(
+def list_cut_panel_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    q = db.query(CutPanelReport).options(
         joinedload(CutPanelReport.vendor),
         joinedload(CutPanelReport.floor_rel),
         joinedload(CutPanelReport.line_rel),
         joinedload(CutPanelReport.rows),
-    ).order_by(CutPanelReport.created_at.desc()).offset(skip).limit(limit).all()
+    )
+    if not is_admin:
+        q = q.filter(CutPanelReport.created_by == current_user.id)
+    reports = q.order_by(CutPanelReport.created_at.desc()).offset(skip).limit(limit).all()
     return success_response(data=[_serialize_cut_panel_report(r) for r in reports])
 
 
 @router.get("/cut-panel/{report_id}", summary="Get Cut Panel Report")
-def get_cut_panel_report(report_id: str, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def get_cut_panel_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
     report = db.query(CutPanelReport).options(
         joinedload(CutPanelReport.vendor),
         joinedload(CutPanelReport.floor_rel),
@@ -602,6 +622,8 @@ def get_cut_panel_report(report_id: str, db: Session = Depends(get_db), _=Depend
     ).filter(CutPanelReport.id == report_id).first()
     if not report:
         raise HTTPException(404, "Cut panel report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
     return success_response(data=_serialize_cut_panel_report(report))
 
 
@@ -667,18 +689,27 @@ def create_cut_panel_report(payload: CutPanelReportCreate, db: Session = Depends
 # ─── BATCH AUDIT ENDPOINTS ───────────────────────────────────────────────────
 
 @router.get("/batch-audit/", summary="List Batch Audit Reports")
-def list_batch_audit_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), _=Depends(AllStaff)):
-    reports = db.query(BatchAuditReport).options(
+def list_batch_audit_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    q = db.query(BatchAuditReport).options(
         joinedload(BatchAuditReport.vendor),
         joinedload(BatchAuditReport.floor_rel),
         joinedload(BatchAuditReport.line_rel),
         joinedload(BatchAuditReport.rows),
-    ).order_by(BatchAuditReport.created_at.desc()).offset(skip).limit(limit).all()
+    )
+    if not is_admin:
+        q = q.filter(BatchAuditReport.created_by == current_user.id)
+    reports = q.order_by(BatchAuditReport.created_at.desc()).offset(skip).limit(limit).all()
     return success_response(data=[_serialize_batch_audit_report(r) for r in reports])
 
 
 @router.get("/batch-audit/{report_id}", summary="Get Batch Audit Report")
-def get_batch_audit_report(report_id: str, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def get_batch_audit_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
     report = db.query(BatchAuditReport).options(
         joinedload(BatchAuditReport.vendor),
         joinedload(BatchAuditReport.floor_rel),
@@ -687,6 +718,8 @@ def get_batch_audit_report(report_id: str, db: Session = Depends(get_db), _=Depe
     ).filter(BatchAuditReport.id == report_id).first()
     if not report:
         raise HTTPException(404, "Batch audit report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
     return success_response(data=_serialize_batch_audit_report(report))
 
 
@@ -761,7 +794,10 @@ def create_batch_audit_report(payload: BatchAuditReportCreate, db: Session = Dep
 # ─── FINISH / ENDLINE QC ENDPOINTS ───────────────────────────────────────────
 
 @router.get("/finish-endline/", summary="List Finish/Endline QC Reports")
-def list_finish_reports(report_type: Optional[str] = None, skip: int = 0, limit: int = 50, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def list_finish_reports(report_type: Optional[str] = None, skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
     q = db.query(FinishEndlineQCReport).options(
         joinedload(FinishEndlineQCReport.vendor),
         joinedload(FinishEndlineQCReport.floor_rel),
@@ -769,11 +805,16 @@ def list_finish_reports(report_type: Optional[str] = None, skip: int = 0, limit:
     )
     if report_type:
         q = q.filter(FinishEndlineQCReport.report_type == report_type)
+    if not is_admin:
+        q = q.filter(FinishEndlineQCReport.created_by == current_user.id)
     reports = q.order_by(FinishEndlineQCReport.created_at.desc()).offset(skip).limit(limit).all()
     return success_response(data=[_serialize_finish_report(r) for r in reports])
 
 @router.get("/finish-endline/{report_id}", summary="Get Finish/Endline QC Report")
-def get_finish_report(report_id: str, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def get_finish_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
     r = db.query(FinishEndlineQCReport).options(
         joinedload(FinishEndlineQCReport.vendor),
         joinedload(FinishEndlineQCReport.floor_rel),
@@ -782,6 +823,8 @@ def get_finish_report(report_id: str, db: Session = Depends(get_db), _=Depends(A
     ).filter(FinishEndlineQCReport.id == report_id).first()
     if not r:
         raise HTTPException(404, "Report not found.")
+    if not is_admin and str(r.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
     return success_response(data=_serialize_finish_report(r))
 
 @router.post("/finish-endline/", summary="Create Finish/Endline QC Report")
@@ -831,10 +874,15 @@ def create_finish_report(payload: FinishQCCreate, db: Session = Depends(get_db),
     return success_response(data=_serialize_finish_report(report), message="Report created successfully.")
 
 @router.put("/finish-endline/{report_id}", summary="Update Finish/Endline QC Report")
-def update_finish_report(report_id: str, payload: FinishQCCreate, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def update_finish_report(report_id: str, payload: FinishQCCreate, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
     report = db.query(FinishEndlineQCReport).filter(FinishEndlineQCReport.id == report_id).first()
     if not report:
         raise HTTPException(404, "Report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
 
     # Update header
     for field in ["style_no","po_number","article_code","product_color","shift","line","qc_name","department","inspection_level","remarks","prepared_by","checked_by", "vendor_id", "floor_id", "line_id"]:

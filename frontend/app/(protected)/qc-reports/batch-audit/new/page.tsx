@@ -3,8 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
-import { Building2, Layers, Plus, Trash2 } from "lucide-react";
+import { Building2, Layers, Plus, Trash2, ChevronRight } from "lucide-react";
 import { ReportCanvas, ReportToolbar, ReportWorkspace } from "@/components/qc/ReportUI";
+import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
 type Fault = { id: string; code: string; name: string; section: "fabric" | "stitching" | "finishing" };
 type AuditRow = {
@@ -152,6 +153,7 @@ function qualityTone(dhu: number) {
 export default function BatchAuditReportPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const newFaultIndex = useRef(0);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [floors, setFloors] = useState<VendorFloor[]>([]);
@@ -257,7 +259,7 @@ export default function BatchAuditReportPage() {
     }
     setSaving(true);
     try {
-      await api.post("/advanced-qc/batch-audit/", {
+      const res = await api.post("/advanced-qc/batch-audit/", {
         ...header,
         issue_date: header.issue_date || null,
         first_pass_qty: Number(header.first_pass_qty) || 0,
@@ -272,13 +274,44 @@ export default function BatchAuditReportPage() {
           aql_reject: Number(row.aql_reject) || 0,
         })),
       });
+      const reportId = res.data?.data?.id;
+      if (reportId && pendingFiles.length > 0) {
+        for (const file of pendingFiles) {
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            await api.post(`/qc-reports/${reportId}/attachments`, fd, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          } catch { /* non-fatal */ }
+        }
+      }
       router.push("/qc-reports");
-    } catch (err: unknown) {
-      const message = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string; detail?: string } } }).response?.data?.message
-          || (err as { response?: { data?: { message?: string; detail?: string } } }).response?.data?.detail
-        : null;
-      alert(message || "Failed to save batch audit report.");
+    } catch (err: any) {
+      let errorMsg = "Failed to save batch audit report.";
+      const detail = err?.response?.data?.detail;
+      const message = err?.response?.data?.message;
+      if (message) {
+        errorMsg = typeof message === 'string' ? message : JSON.stringify(message);
+      } else if (detail) {
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          try {
+            errorMsg = detail.map((d: any) => {
+              const field = d.loc ? d.loc[d.loc.length - 1] : "field";
+              return `${field}: ${d.msg}`;
+            }).join("\n");
+          } catch {
+            errorMsg = JSON.stringify(detail);
+          }
+        } else {
+          errorMsg = JSON.stringify(detail);
+        }
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+      alert(`Failed: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
@@ -351,7 +384,7 @@ export default function BatchAuditReportPage() {
                 ["Date", "report_date"],
               ].map(([label, key]) => (
                 <div key={key} className="flex border-r border-gray-300 last:border-r-0">
-                  <span className="px-3 py-3 font-black text-xs min-w-[88px]">{label} :</span>
+                  <span className="px-3 py-3 font-black text-xs min-w-[88px]">{label} {['style_no', 'report_date', 'unit_number', 'stm'].includes(key) && <span className="text-rose-500">*</span>} :</span>
                   <input type={key === "report_date" ? "date" : "text"} className="flex-1 min-w-0 px-2 py-3 text-xs font-black outline-none" value={header[key as HeaderKey]} onChange={(e) => setHeader((p) => ({ ...p, [key as HeaderKey]: e.target.value }))} />
                 </div>
               ))}
@@ -359,7 +392,7 @@ export default function BatchAuditReportPage() {
 
             <div className="grid grid-cols-3 border-b border-gray-300">
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-3 font-black text-xs min-w-[92px]">Vendor :</span>
+                <span className="px-3 py-3 font-black text-xs min-w-[92px]">Vendor <span className="text-rose-500">*</span> :</span>
                 <select className="flex-1 px-2 py-3 text-xs font-black outline-none bg-transparent" value={header.vendor_id} onChange={(e) => {
                   setFloors([]);
                   setHeader((p) => ({ ...p, vendor_id: e.target.value, floor_id: "", line_id: "" }));
@@ -369,14 +402,14 @@ export default function BatchAuditReportPage() {
                 </select>
               </div>
               <div className="flex border-r border-gray-300">
-                <span className="px-3 py-3 font-black text-xs min-w-[92px] flex items-center gap-2"><Building2 size={12}/> Floor :</span>
+                <span className="px-3 py-3 font-black text-xs min-w-[92px] flex items-center gap-2"><Building2 size={12}/> Floor <span className="text-rose-500">*</span> :</span>
                 <select className="flex-1 px-2 py-3 text-xs font-black outline-none bg-transparent" value={header.floor_id} onChange={(e) => setHeader((p) => ({ ...p, floor_id: e.target.value, line_id: "" }))}>
                   <option value="">Select Floor</option>
                   {floors.map((floor) => <option key={floor.id} value={floor.id}>{floor.name}</option>)}
                 </select>
               </div>
               <div className="flex">
-                <span className="px-3 py-3 font-black text-xs min-w-[92px] flex items-center gap-2"><Layers size={12}/> Line :</span>
+                <span className="px-3 py-3 font-black text-xs min-w-[92px] flex items-center gap-2"><Layers size={12}/> Line <span className="text-rose-500">*</span> :</span>
                 <select className="flex-1 px-2 py-3 text-xs font-black outline-none bg-transparent" value={header.line_id} onChange={(e) => setHeader((p) => ({ ...p, line_id: e.target.value }))}>
                   <option value="">Select Line</option>
                   {lines.map((line) => <option key={line.id} value={line.id}>{line.name}</option>)}
@@ -392,7 +425,7 @@ export default function BatchAuditReportPage() {
                 ["QC Name", "qc_name"],
               ].map(([label, key]) => (
                 <div key={key} className="flex border-r border-gray-300 last:border-r-0">
-                  <span className="px-3 py-3 font-black text-xs min-w-[96px]">{label} :</span>
+                  <span className="px-3 py-3 font-black text-xs min-w-[96px]">{label} {['qc_name', 'product_color', 'product_name'].includes(key) && <span className="text-rose-500">*</span>} :</span>
                   <input className="flex-1 min-w-0 px-2 py-3 text-xs font-black outline-none" value={header[key as HeaderKey]} onChange={(e) => setHeader((p) => ({ ...p, [key as HeaderKey]: e.target.value }))} />
                 </div>
               ))}
@@ -521,6 +554,32 @@ export default function BatchAuditReportPage() {
               <p className="text-xs font-bold text-gray-500">No defect counts entered yet.</p>
             )}
           </div>
+        </div>
+
+        <AttachmentPanel
+          pendingFiles={pendingFiles}
+          onPendingChange={setPendingFiles}
+        />
+
+        {/* Independent Submit Button */}
+        <div className="flex justify-end mt-10">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-12 py-5 rounded-full text-xs font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 ${
+              saving 
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.3)] hover:shadow-[0_0_60px_rgba(79,70,229,0.5)] hover:-translate-y-1"
+            }`}
+          >
+            {saving ? (
+              <>Processing...</>
+            ) : (
+              <>
+                Submit Report <ChevronRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </div>
     </ReportWorkspace>
   );

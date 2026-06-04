@@ -5,7 +5,7 @@ import api from "@/services/api";
 import { 
   Plus, Search, Package, Calendar, AlertCircle, CheckCircle, Clock, 
   Building2, Tag, Shirt, Layers, ChevronLeft, Info, Edit3, Trash2, History, Factory,
-  Paperclip, Upload, X
+  Paperclip, Upload, X, Pin
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -352,6 +352,9 @@ function OrdersContent() {
           requirements: sanitizedData.requirements,
           reference_image: sanitizedData.reference_image,
           reference_attachments: sanitizedData.reference_attachments,
+          // Always persist the class context so editing from a class view links the order
+          ...(sanitizedData.sample_class_id ? { sample_class_id: sanitizedData.sample_class_id } : {}),
+          ...(sanitizedData.bulk_class_id ? { bulk_class_id: sanitizedData.bulk_class_id } : {}),
         });
         setIsModalOpen(false);
         setEditingOrder(null);
@@ -509,6 +512,22 @@ function OrdersContent() {
     }
   };
 
+  // One-time assignment: link an existing (unassigned) order to the current sample/bulk class
+  const assignToClass = async (orderId: string) => {
+    if (!sampleClassId && !bulkClassId) return;
+    try {
+      await api.put(`/orders/${orderId}`, {
+        ...(sampleClassId ? { sample_class_id: sampleClassId } : {}),
+        ...(bulkClassId ? { bulk_class_id: bulkClassId } : {}),
+      });
+      fetchData();
+      setFeedback({ type: "success", title: "Assigned!", message: "Order permanently linked to this class." });
+    } catch (err: any) {
+      setFeedback({ type: "error", title: "Failed", message: err?.response?.data?.detail || "Could not assign order." });
+    }
+  };
+
+
   const filtered = orders.filter((o: any) => 
     (o.order_no?.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (o.style_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -570,7 +589,21 @@ function OrdersContent() {
               <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8`}>
                  {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
               </p>
-              <div className="mt-6 grid grid-cols-3 gap-2">
+              <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: (sampleClassId || bulkClassId) && !order.sample_class_id && !order.bulk_class_id ? 'repeat(4,1fr)' : 'repeat(3,1fr)' }}>
+                {/* Assign to Class button — only shown for unlinked orders when in a class context */}
+                {(sampleClassId || bulkClassId) && !order.sample_class_id && !order.bulk_class_id && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      assignToClass(order.id);
+                    }}
+                    className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-amber-400 hover:bg-amber-500/20 hover:border-amber-400"
+                    title="Permanently link this order to the current class"
+                  >
+                    <Pin className="mx-auto mb-1 h-4 w-4" /> Assign
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={(event) => {

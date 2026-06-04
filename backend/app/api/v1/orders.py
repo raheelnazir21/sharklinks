@@ -365,7 +365,9 @@ def list_orders(
             "is_delayed": getattr(o, "is_delayed", False),
             "delay_days": o.delay_days,
             "top_sample_status": o.top_sample_status,
-            "qa_audit_status": o.qa_audit_status
+            "qa_audit_status": o.qa_audit_status,
+            "sample_class_id": str(o.sample_class_id) if o.sample_class_id else None,
+            "bulk_class_id": str(o.bulk_class_id) if o.bulk_class_id else None,
         }
         for o in orders
     ])

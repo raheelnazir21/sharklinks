@@ -589,57 +589,64 @@ function OrdersContent() {
               <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8`}>
                  {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
               </p>
-              <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: (sampleClassId || bulkClassId) ? 'repeat(4,1fr)' : 'repeat(3,1fr)' }}>
-                {/* Assign / Reassign button — always shown in class context so mistakes can be corrected */}
-                {(sampleClassId || bulkClassId) && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      assignToClass(order.id);
-                    }}
-                    className={`rounded-2xl border px-3 py-3 text-[9px] font-black uppercase tracking-widest transition-all ${
-                      order.sample_class_id || order.bulk_class_id
-                        ? 'border-blue-500/40 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400'
-                        : 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400'
-                    }`}
-                    title={order.sample_class_id || order.bulk_class_id ? "Reassign to this class" : "Assign to this class"}
-                  >
-                    <Pin className="mx-auto mb-1 h-4 w-4" />
-                    {order.sample_class_id || order.bulk_class_id ? 'Reassign' : 'Assign'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openEditOrder(order);
-                  }}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-blue-500/40 hover:text-blue-400"
-                >
-                  <Edit3 className="mx-auto mb-1 h-4 w-4" /> Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setHistoryOrderId(order.id);
-                  }}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-emerald-500/40 hover:text-emerald-400"
-                >
-                  <History className="mx-auto mb-1 h-4 w-4" /> History
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDeleteTarget(order);
-                  }}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-red-500/40 hover:text-red-400"
-                >
-                  <Trash2 className="mx-auto mb-1 h-4 w-4" /> Delete
-                </button>
-              </div>
+              {(() => {
+                const currentClassId = isSampling ? order.sample_class_id : order.bulk_class_id;
+                const targetClassId = isSampling ? sampleClassId : bulkClassId;
+                const showButton = !!targetClassId && String(currentClassId) !== String(targetClassId);
+                const buttonCount = 3 + (showButton ? 1 : 0);
+                return (
+                  <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: `repeat(${buttonCount},1fr)` }}>
+                    {showButton && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          assignToClass(order.id);
+                        }}
+                        className={`rounded-2xl border px-3 py-3 text-[9px] font-black uppercase tracking-widest transition-all ${
+                          currentClassId
+                            ? 'border-blue-500/40 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400'
+                            : 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400'
+                        }`}
+                        title={currentClassId ? "Reassign to this class" : "Assign to this class"}
+                      >
+                        <Pin className="mx-auto mb-1 h-4 w-4" />
+                        {currentClassId ? 'Reassign' : 'Assign'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openEditOrder(order);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-blue-500/40 hover:text-blue-400"
+                    >
+                      <Edit3 className="mx-auto mb-1 h-4 w-4" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setHistoryOrderId(order.id);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-emerald-500/40 hover:text-emerald-400"
+                    >
+                      <History className="mx-auto mb-1 h-4 w-4" /> History
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDeleteTarget(order);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-red-500/40 hover:text-red-400"
+                    >
+                      <Trash2 className="mx-auto mb-1 h-4 w-4" /> Delete
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

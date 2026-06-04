@@ -184,6 +184,9 @@ class OrderUpdate(BaseModel):
     reference_image: Optional[str] = None
     reference_attachments: Optional[List[ReferenceAttachment]] = None
     stage_chunks: Optional[List[StageChunkCreate]] = None
+    # Class assignment fields — required for Assign to Class and class-context editing
+    sample_class_id: Optional[str] = None
+    bulk_class_id: Optional[str] = None
 
 
 class OrderOut(BaseModel):

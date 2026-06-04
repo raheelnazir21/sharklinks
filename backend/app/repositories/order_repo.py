@@ -4,7 +4,7 @@ Order Repository — all DB queries for Orders, Stages, and History.
 from typing import List, Optional
 import uuid
 from datetime import date
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session
 from app.models.order import Order, ProductionStage, OrderHistory, OrderStatus, Vendor, SampleClass, BulkClass
 
@@ -109,7 +109,21 @@ class OrderRepository:
         if status:
             q = q.filter(Order.status == status)
         if sample_class_id:
-            q = q.filter(cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)))
+            # Look up the sample class to get its vendor_id for backward compatibility.
+            # Existing orders created before class-scoping was added have sample_class_id = NULL.
+            # We show: (a) orders properly linked to this class, OR
+            #          (b) legacy orders with no class (NULL) that belong to the same vendor.
+            sc = db.query(SampleClass).filter(
+                cast(SampleClass.id, String).in_(_id_variants(sample_class_id))
+            ).first()
+            if sc and sc.vendor_id:
+                vendor_id_variants = _id_variants(str(sc.vendor_id))
+                q = q.filter(or_(
+                    cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)),
+                    (Order.sample_class_id == None) & (cast(Order.vendor_id, String).in_(vendor_id_variants))
+                ))
+            else:
+                q = q.filter(cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)))
         if bulk_class_id:
             q = q.filter(cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)))
         if created_by:

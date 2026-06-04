@@ -112,7 +112,8 @@ class OrderRepository:
             # Look up the sample class to get its vendor_id for backward compatibility.
             # Existing orders created before class-scoping was added have sample_class_id = NULL.
             # We show: (a) orders properly linked to this class, OR
-            #          (b) legacy orders with no class (NULL) that belong to the same vendor.
+            #          (b) legacy orders with no class (NULL) that belong to the same vendor, OR
+            #          (c) orders whose name contains the class name (to allow re-routing if misassigned).
             sc = db.query(SampleClass).filter(
                 cast(SampleClass.id, String).in_(_id_variants(sample_class_id))
             ).first()
@@ -120,12 +121,27 @@ class OrderRepository:
                 vendor_id_variants = _id_variants(str(sc.vendor_id))
                 q = q.filter(or_(
                     cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)),
+                    Order.product_name.ilike(f"%{sc.name}%"),
                     (Order.sample_class_id == None) & (cast(Order.vendor_id, String).in_(vendor_id_variants))
+                ))
+            elif sc:
+                q = q.filter(or_(
+                    cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)),
+                    Order.product_name.ilike(f"%{sc.name}%")
                 ))
             else:
                 q = q.filter(cast(Order.sample_class_id, String).in_(_id_variants(sample_class_id)))
         if bulk_class_id:
-            q = q.filter(cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)))
+            bc = db.query(BulkClass).filter(
+                cast(BulkClass.id, String).in_(_id_variants(bulk_class_id))
+            ).first()
+            if bc:
+                q = q.filter(or_(
+                    cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)),
+                    Order.style_name.ilike(f"%{bc.name}%")
+                ))
+            else:
+                q = q.filter(cast(Order.bulk_class_id, String).in_(_id_variants(bulk_class_id)))
         if created_by:
             q = q.filter(cast(Order.created_by, String).in_(_id_variants(created_by)))
         if allowed_vendor_ids is not None:

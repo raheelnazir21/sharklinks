@@ -581,10 +581,12 @@ function OrdersContent() {
   };
 
   const autoLinkAllOrders = async () => {
-    const unlinked = orders.filter((o: any) => !o.sample_class_id && !o.bulk_class_id);
-    const toUpdate = unlinked.map((o: any) => {
+    // Find all orders that have a matched class name, and are either unlinked OR linked to a different class
+    const toUpdate = orders.map((o: any) => {
       const matchedClass = getAutoMatchedClass(o);
-      if (matchedClass) {
+      if (!matchedClass) return null;
+      const currentClassId = isSampling ? o.sample_class_id : o.bulk_class_id;
+      if (String(currentClassId) !== String(matchedClass.id)) {
         return { order: o, matchedClass };
       }
       return null;
@@ -593,8 +595,8 @@ function OrdersContent() {
     if (toUpdate.length === 0) {
       setFeedback({
         type: "error",
-        title: "No Matches",
-        message: "No unlinked orders match any existing classes by name."
+        title: "All Sorted!",
+        message: "All orders in view are already correctly linked to their respective classes."
       });
       return;
     }
@@ -647,16 +649,14 @@ function OrdersContent() {
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-700">
       <div className="flex justify-end gap-4">
-        {!(sampleClassId || bulkClassId) && (
-          <button
-            type="button"
-            onClick={autoLinkAllOrders}
-            className="border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-8 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 shadow-2xl active:scale-95"
-            title="Auto-assign all unlinked orders to classes based on name match"
-          >
-            <Pin className="w-5 h-5" /> Auto-Assign Classes
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={autoLinkAllOrders}
+          className="border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-8 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 shadow-2xl active:scale-95"
+          title="Auto-assign all unlinked orders to classes based on name match"
+        >
+          <Pin className="w-5 h-5" /> Auto-Assign Classes
+        </button>
         <button 
           onClick={openCreateOrder}
           style={{ backgroundColor: themeHex }}
@@ -711,8 +711,10 @@ function OrdersContent() {
               </p>
               {(() => {
                 const matchedClass = getAutoMatchedClass(order);
-                const hasAutoLinkButton = !(sampleClassId || bulkClassId) && !order.sample_class_id && !order.bulk_class_id && !!matchedClass;
-                const buttonCount = 3 + ((sampleClassId || bulkClassId) || hasAutoLinkButton ? 1 : 0);
+                const currentClassId = isSampling ? order.sample_class_id : order.bulk_class_id;
+                const hasAutoLinkButton = !!matchedClass && String(currentClassId) !== String(matchedClass.id);
+                const hasManualButton = !!(sampleClassId || bulkClassId);
+                const buttonCount = 3 + (hasAutoLinkButton ? 1 : 0) + (hasManualButton ? 1 : 0);
                 return (
                   <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: `repeat(${buttonCount},1fr)` }}>
                     {/* Assign / Reassign button — always shown in class context so mistakes can be corrected */}

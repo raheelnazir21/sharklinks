@@ -589,19 +589,24 @@ function OrdersContent() {
               <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8`}>
                  {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
               </p>
-              <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: (sampleClassId || bulkClassId) && !order.sample_class_id && !order.bulk_class_id ? 'repeat(4,1fr)' : 'repeat(3,1fr)' }}>
-                {/* Assign to Class button — only shown for unlinked orders when in a class context */}
-                {(sampleClassId || bulkClassId) && !order.sample_class_id && !order.bulk_class_id && (
+              <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: (sampleClassId || bulkClassId) ? 'repeat(4,1fr)' : 'repeat(3,1fr)' }}>
+                {/* Assign / Reassign button — always shown in class context so mistakes can be corrected */}
+                {(sampleClassId || bulkClassId) && (
                   <button
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
                       assignToClass(order.id);
                     }}
-                    className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-amber-400 hover:bg-amber-500/20 hover:border-amber-400"
-                    title="Permanently link this order to the current class"
+                    className={`rounded-2xl border px-3 py-3 text-[9px] font-black uppercase tracking-widest transition-all ${
+                      order.sample_class_id || order.bulk_class_id
+                        ? 'border-blue-500/40 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400'
+                    }`}
+                    title={order.sample_class_id || order.bulk_class_id ? "Reassign to this class" : "Assign to this class"}
                   >
-                    <Pin className="mx-auto mb-1 h-4 w-4" /> Assign
+                    <Pin className="mx-auto mb-1 h-4 w-4" />
+                    {order.sample_class_id || order.bulk_class_id ? 'Reassign' : 'Assign'}
                   </button>
                 )}
                 <button

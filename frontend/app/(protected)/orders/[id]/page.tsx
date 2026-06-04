@@ -205,13 +205,42 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   });
 
+  const getBackUrl = () => {
+    if (!order) return "/dashboard";
+    if (order.track_type === "sampling") {
+      if (order.sample_class_id) {
+        return `/orders?track=sampling&sample_class_id=${order.sample_class_id}`;
+      }
+      return "/samples";
+    } else {
+      if (order.bulk_class_id) {
+        return `/orders?track=bulk&bulk_class_id=${order.bulk_class_id}`;
+      }
+      return "/bulk-projects";
+    }
+  };
+
+  const getBackLabel = () => {
+    if (!order) return "Back";
+    if (order.track_type === "sampling") {
+      return order.sample_class_name ? `Back to ${order.sample_class_name}` : "Back to Classes";
+    } else {
+      return order.bulk_class_name ? `Back to ${order.bulk_class_name}` : "Back to Classes";
+    }
+  };
+
   return (
     <div className="space-y-8 pb-20 animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
-          <button onClick={() => router.back()} className="p-4 text-slate-500 hover:text-white bg-slate-900 border border-slate-800 rounded-3xl transition-all shadow-inner group">
-            <ChevronLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
+          <button 
+            onClick={() => router.push(getBackUrl())} 
+            className="px-5 py-4 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-2xl transition-all shadow-inner group flex items-center gap-2 active:scale-95 text-[10px] font-black uppercase tracking-[0.2em]"
+            title={getBackLabel()}
+          >
+            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span>{getBackLabel()}</span>
           </button>
           <div className="space-y-3">
             <div className="flex items-center gap-4 flex-wrap">

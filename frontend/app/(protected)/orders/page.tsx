@@ -538,15 +538,13 @@ function OrdersContent() {
     <div className="space-y-8 pb-10 animate-in fade-in duration-700">
       <div className="flex justify-between items-center gap-4">
         <div>
-          {(sampleClassId || bulkClassId) && (
-            <button
-              type="button"
-              onClick={() => router.push(isSampling ? "/samples" : "/bulk-projects")}
-              className="border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-600 px-8 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-2 active:scale-95"
-            >
-              <ChevronLeft className="w-4 h-4" /> Back to {isSampling ? "Samples" : "Bulk Projects"}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => router.push(isSampling ? "/samples" : "/bulk-projects")}
+            className="border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-600 px-8 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-2 active:scale-95"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to {isSampling ? "Samples" : "Bulk Projects"}
+          </button>
         </div>
         <button 
           onClick={openCreateOrder}

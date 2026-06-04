@@ -593,10 +593,16 @@ function OrdersContent() {
     }).filter(Boolean) as { order: any, matchedClass: any }[];
 
     if (toUpdate.length === 0) {
+      // Find all matches regardless of current assignment status for debugging
+      const allMatches = orders.map((o: any) => {
+        const mc = getAutoMatchedClass(o);
+        return mc ? `${o.product_name || o.style_name} -> ${mc.name}` : null;
+      }).filter(Boolean);
+
       setFeedback({
         type: "error",
         title: "All Sorted!",
-        message: "All orders in view are already correctly linked to their respective classes."
+        message: `All orders in view are already correctly linked. (Debug: orders=${orders.length}, sampleClasses=${sampleClasses.length}, bulkClasses=${bulkClasses.length}, track=${track}, isSampling=${isSampling ? 'yes' : 'no'}, matches found=${allMatches.length}, matches=[${allMatches.slice(0, 3).join(', ')}])`
       });
       return;
     }

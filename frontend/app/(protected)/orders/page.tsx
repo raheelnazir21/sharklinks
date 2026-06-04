@@ -599,10 +599,13 @@ function OrdersContent() {
         return mc ? `${o.product_name || o.style_name} -> ${mc.name}` : null;
       }).filter(Boolean);
 
+      const classNames = sampleClasses.map((c: any) => c.name);
+      const orderNames = orders.map((o: any) => o.product_name || o.style_name);
+
       setFeedback({
         type: "error",
         title: "All Sorted!",
-        message: `All orders in view are already correctly linked. (Debug: orders=${orders.length}, sampleClasses=${sampleClasses.length}, bulkClasses=${bulkClasses.length}, track=${track}, isSampling=${isSampling ? 'yes' : 'no'}, matches found=${allMatches.length}, matches=[${allMatches.slice(0, 3).join(', ')}])`
+        message: `All orders in view are already correctly linked. (Debug: orders=${orders.length}, sampleClasses=${sampleClasses.length}, bulkClasses=${bulkClasses.length}, track=${track}, isSampling=${isSampling ? 'yes' : 'no'}, matches found=${allMatches.length}, classes=[${classNames.join(', ')}], orderNames=[${orderNames.slice(0, 5).join(', ')}])`
       });
       return;
     }

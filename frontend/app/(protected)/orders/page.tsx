@@ -135,6 +135,8 @@ function OrdersContent() {
   
   const [orders, setOrders] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [sampleClasses, setSampleClasses] = useState<any[]>([]);
+  const [bulkClasses, setBulkClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -190,7 +192,7 @@ function OrdersContent() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, vendorsRes] = await Promise.all([
+      const [ordersRes, vendorsRes, sampleClassesRes, bulkClassesRes] = await Promise.all([
         api.get("/orders/", { 
           params: { 
             status: statusFilter || undefined,
@@ -199,10 +201,14 @@ function OrdersContent() {
             ...(bulkClassId ? { bulk_class_id: bulkClassId } : {}),
           } 
         }),
-        api.get("/vendors/")
+        api.get("/vendors/"),
+        api.get("/orders/sample-classes").catch(() => ({ data: { data: [] } })),
+        api.get("/orders/bulk-classes").catch(() => ({ data: { data: [] } }))
       ]);
       setOrders(ordersRes.data.data);
       setVendors(vendorsRes.data.data);
+      setSampleClasses(sampleClassesRes.data.data || []);
+      setBulkClasses(bulkClassesRes.data.data || []);
     } catch (err) {
       console.warn("Failed to fetch data", err);
     } finally {
@@ -527,6 +533,110 @@ function OrdersContent() {
     }
   };
 
+  const getAutoMatchedClass = (order: any) => {
+    const nameToSearch = (isSampling ? order.product_name : order.style_name) || "";
+    if (!nameToSearch) return null;
+    const cleanedSearch = nameToSearch.toLowerCase().trim();
+    
+    const classesList = isSampling ? sampleClasses : bulkClasses;
+    return classesList.find((c: any) => {
+      if (!c.name) return false;
+      const cleanedClass = c.name.toLowerCase().trim();
+      if (!cleanedClass) return false;
+      return cleanedSearch.includes(cleanedClass);
+    });
+  };
+
+  const autoLinkOrder = async (order: any, matchedClass: any) => {
+    try {
+      await api.put(`/orders/${order.id}`, {
+        vendor_id: order.vendor_id,
+        order_no: order.order_no,
+        style_name: order.style_name,
+        product_name: order.product_name,
+        product_type: order.product_type,
+        fabric: order.fabric,
+        quantity: order.quantity,
+        ex_factory_date: order.ex_factory_date,
+        priority: order.priority,
+        remarks: order.remarks,
+        requirements: order.requirements,
+        reference_image: order.reference_image,
+        reference_attachments: order.reference_attachments,
+        ...(isSampling ? { sample_class_id: matchedClass.id } : { bulk_class_id: matchedClass.id }),
+      });
+      fetchData();
+      setFeedback({ 
+        type: "success", 
+        title: "Auto-Linked!", 
+        message: `Order linked to "${matchedClass.name}" successfully.` 
+      });
+    } catch (err: any) {
+      setFeedback({ 
+        type: "error", 
+        title: "Failed", 
+        message: err?.response?.data?.detail || "Could not link order." 
+      });
+    }
+  };
+
+  const autoLinkAllOrders = async () => {
+    const unlinked = orders.filter((o: any) => !o.sample_class_id && !o.bulk_class_id);
+    const toUpdate = unlinked.map((o: any) => {
+      const matchedClass = getAutoMatchedClass(o);
+      if (matchedClass) {
+        return { order: o, matchedClass };
+      }
+      return null;
+    }).filter(Boolean) as { order: any, matchedClass: any }[];
+
+    if (toUpdate.length === 0) {
+      setFeedback({
+        type: "error",
+        title: "No Matches",
+        message: "No unlinked orders match any existing classes by name."
+      });
+      return;
+    }
+
+    setLoading(true);
+    let successCount = 0;
+    try {
+      for (const item of toUpdate) {
+        await api.put(`/orders/${item.order.id}`, {
+          vendor_id: item.order.vendor_id,
+          order_no: item.order.order_no,
+          style_name: item.order.style_name,
+          product_name: item.order.product_name,
+          product_type: item.order.product_type,
+          fabric: item.order.fabric,
+          quantity: item.order.quantity,
+          ex_factory_date: item.order.ex_factory_date,
+          priority: item.order.priority,
+          remarks: item.order.remarks,
+          requirements: item.order.requirements,
+          reference_image: item.order.reference_image,
+          reference_attachments: item.order.reference_attachments,
+          ...(isSampling ? { sample_class_id: item.matchedClass.id } : { bulk_class_id: item.matchedClass.id }),
+        });
+        successCount++;
+      }
+      fetchData();
+      setFeedback({ 
+        type: "success", 
+        title: "Auto-Assign Complete", 
+        message: `Successfully linked ${successCount} order(s) to their parent classes.` 
+      });
+    } catch (err: any) {
+      fetchData();
+      setFeedback({ 
+        type: "error", 
+        title: "Partial Success", 
+        message: `Linked ${successCount} order(s), but encountered an error: ${err?.response?.data?.detail || "Unknown error"}` 
+      });
+    }
+  };
+
 
   const filtered = orders.filter((o: any) => 
     (o.order_no?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -536,7 +646,17 @@ function OrdersContent() {
 
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-700">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4">
+        {!(sampleClassId || bulkClassId) && (
+          <button
+            type="button"
+            onClick={autoLinkAllOrders}
+            className="border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-8 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 shadow-2xl active:scale-95"
+            title="Auto-assign all unlinked orders to classes based on name match"
+          >
+            <Pin className="w-5 h-5" /> Auto-Assign Classes
+          </button>
+        )}
         <button 
           onClick={openCreateOrder}
           style={{ backgroundColor: themeHex }}
@@ -589,57 +709,79 @@ function OrdersContent() {
               <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8`}>
                  {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
               </p>
-              <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: (sampleClassId || bulkClassId) ? 'repeat(4,1fr)' : 'repeat(3,1fr)' }}>
-                {/* Assign / Reassign button — always shown in class context so mistakes can be corrected */}
-                {(sampleClassId || bulkClassId) && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      assignToClass(order.id);
-                    }}
-                    className={`rounded-2xl border px-3 py-3 text-[9px] font-black uppercase tracking-widest transition-all ${
-                      order.sample_class_id || order.bulk_class_id
-                        ? 'border-blue-500/40 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400'
-                        : 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400'
-                    }`}
-                    title={order.sample_class_id || order.bulk_class_id ? "Reassign to this class" : "Assign to this class"}
-                  >
-                    <Pin className="mx-auto mb-1 h-4 w-4" />
-                    {order.sample_class_id || order.bulk_class_id ? 'Reassign' : 'Assign'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openEditOrder(order);
-                  }}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-blue-500/40 hover:text-blue-400"
-                >
-                  <Edit3 className="mx-auto mb-1 h-4 w-4" /> Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setHistoryOrderId(order.id);
-                  }}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-emerald-500/40 hover:text-emerald-400"
-                >
-                  <History className="mx-auto mb-1 h-4 w-4" /> History
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDeleteTarget(order);
-                  }}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-red-500/40 hover:text-red-400"
-                >
-                  <Trash2 className="mx-auto mb-1 h-4 w-4" /> Delete
-                </button>
-              </div>
+              {(() => {
+                const matchedClass = getAutoMatchedClass(order);
+                const hasAutoLinkButton = !(sampleClassId || bulkClassId) && !order.sample_class_id && !order.bulk_class_id && !!matchedClass;
+                const buttonCount = 3 + ((sampleClassId || bulkClassId) || hasAutoLinkButton ? 1 : 0);
+                return (
+                  <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: `repeat(${buttonCount},1fr)` }}>
+                    {/* Assign / Reassign button — always shown in class context so mistakes can be corrected */}
+                    {(sampleClassId || bulkClassId) && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          assignToClass(order.id);
+                        }}
+                        className={`rounded-2xl border px-3 py-3 text-[9px] font-black uppercase tracking-widest transition-all ${
+                          order.sample_class_id || order.bulk_class_id
+                            ? 'border-blue-500/40 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400'
+                            : 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400'
+                        }`}
+                        title={order.sample_class_id || order.bulk_class_id ? "Reassign to this class" : "Assign to this class"}
+                      >
+                        <Pin className="mx-auto mb-1 h-4 w-4" />
+                        {order.sample_class_id || order.bulk_class_id ? 'Reassign' : 'Assign'}
+                      </button>
+                    )}
+                    {/* Auto-link button — shown on general page when unassigned and name matches an existing class */}
+                    {hasAutoLinkButton && matchedClass && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          autoLinkOrder(order, matchedClass);
+                        }}
+                        className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-amber-400 hover:bg-amber-500/20 hover:border-amber-400"
+                        title={`Auto-link this order to class: ${matchedClass.name}`}
+                      >
+                        <Pin className="mx-auto mb-1 h-4 w-4" />
+                        Link {matchedClass.name}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openEditOrder(order);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-blue-500/40 hover:text-blue-400"
+                    >
+                      <Edit3 className="mx-auto mb-1 h-4 w-4" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setHistoryOrderId(order.id);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-emerald-500/40 hover:text-emerald-400"
+                    >
+                      <History className="mx-auto mb-1 h-4 w-4" /> History
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDeleteTarget(order);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-red-500/40 hover:text-red-400"
+                    >
+                      <Trash2 className="mx-auto mb-1 h-4 w-4" /> Delete
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

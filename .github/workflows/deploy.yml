@@ -126,6 +126,27 @@ jobs:
             docker compose up -d --build
             docker compose exec -T backend alembic upgrade head || echo "Migration skipped or failed."
 
+            # ── Update host nginx config and reload ─────────────────────────
+            # Find the active nginx sites-available config for this project
+            NGINX_SITE=""
+            for candidate in /etc/nginx/sites-available/textile-qc \
+                             /etc/nginx/sites-available/textileapperal \
+                             /etc/nginx/sites-available/default; do
+              if [ -f "$candidate" ]; then
+                NGINX_SITE="$candidate"
+                break
+              fi
+            done
+
+            if [ -n "$NGINX_SITE" ]; then
+              echo "Updating nginx config at $NGINX_SITE"
+              sudo cp "$PROJECT_DIR/nginx/nginx.host.conf" "$NGINX_SITE"
+              sudo nginx -t && sudo nginx -s reload && echo "Nginx reloaded OK" || echo "WARNING: Nginx reload failed"
+            else
+              echo "No known nginx site config found — skipping nginx reload"
+            fi
+            # ────────────────────────────────────────────────────────────────
+
             echo "Waiting for application containers to become stable..."
             for i in $(seq 1 18); do
               BACKEND_STATUS="$(docker inspect -f '{{.State.Status}}' textile_backend 2>/dev/null || echo missing)"

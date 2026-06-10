@@ -12,6 +12,7 @@ import Link from "next/link";
 import Modal from "@/components/ui/Modal";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import OrderHistoryModal from "@/components/orders/OrderHistoryModal";
+import { useAuth } from "@/hooks/useAuth";
 
 const DEFAULT_BULK_STAGES = [
   { name: "customer_order_wrapping_card", label: "Customer Order / Wrapping Card" },
@@ -129,12 +130,16 @@ function OrdersContent() {
   const sampleClassId = searchParams.get("sample_class_id");
   const bulkClassId = searchParams.get("bulk_class_id");
   
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
   const isSampling = track === "sampling";
   const themeColor = isSampling ? "blue" : "emerald";
   const themeHex = isSampling ? "#3b82f6" : "#10b981";
   
   const [orders, setOrders] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [sampleClasses, setSampleClasses] = useState<any[]>([]);
+  const [bulkClasses, setBulkClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -213,6 +218,13 @@ function OrdersContent() {
   useEffect(() => {
     fetchData();
   }, [statusFilter, track, sampleClassId, bulkClassId]);
+
+  // Load class lists for the super_admin class dropdown in the edit modal
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    api.get("/orders/sample-classes").then((res) => setSampleClasses(res.data.data || [])).catch(() => {});
+    api.get("/orders/bulk-classes").then((res) => setBulkClasses(res.data.data || [])).catch(() => {});
+  }, [isSuperAdmin]);
 
   const handleAddBulkItem = () => {
     setBulkItems([...bulkItems, createBlankBulkItem()]);
@@ -352,9 +364,9 @@ function OrdersContent() {
           requirements: sanitizedData.requirements,
           reference_image: sanitizedData.reference_image,
           reference_attachments: sanitizedData.reference_attachments,
-          // Always persist the class context so editing from a class view links the order
-          ...(sanitizedData.sample_class_id ? { sample_class_id: sanitizedData.sample_class_id } : {}),
-          ...(sanitizedData.bulk_class_id ? { bulk_class_id: sanitizedData.bulk_class_id } : {}),
+          // Always send class IDs (super admin can change them; null clears the assignment)
+          sample_class_id: sanitizedData.sample_class_id || null,
+          bulk_class_id: sanitizedData.bulk_class_id || null,
         });
         setIsModalOpen(false);
         setEditingOrder(null);
@@ -454,8 +466,8 @@ function OrdersContent() {
       tech_pack_no: "",
       priority: order.priority || "normal",
       track_type: order.track_type || track,
-      sample_class_id: sampleClassId || null,
-      bulk_class_id: bulkClassId || null,
+      sample_class_id: order.sample_class_id || sampleClassId || null,
+      bulk_class_id: order.bulk_class_id || bulkClassId || null,
       sample_department_id: "",
       remarks: "",
       requirements: "",
@@ -716,6 +728,31 @@ function OrdersContent() {
                   {vendors.map((v: any) => (<option key={v.id} value={v.id}>{v.name}</option>))}
                 </select>
               </div>
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-[9px] font-black text-amber-500 uppercase tracking-widest mb-3 italic">
+                    {isSampling ? "Sample Class" : "Bulk Class"}
+                  </label>
+                  <select
+                    className="w-full bg-slate-950 border border-amber-500/30 rounded-xl px-5 py-4 text-xs font-bold text-white focus:outline-none focus:border-amber-400"
+                    value={isSampling ? (formData.sample_class_id || "") : (formData.bulk_class_id || "")}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ...(isSampling
+                        ? { sample_class_id: e.target.value || null }
+                        : { bulk_class_id: e.target.value || null }
+                      )
+                    })}
+                  >
+                    <option value="">No Class Assigned</option>
+                    {(isSampling ? sampleClasses : bulkClasses).map((cls: any) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name}{cls.serial_number ? ` (${cls.serial_number})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <ReferenceAttachmentButton
                 attachments={formData.reference_attachments}
                 uploading={uploadingReference}

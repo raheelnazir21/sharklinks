@@ -120,18 +120,21 @@ jobs:
               cp -a "$ENV_DIR/backend/uploads/." "$PROJECT_DIR/backend/uploads/"
             fi
 
-            # ── Self-heal: flatten any nested uploads/uploads/ directory ──
-            # This fixes previously broken deploys where cp -a created nesting.
-            if [ -d "$PROJECT_DIR/backend/uploads/uploads" ]; then
-              echo "Detected nested uploads dir – flattening..."
-              find "$PROJECT_DIR/backend/uploads/uploads" -maxdepth 5 -type f -exec mv -n {} "$PROJECT_DIR/backend/uploads/" \;
-              rm -rf "$PROJECT_DIR/backend/uploads/uploads"
-              echo "Flatten complete."
+            # ── Self-heal: recover files nested at any depth under uploads ──
+            # Handles single nesting (uploads/uploads/) AND deeper (uploads/uploads/uploads/)
+            if find "$PROJECT_DIR/backend/uploads" -mindepth 2 -type f | read -r; then
+              echo "Found nested files under uploads – recovering..."
+              find "$PROJECT_DIR/backend/uploads" -mindepth 2 -type f \
+                -exec mv -n {} "$PROJECT_DIR/backend/uploads/" \;
+              # Remove empty nested directories (leaves subdirs like attachments/ intact)
+              find "$PROJECT_DIR/backend/uploads" -mindepth 1 -type d -empty -delete 2>/dev/null || true
+              echo "Recovery complete."
             fi
-            # Also flatten ENV_DIR so next deploy saves clean structure
-            if [ -d "$ENV_DIR/backend/uploads/uploads" ]; then
-              find "$ENV_DIR/backend/uploads/uploads" -maxdepth 5 -type f -exec mv -n {} "$ENV_DIR/backend/uploads/" \;
-              rm -rf "$ENV_DIR/backend/uploads/uploads"
+            # Also flatten ENV_DIR so next save preserves clean structure
+            if find "$ENV_DIR/backend/uploads" -mindepth 2 -type f 2>/dev/null | read -r; then
+              find "$ENV_DIR/backend/uploads" -mindepth 2 -type f \
+                -exec mv -n {} "$ENV_DIR/backend/uploads/" \;
+              find "$ENV_DIR/backend/uploads" -mindepth 1 -type d -empty -delete 2>/dev/null || true
             fi
 
             if [ -f "$ENV_DIR/backend/textile_qc.db" ]; then

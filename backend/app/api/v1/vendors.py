@@ -22,6 +22,7 @@ router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
 VendorReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
+SuperAdminOnly = require_roles([RoleEnum.super_admin])
 
 
 @router.get("", response_model=dict, summary="List All Vendors")
@@ -91,7 +92,7 @@ def update_vendor(
     vendor_id: str,
     payload: VendorUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(ManagerAccess),
+    current_user: User = Depends(SuperAdminOnly),
 ):
     assert_vendor_access(db, vendor_id, current_user)
     update_payload = payload

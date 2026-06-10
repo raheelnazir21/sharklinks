@@ -6,6 +6,7 @@ import { Plus, Search, Mail, Phone, MapPin, Building2, Edit3, Trash2 } from "luc
 import Modal from "@/components/ui/Modal";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 type Vendor = {
   id: string;
@@ -83,6 +84,8 @@ function getApiError(err: unknown, fallback: string) {
 }
 
 export default function VendorsPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [managers, setManagers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,14 +234,16 @@ export default function VendorsPage() {
                   <Building2 className="w-7 h-7" />
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(vendor)}
-                    className="text-slate-500 hover:text-indigo-700 p-2 bg-slate-50 rounded-xl border border-slate-200 transition-all"
-                    title="Edit vendor"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
+                  {isSuperAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(vendor)}
+                      className="text-slate-500 hover:text-indigo-700 p-2 bg-slate-50 rounded-xl border border-slate-200 transition-all"
+                      title="Edit vendor"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(vendor)}

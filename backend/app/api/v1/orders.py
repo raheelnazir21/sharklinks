@@ -28,6 +28,7 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
+SuperAdminOnly = require_roles([RoleEnum.super_admin])
 
 UPLOAD_DIR = "uploads/attachments"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -104,7 +105,7 @@ def update_sample_class(
     sample_class_id: str,
     payload: SampleClassUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(ManagerAccess),
+    current_user: User = Depends(SuperAdminOnly),
 ):
     sc = SampleClassRepository.get_by_id(db, sample_class_id)
     if not sc:
@@ -214,7 +215,7 @@ def update_bulk_class(
     payload: BulkClassUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(ManagerAccess),
+    _=Depends(SuperAdminOnly),
 ):
     bc = BulkClassRepository.get_by_id(db, bc_id)
     if not bc:

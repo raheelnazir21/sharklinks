@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 import Modal from "@/components/ui/Modal";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import {
@@ -38,6 +39,8 @@ function getApiError(err: unknown, fallback: string) {
 }
 
 export default function SamplesPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
   const [samples, setSamples] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,7 +192,7 @@ export default function SamplesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((sample) => (
-            <SampleCard key={sample.id} sample={sample} onEdit={openEdit} onDelete={setDeleteTarget} />
+            <SampleCard key={sample.id} sample={sample} onEdit={openEdit} onDelete={setDeleteTarget} canEdit={isSuperAdmin} />
           ))}
           {filtered.length === 0 && (
             <EmptyState
@@ -290,7 +293,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function SampleCard({ sample, onEdit, onDelete }: { sample: any; onEdit: (sample: any) => void; onDelete: (sample: any) => void }) {
+function SampleCard({ sample, onEdit, onDelete, canEdit }: { sample: any; onEdit: (sample: any) => void; onDelete: (sample: any) => void; canEdit?: boolean }) {
   const progress = sample.status === "completed" ? 100 : sample.status === "active" ? 62 : 35;
   return (
     <article className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/[0.03] transition duration-200 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-xl hover:shadow-cyan-950/5">
@@ -300,7 +303,9 @@ function SampleCard({ sample, onEdit, onDelete }: { sample: any; onEdit: (sample
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge tone={sample.status === "completed" ? "success" : "info"}>{sample.status || "Active"}</StatusBadge>
-          <button type="button" onClick={() => onEdit(sample)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-cyan-700"><Edit3 className="h-4 w-4" /></button>
+          {canEdit && (
+            <button type="button" onClick={() => onEdit(sample)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-cyan-700"><Edit3 className="h-4 w-4" /></button>
+          )}
           <button type="button" onClick={() => onDelete(sample)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
         </div>
       </div>

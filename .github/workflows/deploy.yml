@@ -120,6 +120,20 @@ jobs:
               cp -a "$ENV_DIR/backend/uploads/." "$PROJECT_DIR/backend/uploads/"
             fi
 
+            # ── Self-heal: flatten any nested uploads/uploads/ directory ──
+            # This fixes previously broken deploys where cp -a created nesting.
+            if [ -d "$PROJECT_DIR/backend/uploads/uploads" ]; then
+              echo "Detected nested uploads dir – flattening..."
+              find "$PROJECT_DIR/backend/uploads/uploads" -maxdepth 5 -type f -exec mv -n {} "$PROJECT_DIR/backend/uploads/" \;
+              rm -rf "$PROJECT_DIR/backend/uploads/uploads"
+              echo "Flatten complete."
+            fi
+            # Also flatten ENV_DIR so next deploy saves clean structure
+            if [ -d "$ENV_DIR/backend/uploads/uploads" ]; then
+              find "$ENV_DIR/backend/uploads/uploads" -maxdepth 5 -type f -exec mv -n {} "$ENV_DIR/backend/uploads/" \;
+              rm -rf "$ENV_DIR/backend/uploads/uploads"
+            fi
+
             if [ -f "$ENV_DIR/backend/textile_qc.db" ]; then
               cp "$ENV_DIR/backend/textile_qc.db" "$PROJECT_DIR/backend/textile_qc.db"
             fi

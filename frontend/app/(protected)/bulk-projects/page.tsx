@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 import Modal from "@/components/ui/Modal";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import {
@@ -38,6 +39,8 @@ function getApiError(err: unknown, fallback: string) {
 }
 
 export default function BulkProjectsPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -163,7 +166,7 @@ export default function BulkProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((project) => (
-            <BulkCard key={project.id} project={project} onEdit={openEdit} onDelete={setDeleteTarget} />
+            <BulkCard key={project.id} project={project} onEdit={openEdit} onDelete={setDeleteTarget} canEdit={isSuperAdmin} />
           ))}
           {filtered.length === 0 && (
             <EmptyState
@@ -249,7 +252,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function BulkCard({ project, onEdit, onDelete }: { project: any; onEdit: (project: any) => void; onDelete: (project: any) => void }) {
+function BulkCard({ project, onEdit, onDelete, canEdit }: { project: any; onEdit: (project: any) => void; onDelete: (project: any) => void; canEdit?: boolean }) {
   const status = project.status || "active";
   const progress = status === "completed" ? 100 : status === "hold" ? 42 : 68;
   const delayed = status === "delayed";
@@ -263,7 +266,9 @@ function BulkCard({ project, onEdit, onDelete }: { project: any; onEdit: (projec
           <StatusBadge tone={delayed ? "danger" : status === "completed" ? "success" : "info"}>
             {status}
           </StatusBadge>
-          <button type="button" onClick={() => onEdit(project)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-700"><Edit3 className="h-4 w-4" /></button>
+          {canEdit && (
+            <button type="button" onClick={() => onEdit(project)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-700"><Edit3 className="h-4 w-4" /></button>
+          )}
           <button type="button" onClick={() => onDelete(project)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
         </div>
       </div>

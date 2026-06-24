@@ -56,6 +56,39 @@ body {
   color: #0f172a !important;
 }
 
+/* Exception: preserve white text inside intentionally dark panels */
+.light-ui .dark-panel,
+.light-ui .dark-panel * {
+  color: inherit;
+}
+.light-ui .dark-panel .text-white {
+  color: #ffffff !important;
+}
+.light-ui .dark-panel .text-white\/80 {
+  color: rgba(255,255,255,0.8) !important;
+}
+.light-ui .dark-panel .text-white\/70 {
+  color: rgba(255,255,255,0.7) !important;
+}
+.light-ui .dark-panel .text-emerald-300 {
+  color: #6ee7b7 !important;
+}
+.light-ui .dark-panel .text-red-200,
+.light-ui .dark-panel .text-red-300\/80 {
+  color: #fecaca !important;
+}
+.light-ui .dark-panel .text-green-100,
+.light-ui .dark-panel .text-green-200\/80 {
+  color: #dcfce7 !important;
+}
+.light-ui .dark-panel .text-yellow-100,
+.light-ui .dark-panel .text-yellow-200\/80 {
+  color: #fef9c3 !important;
+}
+.light-ui .dark-panel .text-emerald-100 {
+  color: #d1fae5 !important;
+}
+
 .light-ui button.text-white,
 .light-ui a.text-white,
 .light-ui [role="button"].text-white {

@@ -4,10 +4,11 @@
  */
 "use client";
 
-import { Bell, LogOut, Search } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
+import GlobalSearch from "@/components/layout/GlobalSearch";
 
 interface HeaderProps {
   title: string;
@@ -35,14 +36,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
       />
 
       <div className="flex items-center gap-3">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-64 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100"
-          />
-        </div>
+        {/* Global Search */}
+        <GlobalSearch />
 
         <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">
           <Bell className="h-4 w-4" />

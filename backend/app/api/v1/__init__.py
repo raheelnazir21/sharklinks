@@ -46,3 +46,7 @@ api_router.include_router(advanced_qc.router)
 # Step 9 — Activity Logs / Factory Historian
 from app.api.v1 import activity_logs
 api_router.include_router(activity_logs.router)
+
+# Step 10 — Global Search
+from app.api.v1 import search
+api_router.include_router(search.router)

@@ -6,6 +6,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSidebar } from "@/hooks/useSidebar";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -216,7 +217,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useSidebar();
   const [historian, setHistorian] = useState<HistorianEvent[]>([]);
 
   // Filter nav items by current user's role
@@ -248,7 +249,7 @@ export default function Sidebar() {
     .filter(({ items }) => items.length);
 
   return (
-    <aside className={`flex min-h-screen shrink-0 flex-col border-r border-slate-200 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur transition-all duration-300 ${collapsed ? "w-20" : "w-72"}`}>
+    <aside className={`fixed left-0 top-0 z-30 flex h-screen shrink-0 flex-col border-r border-slate-200 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur transition-all duration-300 ${collapsed ? "w-20" : "w-72"}`}>
       {/* Brand */}
       <div className={`flex items-center gap-3 border-b border-slate-200 px-4 py-5 ${collapsed ? "justify-center" : ""}`}>
         {collapsed ? (

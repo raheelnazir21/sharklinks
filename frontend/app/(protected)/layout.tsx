@@ -3,8 +3,10 @@
  * Wraps every dashboard page with the Sidebar + Header.
  * Next.js App Router: the (protected) folder name is a route group (no URL segment).
  */
+import { SidebarProvider } from "@/hooks/useSidebar";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import MainContent from "@/components/layout/MainContent";
 
 export default function ProtectedLayout({
   children,
@@ -12,12 +14,16 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="light-ui flex min-h-screen bg-[#f7faf9] text-slate-950">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Dashboard" />
-        <main className="flex-1 overflow-y-auto bg-[#f7faf9] p-6">{children}</main>
+    <SidebarProvider>
+      <div className="light-ui min-h-screen bg-[#f7faf9] text-slate-950">
+        {/* Fixed sidebar — stays locked while content scrolls */}
+        <Sidebar />
+        {/* Reactive main area — shifts when sidebar collapses */}
+        <MainContent>
+          <Header title="Dashboard" />
+          <main className="flex-1 bg-[#f7faf9] p-6">{children}</main>
+        </MainContent>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

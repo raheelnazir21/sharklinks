@@ -1,0 +1,30 @@
+/**
+ * useSidebar.tsx — Shared context for sidebar collapsed state.
+ * Consumed by both Sidebar (to toggle) and ProtectedLayout (to adjust margin).
+ */
+"use client";
+
+import { createContext, useContext, useState } from "react";
+
+interface SidebarContextValue {
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+}
+
+const SidebarContext = createContext<SidebarContextValue>({
+  collapsed: false,
+  setCollapsed: () => {},
+});
+
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
+      {children}
+    </SidebarContext.Provider>
+  );
+}
+
+export function useSidebar() {
+  return useContext(SidebarContext);
+}

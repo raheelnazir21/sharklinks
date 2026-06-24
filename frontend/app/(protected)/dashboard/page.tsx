@@ -1020,36 +1020,52 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="!bg-black bg-gradient-to-br from-black via-black to-emerald-950 p-7 !text-white">
-            <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="dark-panel relative overflow-hidden bg-gradient-to-br from-emerald-900 via-green-800 to-emerald-950 p-7 text-white">
+            {/* Decorative glowing orbs */}
+            <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-emerald-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-green-300/10 blur-2xl" />
+
+            <div className="relative mb-6 flex items-center justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Today&apos;s factory pulse</p>
-                <p className="mt-1 text-sm !text-white/70">Fast signals for supervisor review</p>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-300 ring-1 ring-emerald-400/30">
+                  ● Live
+                </span>
+                <p className="mt-2 text-lg font-black tracking-tight text-white">Today&apos;s Factory Pulse</p>
+                <p className="mt-0.5 text-xs text-white/80">Fast signals for supervisor review</p>
               </div>
-              <button onClick={fetchData} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-black uppercase text-white transition hover:bg-emerald-500">
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+              <button onClick={fetchData} className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/30 px-4 py-2.5 text-xs font-black uppercase text-emerald-100 ring-1 ring-emerald-400/30 transition hover:bg-emerald-400/40 hover:text-white">
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest !text-white/70">Orders in flow</p>
-                <p className="mt-3 font-mono text-4xl font-black !text-white">{tracking.summary.total_orders}</p>
+            <div className="relative grid grid-cols-2 gap-3">
+              {/* Orders in flow */}
+              <div className="group rounded-2xl border border-emerald-400/20 bg-white/5 p-4 backdrop-blur transition hover:bg-white/10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/80">Orders in flow</p>
+                <p className="mt-3 font-mono text-4xl font-black text-white">{tracking.summary.total_orders}</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-emerald-400/60" />
               </div>
-              <div className="rounded-xl border border-red-300/30 bg-red-500/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-red-100">Delayed</p>
-                <p className="mt-3 font-mono text-4xl font-black text-red-100">{tracking.summary.delayed_orders}</p>
+              {/* Delayed */}
+              <div className="group rounded-2xl border border-red-400/20 bg-red-500/10 p-4 backdrop-blur transition hover:bg-red-500/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-red-300/80">Delayed</p>
+                <p className="mt-3 font-mono text-4xl font-black text-red-200">{tracking.summary.delayed_orders}</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-red-400/60" />
               </div>
-              <div className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100">FPY rate</p>
-                <p className="mt-3 font-mono text-3xl font-black text-emerald-100">{stats.fpy_percent}%</p>
+              {/* FPY Rate */}
+              <div className="group rounded-2xl border border-green-400/20 bg-green-400/10 p-4 backdrop-blur transition hover:bg-green-400/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-green-200/80">FPY Rate</p>
+                <p className="mt-3 font-mono text-3xl font-black text-green-100">{stats.fpy_percent}%</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-green-300/60" />
               </div>
-              <div className="rounded-xl border border-yellow-300/30 bg-yellow-500/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-yellow-100">DHU risk</p>
+              {/* DHU Risk */}
+              <div className="group rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 backdrop-blur transition hover:bg-yellow-400/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/80">DHU Risk</p>
                 <p className="mt-3 font-mono text-3xl font-black text-yellow-100">{stats.dhu_percent}%</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-yellow-300/60" />
               </div>
             </div>
           </div>
+
         </div>
       </motion.section>
 

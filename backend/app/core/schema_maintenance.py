@@ -154,7 +154,23 @@ def ensure_runtime_schema(engine: Engine) -> None:
             if "chunk_id" not in ps_cols:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN chunk_id CHAR(36)"))
 
+            # --- inline_qc_reports schema updates ---
+            inline_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(inline_qc_reports)")).fetchall()}
+            if "article_code" not in inline_cols:
+                conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN article_code VARCHAR(100)"))
+            if "product_color" not in inline_cols:
+                conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN product_color VARCHAR(100)"))
+
+            # --- finish_endline_qc_reports schema updates ---
+            finish_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(finish_endline_qc_reports)")).fetchall()}
+            if "article_code" not in finish_cols:
+                conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN article_code VARCHAR(100)"))
+            if "product_color" not in finish_cols:
+                conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN product_color VARCHAR(100)"))
+
             for old_name, new_name in legacy_stage_names.items():
+
+
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = :new_name WHERE stage_name = :old_name"),
                     {"new_name": new_name, "old_name": old_name},
@@ -184,7 +200,14 @@ def ensure_runtime_schema(engine: Engine) -> None:
             """))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS chunk_id UUID REFERENCES production_stage_chunks(id) ON DELETE SET NULL"))
 
+            conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
+
             for old_name, new_name in legacy_stage_names.items():
+
+
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = CAST(:new_name AS stagename) WHERE stage_name::text = :old_name"),
                     {"new_name": new_name, "old_name": old_name},

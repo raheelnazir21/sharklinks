@@ -369,3 +369,96 @@ class FinishEndlineQCHourlyRow(Base):
     dhu_percent   = Column(Float, default=0.0)
 
     report = relationship("FinishEndlineQCReport", back_populates="hourly_rows")
+
+
+# ─── RANDOM INLINE QC REPORT ─────────────────────────────────────────────────
+
+class RandomInlineQCReport(Base):
+    """
+    Random Inline QC Report — Cut-to-Pack Process Control & Immediate Corrective Action.
+    Covers 6 processes: Cutting, Sewing, Print/Emb., Wash/Shade, Finishing, Packing.
+    """
+    __tablename__ = "random_inline_qc_reports"
+
+    id                    = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    vendor_id             = Column(GUID(), ForeignKey("vendors.id"), nullable=True)
+    floor_id              = Column(GUID(), ForeignKey("vendor_floors.id"), nullable=True)
+    line_id               = Column(GUID(), ForeignKey("vendor_lines.id"), nullable=True)
+    report_date           = Column(Date, default=date.today)
+    report_no             = Column(String(100), nullable=True)
+
+    # Header identification fields
+    factory               = Column(String(200), nullable=True)
+    inspector_auditor     = Column(String(150), nullable=True)
+    visit_time            = Column(String(50), nullable=True)
+    shift                 = Column(String(50), nullable=True)
+    production_manager    = Column(String(150), nullable=True)
+    qc_manager            = Column(String(150), nullable=True)
+    inspection_duration   = Column(String(100), nullable=True, default="Minimum first 2 hours")
+    factory_representative = Column(String(150), nullable=True)
+
+    # Defect summary
+    critical_count        = Column(Integer, default=0)
+    major_count           = Column(Integer, default=0)
+    minor_count           = Column(Integer, default=0)
+    repeat_issue          = Column(Boolean, default=False)
+
+    # Overall decision: pass | conditional | hold
+    overall_decision      = Column(String(50), nullable=True, default="pass")
+
+    # Verification
+    verification_status   = Column(String(50), nullable=True, default="pending")  # closed | pending
+    root_cause            = Column(Text, nullable=True)
+    due_responsible       = Column(Text, nullable=True)
+
+    # Signatures
+    production_manager_signature = Column(String(200), nullable=True)
+    production_manager_date      = Column(String(100), nullable=True)
+    qc_manager_signature         = Column(String(200), nullable=True)
+    qc_manager_date              = Column(String(100), nullable=True)
+    auditor_signature            = Column(String(200), nullable=True)
+    auditor_date                 = Column(String(100), nullable=True)
+
+    # Computed totals
+    total_defects         = Column(Integer, default=0)
+    total_processes       = Column(Integer, default=6)
+    processes_passed      = Column(Integer, default=0)
+
+    remarks               = Column(Text, nullable=True)
+    created_by            = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    created_at            = Column(DateTime, default=datetime.utcnow)
+    updated_at            = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    vendor    = relationship("Vendor")
+    floor_rel = relationship("VendorFloor")
+    line_rel  = relationship("VendorLine")
+    rows      = relationship(
+        "RandomInlineQCProcessRow",
+        back_populates="report",
+        cascade="all, delete-orphan",
+        order_by="RandomInlineQCProcessRow.row_order"
+    )
+
+
+class RandomInlineQCProcessRow(Base):
+    """
+    One row per manufacturing process in the Random Inline QC Report.
+    Default processes: Cutting, Sewing, Print/Emb., Wash/Shade, Finishing, Packing.
+    """
+    __tablename__ = "random_inline_qc_process_rows"
+
+    id              = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    report_id       = Column(GUID(), ForeignKey("random_inline_qc_reports.id"), nullable=False, index=True)
+    row_order       = Column(Integer, default=1)
+    process_name    = Column(String(100), nullable=False)   # e.g. "CUTTING"
+    active_po_style = Column(String(200), nullable=True)
+    line_area       = Column(String(200), nullable=True)
+    qty_checked     = Column(Integer, default=0)
+    finding_defect  = Column(Text, nullable=True)
+    immediate_action = Column(Text, nullable=True)
+    # P = Pass, C = Correct & Continue, H = Hold
+    status          = Column(String(10), nullable=True, default="P")
+    total_defects   = Column(Integer, default=0)
+
+    report = relationship("RandomInlineQCReport", back_populates="rows")
+

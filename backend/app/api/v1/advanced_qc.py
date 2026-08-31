@@ -18,6 +18,7 @@ from app.models.inline_qc import (
     OperatorTrafficLightHistory, FinishEndlineQCReport,
     FinishEndlineQCHourlyRow, CutPanelReport, CutPanelReportRow,
     BatchAuditReport, BatchAuditReportRow,
+    RandomInlineQCReport, RandomInlineQCProcessRow,
     TrafficLightStatus, AQLResult, FinishReportType
 )
 from app.models.qc_report import QCReportAttachment
@@ -1198,3 +1199,377 @@ def delete_finish_report(report_id: str, db: Session = Depends(get_db), current_
     db.delete(report)
     db.commit()
     return success_response(message="Finish/Endline QC report deleted.")
+
+
+# ─── RANDOM INLINE QC ENDPOINTS ──────────────────────────────────────────────
+
+DEFAULT_PROCESSES = [
+    {
+        "name": "CUTTING",
+        "control_points": [
+            "Fabric identity, GSM, width and relaxation",
+            "Roll/shade continuity and panel segregation",
+            "Marker, ratio, grain/nap, notches and panel defects",
+            "Bundle numbering and cut-panel measurements",
+        ],
+    },
+    {
+        "name": "SEWING",
+        "control_points": [
+            "Approved PP construction and operation sequence",
+            "Seam allowance, SPI, machine setting and attachments",
+            "Critical measurements, symmetry and plaid/stripe alignment",
+            "Skipped/broken stitches, puckering, open seams, loose threads",
+        ],
+    },
+    {
+        "name": "PRINT / EMB.",
+        "control_points": [
+            "Approved strike-off, placement, size and color",
+            "Registration, coverage, curing/adhesion and cleanliness",
+            "Cracking/stretch performance; embroidery density/backing",
+            "No damage, staining or distortion to garment",
+        ],
+    },
+    {
+        "name": "WASH / SHADE",
+        "control_points": [
+            "Approved wash effect and shade standard",
+            "Lot/panel shade continuity and hand feel",
+            "Shrinkage, spirality, pilling, lint and crocking risk",
+            "No stains, wash marks, holes or garment damage",
+        ],
+    },
+    {
+        "name": "FINISHING",
+        "control_points": [
+            "100% thread trimming, stain and repair control",
+            "Final measurements, pressing shape and appearance",
+            "Labels, trims and accessories complete/correct",
+            "Rejected pieces segregated and rechecked after correction",
+        ],
+    },
+    {
+        "name": "PACKING",
+        "control_points": [
+            "Correct style, color, size, folding and polybag",
+            "Barcode, size sticker, assortment and carton quantity",
+            "Carton markings, condition and sealing",
+            "Metal detection / special packing requirement where applicable",
+        ],
+    },
+]
+
+
+class RandomInlineProcessRowIn(BaseModel):
+    process_name:     str
+    active_po_style:  Optional[str] = None
+    line_area:        Optional[str] = None
+    qty_checked:      int = 0
+    finding_defect:   Optional[str] = None
+    immediate_action: Optional[str] = None
+    status:           str = "P"   # P | C | H
+    total_defects:    int = 0
+
+
+class RandomInlineQCReportCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    vendor_id:              Optional[uuid.UUID] = None
+    floor_id:               Optional[uuid.UUID] = None
+    line_id:                Optional[uuid.UUID] = None
+    report_date:            Optional[date] = None
+    report_no:              Optional[str] = None
+    factory:                Optional[str] = None
+    inspector_auditor:      Optional[str] = None
+    visit_time:             Optional[str] = None
+    shift:                  Optional[str] = None
+    production_manager:     Optional[str] = None
+    qc_manager:             Optional[str] = None
+    inspection_duration:    Optional[str] = "Minimum first 2 hours"
+    factory_representative: Optional[str] = None
+    critical_count:         int = 0
+    major_count:            int = 0
+    minor_count:            int = 0
+    repeat_issue:           bool = False
+    overall_decision:       Optional[str] = "pass"
+    verification_status:    Optional[str] = "pending"
+    root_cause:             Optional[str] = None
+    due_responsible:        Optional[str] = None
+    production_manager_signature: Optional[str] = None
+    production_manager_date:      Optional[str] = None
+    qc_manager_signature:         Optional[str] = None
+    qc_manager_date:              Optional[str] = None
+    auditor_signature:            Optional[str] = None
+    auditor_date:                 Optional[str] = None
+    remarks:                Optional[str] = None
+    rows:                   List[RandomInlineProcessRowIn] = []
+
+
+def _serialize_random_inline_report(r: RandomInlineQCReport) -> dict:
+    rows_out = []
+    for row in r.rows:
+        # Attach static control points from defaults
+        ctrl = next(
+            (p["control_points"] for p in DEFAULT_PROCESSES if p["name"] == row.process_name),
+            []
+        )
+        rows_out.append({
+            "id":              str(row.id),
+            "row_order":       row.row_order,
+            "process_name":    row.process_name,
+            "active_po_style": row.active_po_style,
+            "line_area":       row.line_area,
+            "qty_checked":     row.qty_checked,
+            "finding_defect":  row.finding_defect,
+            "immediate_action": row.immediate_action,
+            "status":          row.status,
+            "total_defects":   row.total_defects,
+            "control_points":  ctrl,
+        })
+    return {
+        "id":                str(r.id),
+        "report_type":       "random_inline",
+        "vendor_id":         str(r.vendor_id) if r.vendor_id else None,
+        "floor_id":          str(r.floor_id) if r.floor_id else None,
+        "line_id":           str(r.line_id) if r.line_id else None,
+        "vendor_name":       r.vendor.name if r.vendor else None,
+        "floor_name":        r.floor_rel.name if r.floor_rel else None,
+        "line_name":         r.line_rel.name if r.line_rel else None,
+        "report_date":       str(r.report_date) if r.report_date else None,
+        "report_no":         r.report_no,
+        "factory":           r.factory,
+        "inspector_auditor": r.inspector_auditor,
+        "visit_time":        r.visit_time,
+        "shift":             r.shift,
+        "production_manager":     r.production_manager,
+        "qc_manager":             r.qc_manager,
+        "inspection_duration":    r.inspection_duration,
+        "factory_representative": r.factory_representative,
+        "critical_count":         r.critical_count,
+        "major_count":            r.major_count,
+        "minor_count":            r.minor_count,
+        "repeat_issue":           r.repeat_issue,
+        "overall_decision":       r.overall_decision,
+        "verification_status":    r.verification_status,
+        "root_cause":             r.root_cause,
+        "due_responsible":        r.due_responsible,
+        "production_manager_signature": r.production_manager_signature,
+        "production_manager_date":      r.production_manager_date,
+        "qc_manager_signature":         r.qc_manager_signature,
+        "qc_manager_date":              r.qc_manager_date,
+        "auditor_signature":            r.auditor_signature,
+        "auditor_date":                 r.auditor_date,
+        "total_defects":   r.total_defects,
+        "total_processes": r.total_processes,
+        "processes_passed": r.processes_passed,
+        "remarks":         r.remarks,
+        "created_at":      r.created_at.isoformat() if r.created_at else None,
+        "rows":            rows_out,
+        "default_processes": DEFAULT_PROCESSES,
+    }
+
+
+@router.get("/random-inline/", summary="List Random Inline QC Reports")
+def list_random_inline_reports(
+    skip: int = 0, limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(AllStaff)
+):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    q = db.query(RandomInlineQCReport).options(
+        joinedload(RandomInlineQCReport.vendor),
+        joinedload(RandomInlineQCReport.floor_rel),
+        joinedload(RandomInlineQCReport.line_rel),
+        joinedload(RandomInlineQCReport.rows),
+    )
+    if not is_admin:
+        q = q.filter(RandomInlineQCReport.created_by == current_user.id)
+    reports = q.order_by(RandomInlineQCReport.created_at.desc()).offset(skip).limit(limit).all()
+    return success_response(data=[_serialize_random_inline_report(r) for r in reports])
+
+
+@router.get("/random-inline/{report_id}", summary="Get Random Inline QC Report")
+def get_random_inline_report(
+    report_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(AllStaff)
+):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(RandomInlineQCReport).options(
+        joinedload(RandomInlineQCReport.vendor),
+        joinedload(RandomInlineQCReport.floor_rel),
+        joinedload(RandomInlineQCReport.line_rel),
+        joinedload(RandomInlineQCReport.rows),
+    ).filter(RandomInlineQCReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Random Inline QC report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to access this report.")
+    return success_response(data=_serialize_random_inline_report(report))
+
+
+@router.post("/random-inline/", summary="Create Random Inline QC Report")
+def create_random_inline_report(
+    payload: RandomInlineQCReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(AllStaff)
+):
+    report = RandomInlineQCReport(
+        id=uuid.uuid4(),
+        vendor_id=payload.vendor_id,
+        floor_id=payload.floor_id,
+        line_id=payload.line_id,
+        report_date=payload.report_date or date.today(),
+        report_no=payload.report_no,
+        factory=payload.factory,
+        inspector_auditor=payload.inspector_auditor,
+        visit_time=payload.visit_time,
+        shift=payload.shift,
+        production_manager=payload.production_manager,
+        qc_manager=payload.qc_manager,
+        inspection_duration=payload.inspection_duration,
+        factory_representative=payload.factory_representative,
+        critical_count=payload.critical_count,
+        major_count=payload.major_count,
+        minor_count=payload.minor_count,
+        repeat_issue=payload.repeat_issue,
+        overall_decision=payload.overall_decision,
+        verification_status=payload.verification_status,
+        root_cause=payload.root_cause,
+        due_responsible=payload.due_responsible,
+        production_manager_signature=payload.production_manager_signature,
+        production_manager_date=payload.production_manager_date,
+        qc_manager_signature=payload.qc_manager_signature,
+        qc_manager_date=payload.qc_manager_date,
+        auditor_signature=payload.auditor_signature,
+        auditor_date=payload.auditor_date,
+        remarks=payload.remarks,
+        created_by=current_user.id,
+    )
+    db.add(report)
+    db.flush()
+
+    total_defects = 0
+    processes_passed = 0
+    for index, row_in in enumerate(payload.rows):
+        row = RandomInlineQCProcessRow(
+            id=uuid.uuid4(),
+            report_id=report.id,
+            row_order=index + 1,
+            process_name=row_in.process_name,
+            active_po_style=row_in.active_po_style,
+            line_area=row_in.line_area,
+            qty_checked=row_in.qty_checked,
+            finding_defect=row_in.finding_defect,
+            immediate_action=row_in.immediate_action,
+            status=row_in.status,
+            total_defects=row_in.total_defects,
+        )
+        db.add(row)
+        total_defects += row_in.total_defects
+        if row_in.status == "P":
+            processes_passed += 1
+
+    report.total_defects = total_defects
+    report.total_processes = len(payload.rows) or 6
+    report.processes_passed = processes_passed
+
+    db.commit()
+    db.refresh(report)
+    return success_response(data=_serialize_random_inline_report(report), message="Random Inline QC report created.")
+
+
+@router.put("/random-inline/{report_id}", summary="Update Random Inline QC Report")
+def update_random_inline_report(
+    report_id: str,
+    payload: RandomInlineQCReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(AllStaff)
+):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(RandomInlineQCReport).options(
+        joinedload(RandomInlineQCReport.rows)
+    ).filter(RandomInlineQCReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Random Inline QC report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to edit this report.")
+
+    # Update header fields
+    header_fields = [
+        "vendor_id", "floor_id", "line_id", "report_date", "report_no",
+        "factory", "inspector_auditor", "visit_time", "shift",
+        "production_manager", "qc_manager", "inspection_duration", "factory_representative",
+        "critical_count", "major_count", "minor_count", "repeat_issue",
+        "overall_decision", "verification_status", "root_cause", "due_responsible",
+        "production_manager_signature", "production_manager_date",
+        "qc_manager_signature", "qc_manager_date",
+        "auditor_signature", "auditor_date", "remarks",
+    ]
+    for field in header_fields:
+        val = getattr(payload, field, None)
+        if val is not None:
+            setattr(report, field, val)
+
+    # Replace rows
+    for row in report.rows:
+        db.delete(row)
+    db.flush()
+
+    total_defects = 0
+    processes_passed = 0
+    for index, row_in in enumerate(payload.rows):
+        row = RandomInlineQCProcessRow(
+            id=uuid.uuid4(),
+            report_id=report.id,
+            row_order=index + 1,
+            process_name=row_in.process_name,
+            active_po_style=row_in.active_po_style,
+            line_area=row_in.line_area,
+            qty_checked=row_in.qty_checked,
+            finding_defect=row_in.finding_defect,
+            immediate_action=row_in.immediate_action,
+            status=row_in.status,
+            total_defects=row_in.total_defects,
+        )
+        db.add(row)
+        total_defects += row_in.total_defects
+        if row_in.status == "P":
+            processes_passed += 1
+
+    report.total_defects = total_defects
+    report.total_processes = len(payload.rows) or 6
+    report.processes_passed = processes_passed
+
+    db.commit()
+    db.refresh(report)
+    return success_response(data=_serialize_random_inline_report(report), message="Random Inline QC report updated.")
+
+
+@router.delete("/random-inline/{report_id}", summary="Delete Random Inline QC Report")
+def delete_random_inline_report(
+    report_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(AllStaff)
+):
+    role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
+    is_admin = role_name in ("super_admin", "admin")
+
+    report = db.query(RandomInlineQCReport).filter(RandomInlineQCReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Random Inline QC report not found.")
+    if not is_admin and str(report.created_by) != str(current_user.id):
+        raise HTTPException(403, "You do not have permission to delete this report.")
+
+    _delete_report_attachments(db, report_id)
+    db.delete(report)
+    db.commit()
+    return success_response(message="Random Inline QC report deleted.")

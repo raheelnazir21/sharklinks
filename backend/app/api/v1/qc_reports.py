@@ -22,7 +22,8 @@ from app.models.qc_report import (
 from app.models.inline_qc import (
     InlineQCReport, InlineQCOperation, InlineQCDefectRow,
     FinishEndlineQCReport, FinishEndlineQCHourlyRow,
-    CutPanelReport, BatchAuditReport
+    CutPanelReport, BatchAuditReport,
+    RandomInlineQCReport, RandomInlineQCProcessRow
 )
 from app.schemas.qc_report import (
     QCReportCreate, DefectCategoryCreate, DefectCodeCreate, AnalyticsSummary,
@@ -53,14 +54,16 @@ def get_analytics(db: Session = Depends(get_db), _=Depends(QCAccess)):
     finish_reports = db.query(FinishEndlineQCReport).all()
     cut_panel_reports = db.query(CutPanelReport).all()
     batch_audit_reports = db.query(BatchAuditReport).all()
-    advanced_reports = inline_reports + finish_reports + cut_panel_reports + batch_audit_reports
+    random_inline_reports = db.query(RandomInlineQCReport).all()
+    advanced_reports = inline_reports + finish_reports + cut_panel_reports + batch_audit_reports + random_inline_reports
 
     total_inspections = (base.get("total_inspections") or 0) + len(advanced_reports)
-    total_defects = (base.get("total_defects") or 0) + sum(r.total_defects or 0 for r in advanced_reports)
+    total_defects = (base.get("total_defects") or 0) + sum(getattr(r, "total_defects", getattr(r, "total_faults", 0)) or 0 for r in advanced_reports)
     checked_total = sum(getattr(r, "total_checked_pcs", 0) or 0 for r in inline_reports)
     checked_total += sum(getattr(r, "total_pcs_inspected", 0) or 0 for r in finish_reports)
     checked_total += sum(getattr(r, "total_checked", 0) or 0 for r in cut_panel_reports)
     checked_total += sum(getattr(r, "total_sample_qty", 0) or 0 for r in batch_audit_reports)
+    checked_total += sum(getattr(r, "total_processes", 0) or 0 for r in random_inline_reports)
 
     weighted_dhu = sum((r.dhu_percent or 0) * (getattr(r, "total_checked_pcs", 0) or 0) for r in inline_reports)
     weighted_dhu += sum((r.dhu_percent or 0) * (getattr(r, "total_pcs_inspected", 0) or 0) for r in finish_reports)
@@ -256,6 +259,28 @@ def list_reports(
                 "dhu_percent": round(r.oqi_percent or 0, 2),
                 "article_code": r.stm,
                 "product_color": r.product_color,
+            })
+
+    if not report_type or report_type == "random_inline":
+        random_q = db.query(RandomInlineQCReport)
+        if vendor_id:
+            random_q = random_q.filter(RandomInlineQCReport.vendor_id == vendor_id)
+        if not is_admin:
+            random_q = random_q.filter(RandomInlineQCReport.created_by == current_user.id)
+        for r in random_q.order_by(RandomInlineQCReport.created_at.desc()).all():
+            data.append({
+                "id": str(r.id),
+                "report_type": "random_inline",
+                "status": "submitted",
+                "vendor_name": r.vendor.name if r.vendor else None,
+                "style_name": r.factory or r.inspector_auditor,
+                "inspection_date": str(r.report_date),
+                "total_defects": r.total_defects,
+                "dhu_percent": round(
+                    (r.total_defects / r.total_processes * 100) if r.total_processes else 0, 2
+                ),
+                "article_code": r.report_no,
+                "product_color": r.shift,
             })
 
     return success_response(data=data)
@@ -540,6 +565,41 @@ def list_detailed_logs(
                     "auditor_name": report.qc_name,
                 })
 
+    if not report_type or report_type == "random_inline":
+        random_q = db.query(RandomInlineQCReport)
+        if vendor_id:
+            random_q = random_q.filter(RandomInlineQCReport.vendor_id == vendor_id)
+        if not is_admin:
+            random_q = random_q.filter(RandomInlineQCReport.created_by == current_user.id)
+        for report in random_q.order_by(RandomInlineQCReport.report_date.desc()).all():
+            for row in report.rows:
+                defect_count = row.total_defects or 0
+                defects = [{
+                    "defect_name": row.finding_defect or "—",
+                    "defect_code": row.status,
+                    "count": defect_count,
+                    "severity": "major" if row.status == "H" else ("minor" if row.status == "P" else "major"),
+                }] if defect_count > 0 else []
+                logs.append({
+                    "id": str(row.id),
+                    "report_id": str(report.id),
+                    "date": str(report.report_date),
+                    "hour": row.visit_time if hasattr(row, 'visit_time') else "",
+                    "batch_size": row.qty_checked,
+                    "vendor_name": report.vendor.name if report.vendor else None,
+                    "floor_name": report.floor_rel.name if report.floor_rel else None,
+                    "line_name": report.line_rel.name if report.line_rel else None,
+                    "style_name": report.factory or report.inspector_auditor,
+                    "article_code": report.report_no,
+                    "product_color": report.shift,
+                    "report_type": "random_inline",
+                    "operation": row.process_name,
+                    "corrective_action": row.immediate_action or "",
+                    "remarks": report.remarks,
+                    "defects": defects,
+                    "auditor_name": report.inspector_auditor,
+                })
+
     combined_total = len(logs)
     logs = logs[skip: skip + limit]
     return success_response(data={"total": combined_total, "items": logs})
@@ -792,6 +852,58 @@ def get_report_detail(
                 },
                 "items": items,
                 "attachments": attachments,
+            })
+
+        random_inline = db.query(RandomInlineQCReport).filter(RandomInlineQCReport.id == report_id_str).first()
+        if random_inline:
+            if not is_admin and str(random_inline.created_by) != str(current_user.id):
+                raise HTTPException(403, "You do not have permission to access this report.")
+            items = []
+            for row in random_inline.rows:
+                items.append({
+                    "id": str(row.id),
+                    "hour": "",
+                    "batch_size": row.qty_checked,
+                    "item_date": str(random_inline.report_date),
+                    "operation": row.process_name,
+                    "defect_code": row.status,
+                    "defect_name": row.finding_defect or "",
+                    "count": row.total_defects,
+                    "severity": "major" if row.status == "H" else ("minor" if row.status == "P" else "major"),
+                    "remarks": row.immediate_action or "",
+                })
+            return success_response(data={
+                "id": str(random_inline.id),
+                "header": {
+                    "report_type": "random_inline",
+                    "vendor_name": random_inline.vendor.name if random_inline.vendor else None,
+                    "floor_name": random_inline.floor_rel.name if random_inline.floor_rel else None,
+                    "line_name": random_inline.line_rel.name if random_inline.line_rel else None,
+                    "order_no": random_inline.report_no,
+                    "style_name": random_inline.factory,
+                    "article_code": random_inline.report_no,
+                    "product_color": random_inline.shift,
+                    "inspection_date": str(random_inline.report_date),
+                    "shift": random_inline.shift,
+                    "auditor_name": random_inline.inspector_auditor,
+                    "quantity_checked": random_inline.total_processes,
+                    "quantity_passed": random_inline.processes_passed,
+                    "quantity_rejected": random_inline.total_processes - random_inline.processes_passed,
+                    "dhu_percent": round(
+                        (random_inline.total_defects / random_inline.total_processes * 100)
+                        if random_inline.total_processes else 0, 2
+                    ),
+                    "fpy_percent": round(
+                        (random_inline.processes_passed / random_inline.total_processes * 100)
+                        if random_inline.total_processes else 0, 2
+                    ),
+                    "total_defects": random_inline.total_defects,
+                    "status": "submitted",
+                    "remarks": random_inline.remarks,
+                    "stage": "RANDOM INLINE",
+                },
+                "items": items,
+                "attachments": [],
             })
 
         raise HTTPException(404, "Report not found.")

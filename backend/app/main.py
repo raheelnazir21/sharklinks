@@ -18,6 +18,7 @@ from app.core.schema_maintenance import ensure_runtime_schema, sync_postgres_enu
 import app.models  # noqa: F401 - register every model before create_all
 from app.models import order, user, audit_log, qc_report # Import modules to ensure models are registered
 from app.models.order import OrderAudit  # Ensure audit table is created
+from app.models import inline_qc  # noqa: F401 — registers all advanced QC models including RandomInlineQCReport
 
 # Create tables
 Base.metadata.create_all(bind=engine)

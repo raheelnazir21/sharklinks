@@ -7,7 +7,8 @@ import {
   CheckCircle2, Clock, MoreVertical, LayoutDashboard,
   ShieldCheck, ArrowRight, TrendingUp, BarChart3,
   Layers, Package, Building2, Table as TableIcon,
-  ChevronLeft, ChevronRight, Eye, Settings2, Download
+  ChevronLeft, ChevronRight, Eye, Settings2, Download,
+  ClipboardList
 } from 'lucide-react';
 import Link from "next/link";
 
@@ -69,6 +70,14 @@ const REPORT_TYPES = [
     tone: "cyan",
     fields: "Editable fault master and AQL result",
   },
+  {
+    href: "/qc-reports/random-inline/new",
+    title: "Random Inline QC Report",
+    subtitle: "Cut-to-pack process control & corrective action",
+    icon: ClipboardList,
+    tone: "violet",
+    fields: "Cutting → Sewing → Print → Wash → Finishing → Packing",
+  },
 ];
 
 const toneClasses: Record<string, { icon: string; badge: string; ring: string }> = {
@@ -77,6 +86,7 @@ const toneClasses: Record<string, { icon: string; badge: string; ring: string }>
   rose: { icon: "bg-rose-500/10 text-rose-400 border-rose-500/20", badge: "text-rose-300 bg-rose-500/10 border-rose-500/20", ring: "hover:border-rose-500/40" },
   amber: { icon: "bg-amber-500/10 text-amber-400 border-amber-500/20", badge: "text-amber-300 bg-amber-500/10 border-amber-500/20", ring: "hover:border-amber-500/40" },
   cyan: { icon: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", badge: "text-cyan-300 bg-cyan-500/10 border-cyan-500/20", ring: "hover:border-cyan-500/40" },
+  violet: { icon: "bg-violet-500/10 text-violet-400 border-violet-500/20", badge: "text-violet-300 bg-violet-500/10 border-violet-500/20", ring: "hover:border-violet-500/40" },
 };
 
 export default function QCReportsDashboard() {
@@ -174,7 +184,7 @@ export default function QCReportsDashboard() {
             <ShieldCheck className="h-4 w-4 text-indigo-600" /> Defect Master
           </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {REPORT_TYPES.map((report) => {
             const Icon = report.icon;
             const tone = toneClasses[report.tone];

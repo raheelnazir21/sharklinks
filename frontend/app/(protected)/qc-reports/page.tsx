@@ -180,10 +180,8 @@ export default function QCReportsDashboard() {
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Create Inspection</p>
             <h2 className="text-xl font-black uppercase tracking-tight text-slate-950 mt-1">Select Report Type</h2>
           </div>
-          <Link href="/qc-reports/defects" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-700 transition hover:bg-slate-100">
-            <ShieldCheck className="h-4 w-4 text-indigo-600" /> Defect Master
-          </Link>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {REPORT_TYPES.map((report) => {
             const Icon = report.icon;

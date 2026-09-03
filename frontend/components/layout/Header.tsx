@@ -1,12 +1,18 @@
 /**
  * Header.tsx — Top navigation bar for all protected pages.
  * Shows page title, search bar, and user quick actions.
+ *
+ * Mobile additions:
+ *   - Hamburger button (md:hidden) that opens the sidebar drawer
+ *   - Compact height on small screens
+ *   - Subtitle hidden on xs to save space
  */
 "use client";
 
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useSidebar } from "@/hooks/useSidebar";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import GlobalSearch from "@/components/layout/GlobalSearch";
 
@@ -17,6 +23,7 @@ interface HeaderProps {
 
 export default function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth();
+  const { setMobileOpen } = useSidebar();
   const pathname = usePathname();
   const heading = title === "Dashboard" ? getPageHeading(pathname) : {
     eyebrow: "Textile QC",
@@ -26,32 +33,49 @@ export default function Header({ title, subtitle }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex min-h-36 items-center justify-between gap-6 border-b border-slate-200 bg-white/95 px-7 py-5 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
-      <IndustrialHeading
-        eyebrow={heading.eyebrow}
-        title={heading.title}
-        highlight={heading.highlight}
-        subtitle={heading.subtitle}
-        compact
-      />
+    <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm shadow-slate-950/[0.03] backdrop-blur md:min-h-36 md:gap-6 md:px-7 md:py-5">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 md:hidden"
+        aria-label="Open navigation menu"
+      >
+        <Menu className="h-4 w-4" />
+      </button>
 
-      <div className="flex items-center gap-3">
+      {/* Page heading — hidden on mobile to keep header compact, shown from sm up */}
+      <div className="hidden sm:block min-w-0 flex-1">
+        <IndustrialHeading
+          eyebrow={heading.eyebrow}
+          title={heading.title}
+          highlight={heading.highlight}
+          subtitle={heading.subtitle}
+          compact
+        />
+      </div>
+
+      {/* Page title — mobile only (single line, no subtitle) */}
+      <p className="sm:hidden flex-1 truncate text-sm font-black text-slate-900">
+        {heading.title} {heading.highlight}
+      </p>
+
+      <div className="flex items-center gap-2 shrink-0 md:gap-3">
         {/* Global Search */}
         <GlobalSearch />
 
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">
+        <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10">
           <Bell className="h-4 w-4" />
           <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-slate-500" />
         </button>
 
-        <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-black uppercase text-emerald-700 transition hover:bg-emerald-100">
+        <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-black uppercase text-emerald-700 transition hover:bg-emerald-100 md:h-10 md:w-10">
           {user?.full_name?.[0] ?? "U"}
         </div>
 
         <button
           onClick={logout}
           title="Log out"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 md:h-10 md:w-10"
         >
           <LogOut className="h-4 w-4" />
         </button>
@@ -59,6 +83,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
     </header>
   );
 }
+
+
 
 function getPageHeading(pathname: string) {
   if (pathname.startsWith("/vendors")) return {

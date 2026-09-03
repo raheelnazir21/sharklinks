@@ -110,10 +110,10 @@ export default function LoginPage() {
       </div>
 
       {/* ── Main Layout ── */}
-      <div className="relative z-10 flex w-full h-full min-h-screen">
+      <div className="relative z-10 flex w-full h-full min-h-screen flex-col md:flex-row">
 
-        {/* ════════════ LEFT PANEL ════════════ */}
-        <div className="w-[55%] flex flex-col justify-between p-10 lg:p-14 2xl:p-20 pt-12 pb-8 min-h-screen">
+        {/* ════════════ LEFT PANEL — hidden on mobile, visible md+ ════════════ */}
+        <div className="hidden md:flex md:w-[55%] flex-col justify-between p-10 lg:p-14 2xl:p-20 pt-12 pb-8 min-h-screen">
 
           {/* Logo */}
           <div className="mb-16">
@@ -178,8 +178,8 @@ export default function LoginPage() {
 
         </div>
 
-        {/* ════════════ RIGHT PANEL ════════════ */}
-        <div className="w-[45%] flex items-center justify-center p-8 relative min-h-screen">
+        {/* ════════════ RIGHT PANEL — full-width on mobile, 45% on md+ ════════════ */}
+        <div className="w-full md:w-[45%] flex items-center justify-center p-5 sm:p-8 relative min-h-screen">
 
           {/* Login Card */}
           <div className="w-full max-w-[440px] bg-white rounded-[32px] p-10 shadow-[0_12px_48px_rgba(0,0,0,0.1)] relative">

@@ -499,7 +499,7 @@ function FourWeekProductionTrend({
           </div>
           {selectedDatum && <p className="text-xs font-bold text-slate-500">{selectedDatum.range} · {selectedDatum.orders.length} orders</p>}
         </div>
-        <div className="max-h-72 overflow-auto">
+        <div className="max-h-72 overflow-x-auto overflow-y-auto">
           {selectedDatum?.orders.length ? (
             <table className="min-w-full text-left text-sm">
               <thead className="sticky top-0 bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500">
@@ -675,7 +675,7 @@ function ActiveLineTable({
           View Flow
         </Link>
       </div>
-      <div className="max-h-[430px] overflow-auto">
+      <div className="max-h-[430px] overflow-x-auto overflow-y-auto">
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 z-[1] !bg-black text-[11px] font-black uppercase tracking-wider !text-white">
             <tr>
@@ -967,7 +967,7 @@ export default function DashboardPage() {
         {...CARD_MOTION}
         className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-xl shadow-slate-950/[0.06]"
       >
-        <div className="grid gap-0 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="grid grid-cols-1 gap-0 xl:grid-cols-[1.25fr_0.75fr]">
           <div className="relative border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(135deg,#ffffff,#fbfefd)] p-7 xl:border-b-0 xl:border-r">
             <div className="mb-7 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">

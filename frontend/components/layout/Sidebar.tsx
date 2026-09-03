@@ -2,6 +2,9 @@
  * Sidebar.tsx — Role-aware navigation sidebar.
  * Menu items are filtered based on the user's role so each
  * user only sees what they're allowed to access.
+ *
+ * Mobile: off-canvas drawer (hidden by default, toggled via Header hamburger).
+ * Desktop (md+): unchanged — collapsed icon rail or full 72-wide panel.
  */
 "use client";
 
@@ -217,7 +220,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { collapsed, setCollapsed } = useSidebar();
+  const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar();
   const [historian, setHistorian] = useState<HistorianEvent[]>([]);
 
   // Filter nav items by current user's role
@@ -228,6 +231,11 @@ export default function Sidebar() {
     () => Boolean(user && ["super_admin", "admin", "manager"].includes(user.role)),
     [user]
   );
+
+  // Auto-close mobile drawer when the user navigates to a new page
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname, setMobileOpen]);
 
   useEffect(() => {
     if (!canViewActivity) return;
@@ -249,7 +257,35 @@ export default function Sidebar() {
     .filter(({ items }) => items.length);
 
   return (
-    <aside className={`fixed left-0 top-0 z-30 flex h-screen shrink-0 flex-col border-r border-slate-200 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur transition-all duration-300 ${collapsed ? "w-20" : "w-72"}`}>
+    <>
+      {/* ── Mobile backdrop — dark overlay behind the drawer ── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Sidebar panel ── */}
+      {/*
+        Desktop (md+): always visible, either collapsed (w-20) or expanded (w-72).
+        Mobile (<md): off-canvas — always w-72, hidden via -translate-x-full,
+        slides in when mobileOpen is true.
+      */}
+      <aside
+        className={[
+          "fixed left-0 top-0 z-40 flex h-screen shrink-0 flex-col",
+          "border-r border-slate-200 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur",
+          "transition-all duration-300",
+          // Desktop width
+          "md:translate-x-0",
+          collapsed ? "md:w-20" : "md:w-72",
+          // Mobile: always full width drawer, slide in/out
+          "w-72",
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        ].join(" ")}
+      >
       {/* Brand */}
       <div className={`flex items-center gap-3 border-b border-slate-200 px-4 py-5 ${collapsed ? "justify-center" : ""}`}>
         {collapsed ? (
@@ -363,6 +399,7 @@ export default function Sidebar() {
           {!collapsed && "Sign Out"}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

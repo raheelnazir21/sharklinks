@@ -29,6 +29,11 @@ class StageStatus(str, enum.Enum):
     completed = "completed"
     skipped = "skipped"
 
+class StageApprovalStatus(str, enum.Enum):
+    approved = "approved"
+    conditional_approved = "conditional_approved"
+    not_approved = "not_approved"
+
 class StageName(str, enum.Enum):
     # ─── Shared Stages ────────────────────────────────────────────────────────
     fabrication = "fabrication"
@@ -48,6 +53,9 @@ class StageName(str, enum.Enum):
     # ─── Bulk Production Flow ─────────────────────────────────────────────────
     customer_order = "customer_order_wrapping_card"
     pp_sample_development = "pp_sample_development"
+    small_vet_dying = "small_vet_dying_shade_band_continuity_approval"
+    full_flag_dying = "full_flag_dying_production"
+    # Legacy approval stages kept for existing production data
     customer_approval = "customer_approval"
     fabric_shade_approval = "fabric_shade_continuity_approval"
     sublimation = "sublimation"
@@ -114,11 +122,13 @@ class BulkClass(Base):
     name = Column(String(200), nullable=False)
     serial_number = Column(String(100), nullable=True)
     customer = Column(String(100), nullable=True)
+    vendor_id = Column(GUID(), ForeignKey("vendors.id"), nullable=True)
     status = Column(String(50), default="active")
     remarks = Column(Text, nullable=True)
     created_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    vendor = relationship("Vendor", foreign_keys=[vendor_id])
     orders = relationship("Order", back_populates="bulk_class")
 
 class Order(Base):
@@ -212,6 +222,10 @@ class ProductionStage(Base):
     status = Column(Enum(StageStatus), default=StageStatus.pending)
     remarks = Column(Text, nullable=True)
     attachment_url = Column(String(500), nullable=True)
+    
+    # Approval tracking (for QC Check / approval-gated bulk stages)
+    approval_status = Column(Enum(StageApprovalStatus), nullable=True)
+    conditional_action = Column(Text, nullable=True)  # Notes for conditional approvals
     
     updated_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

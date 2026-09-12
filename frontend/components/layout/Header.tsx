@@ -9,12 +9,13 @@
  */
 "use client";
 
-import { Bell, LogOut, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/hooks/useSidebar";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import GlobalSearch from "@/components/layout/GlobalSearch";
+import { NotificationBell } from "@/components/ui/NotificationSystem";
 
 interface HeaderProps {
   title: string;
@@ -63,10 +64,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
         {/* Global Search */}
         <GlobalSearch />
 
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-slate-500" />
-        </button>
+        {/* Live Notification Bell — dropdown panel + sound toggle */}
+        <NotificationBell />
 
         <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-black uppercase text-emerald-700 transition hover:bg-emerald-100 md:h-10 md:w-10">
           {user?.full_name?.[0] ?? "U"}

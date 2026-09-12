@@ -19,6 +19,15 @@ import app.models  # noqa: F401 - register every model before create_all
 from app.models import order, user, audit_log, qc_report # Import modules to ensure models are registered
 from app.models.order import OrderAudit  # Ensure audit table is created
 from app.models import inline_qc  # noqa: F401 — registers all advanced QC models including RandomInlineQCReport
+from app.models import comments_notifications  # noqa: F401 — registers StageComment and Notification tables
+
+# Notification scheduler
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from app.api.v1.notifications import run_notification_scan
+    _scheduler_available = True
+except ImportError:
+    _scheduler_available = False
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -33,6 +42,13 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
 )
+
+# Start notification scanner (runs every 15 minutes in background)
+if _scheduler_available:
+    _scheduler = BackgroundScheduler(timezone="UTC")
+    _scheduler.add_job(run_notification_scan, "interval", minutes=15, id="notification_scan")
+    _scheduler.start()
+    print("[Scheduler] Notification scanner started — runs every 15 minutes.")
 
 # Configure CORS (Allows frontend to communicate with backend)
 app.add_middleware(

@@ -20,7 +20,7 @@ from app.repositories.order_repo import SampleClassRepository, BulkClassReposito
 from app.schemas.order import (
     OrderCreate, OrderUpdate, StageCreate, StageUpdate, 
     SampleClassCreate, SampleClassUpdate, BulkClassCreate, BulkClassUpdate, BulkOrderCreate,
-    StageReworkRequest
+    StageReworkRequest, StageApprovalRequest
 )
 from app.utils.response import success_response
 
@@ -69,13 +69,37 @@ def list_sample_classes(
     if vendor_id:
         assert_vendor_access(db, vendor_id, current_user)
     scs = SampleClassRepository.get_all(db, vendor_id, allowed_vendor_ids=_allowed_vendor_ids(db, current_user))
-    return success_response(data=[{
-        "id": str(s.id), "name": s.name, "serial_number": s.serial_number,
-        "customer": s.customer, "status": s.status, "remarks": s.remarks,
-        "vendor_id": str(s.vendor_id) if s.vendor_id else None,
-        "vendor_name": s.vendor.name if s.vendor else None,
-        "created_at": s.created_at.isoformat()
-    } for s in scs])
+    result = []
+    for s in scs:
+        active_orders = [o for o in s.orders if o.is_active]
+        total_stages = sum(len(o.stages) for o in active_orders)
+        completed_stages = sum(
+            sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed")
+            for o in active_orders
+        )
+        if total_stages > 0:
+            progress = round((completed_stages / total_stages) * 100)
+        elif s.status == "completed":
+            progress = 100
+        else:
+            progress = 0
+
+        result.append({
+            "id": str(s.id),
+            "name": s.name,
+            "serial_number": s.serial_number,
+            "customer": s.customer,
+            "status": s.status,
+            "remarks": s.remarks,
+            "vendor_id": str(s.vendor_id) if s.vendor_id else None,
+            "vendor_name": s.vendor.name if s.vendor else None,
+            "created_at": s.created_at.isoformat(),
+            "total_orders": len(active_orders),
+            "total_stages": total_stages,
+            "completed_stages": completed_stages,
+            "progress": progress,
+        })
+    return success_response(data=result)
 
 
 @router.post("/sample-classes", summary="Create Sample Class")
@@ -179,15 +203,37 @@ def list_bulk_classes(
         created_by=None if _is_admin_user(current_user) else str(current_user.id),
         allowed_vendor_ids=allowed_vendor_ids,
     )
-    return success_response(data=[{
-        "id": str(bc.id),
-        "name": bc.name,
-        "serial_number": bc.serial_number,
-        "customer": bc.customer,
-        "status": bc.status,
-        "vendor_names": sorted({order.vendor.name for order in bc.orders if order.is_active and order.vendor}),
-        "created_at": bc.created_at.isoformat(),
-    } for bc in classes])
+    result = []
+    for bc in classes:
+        active_orders = [o for o in bc.orders if o.is_active]
+        total_stages = sum(len(o.stages) for o in active_orders)
+        completed_stages = sum(
+            sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed")
+            for o in active_orders
+        )
+        if total_stages > 0:
+            progress = round((completed_stages / total_stages) * 100)
+        elif bc.status == "completed":
+            progress = 100
+        else:
+            progress = 0
+
+        result.append({
+            "id": str(bc.id),
+            "name": bc.name,
+            "serial_number": bc.serial_number,
+            "customer": bc.customer,
+            "status": bc.status,
+            "vendor_id": str(bc.vendor_id) if bc.vendor_id else None,
+            "vendor_name": bc.vendor.name if bc.vendor else None,
+            "vendor_names": sorted({order.vendor.name for order in bc.orders if order.is_active and order.vendor}),
+            "created_at": bc.created_at.isoformat(),
+            "total_orders": len(active_orders),
+            "total_stages": total_stages,
+            "completed_stages": completed_stages,
+            "progress": progress,
+        })
+    return success_response(data=result)
 
 
 @router.post("/bulk-classes", response_model=dict, summary="Create Bulk Project")
@@ -369,6 +415,13 @@ def list_orders(
             "qa_audit_status": o.qa_audit_status,
             "sample_class_id": str(o.sample_class_id) if o.sample_class_id else None,
             "bulk_class_id": str(o.bulk_class_id) if o.bulk_class_id else None,
+            "total_stages": len(o.stages),
+            "completed_stages": sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed"),
+            "progress": (
+                100 if o.status.value == "completed"
+                else round((sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed") / len(o.stages)) * 100) if len(o.stages) > 0
+                else 0
+            ),
         }
         for o in orders
     ])
@@ -703,7 +756,115 @@ def reject_stage_for_rework(
     )
 
 
+@router.post("/stages/{stage_id}/approve", response_model=dict, summary="3-State Stage Approval")
+def approve_stage(
+    stage_id: str,
+    payload: StageApprovalRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(AllStaff),
+):
+    """Approve, conditionally approve, or reject a QC / approval-gated stage."""
+    _assert_stage_order_access(db, stage_id, current_user)
+    stage = StageService.approve_stage(
+        db,
+        stage_id=stage_id,
+        approval=payload.approval,
+        condition_type=payload.condition_type or "",
+        reason=payload.reason or "",
+        plan=payload.plan or "",
+        user_id=str(current_user.id),
+    )
+    ActivityLogService.record(
+        db,
+        action=f"STAGE_APPROVAL_{payload.approval.upper()}",
+        entity_type="Order",
+        entity_id=str(stage.order_id),
+        user=current_user,
+        payload={"details": f"Stage '{stage.stage_name.value}' approval: {payload.approval}", "condition": payload.condition_type},
+    )
+    return success_response(
+        data={"id": str(stage.id), "approval_status": payload.approval},
+        message=f"Stage approval recorded: {payload.approval}."
+    )
+
+
+@router.post("/{order_id}/promote-to-bulk", response_model=dict, summary="Promote Sample to Bulk")
+def promote_to_bulk(
+    order_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(ManagerAccess),
+):
+    """Create a new Bulk order from a completed Sample order."""
+    _assert_order_access(db, order_id, current_user)
+    bulk_class_id = payload.get("bulk_class_id")
+    vendor_id = payload.get("vendor_id")
+    if not bulk_class_id or not vendor_id:
+        raise HTTPException(status_code=400, detail="bulk_class_id and vendor_id are required.")
+    assert_vendor_access(db, vendor_id, current_user)
+    new_order = OrderService.promote_to_bulk(
+        db, order_id, bulk_class_id, vendor_id, str(current_user.id)
+    )
+    ActivityLogService.record(
+        db,
+        action="ORDER_PROMOTED_TO_BULK",
+        entity_type="Order",
+        entity_id=order_id,
+        user=current_user,
+        payload={"details": f"Sample order promoted to bulk. New order: {new_order.id}"},
+    )
+    return success_response(
+        data={"id": str(new_order.id), "order_no": new_order.order_no},
+        message="Sample order successfully promoted to bulk."
+    )
+
+
+@router.post("/{order_id}/reorder", response_model=dict, summary="Reorder — Clone Completed Bulk Order")
+def reorder(
+    order_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(ManagerAccess),
+):
+    """Clone a completed bulk order with new quantity/ex-factory date."""
+    _assert_order_access(db, order_id, current_user)
+    from datetime import date as _date
+    quantity = int(payload.get("quantity", 0))
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="quantity must be a positive integer.")
+    ex_factory_raw = payload.get("ex_factory_date")
+    ex_factory = _date.fromisoformat(ex_factory_raw) if ex_factory_raw else None
+    vendor_id = payload.get("vendor_id", "")
+    if vendor_id:
+        assert_vendor_access(db, vendor_id, current_user)
+    new_order = OrderService.reorder(
+        db,
+        original_order_id=order_id,
+        quantity=quantity,
+        ex_factory_date=ex_factory,
+        requirements=payload.get("requirements", ""),
+        vendor_id=vendor_id,
+        user_id=str(current_user.id),
+    )
+    ActivityLogService.record(
+        db,
+        action="ORDER_REORDERED",
+        entity_type="Order",
+        entity_id=order_id,
+        user=current_user,
+        payload={"details": f"Reorder created. New order: {new_order.id}", "quantity": quantity},
+    )
+    return success_response(
+        data={"id": str(new_order.id), "order_no": new_order.order_no},
+        message="Reorder created successfully."
+    )
+
+
 # ─── File Attachments ──────────────────────────────────────────────────────
+
 
 ALLOWED_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 

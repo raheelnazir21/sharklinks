@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/hooks/useSidebar";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import MainContent from "@/components/layout/MainContent";
+import { NotificationToasts } from "@/components/ui/NotificationSystem";
 
 export default function ProtectedLayout({
   children,
@@ -23,6 +24,8 @@ export default function ProtectedLayout({
           <Header title="Dashboard" />
           <main className="flex-1 bg-[#f7faf9] p-6">{children}</main>
         </MainContent>
+        {/* Global toast popups — renders above everything */}
+        <NotificationToasts />
       </div>
     </SidebarProvider>
   );

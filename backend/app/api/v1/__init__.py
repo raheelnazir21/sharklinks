@@ -50,3 +50,12 @@ api_router.include_router(activity_logs.router)
 # Step 10 — Global Search
 from app.api.v1 import search
 api_router.include_router(search.router)
+
+# Step 11 — Stage Comments (threaded comment system per stage)
+from app.api.v1 import comments
+api_router.include_router(comments.router)
+
+# Step 12 — Notifications (live alerts for stage deadlines and ex-factory)
+from app.api.v1 import notifications
+api_router.include_router(notifications.router)
+

@@ -97,12 +97,14 @@ class BulkClassCreate(BaseModel):
     name: str
     serial_number: Optional[str] = None
     customer: Optional[str] = None
+    vendor_id: Optional[str] = None
     remarks: Optional[str] = None
 
 class BulkClassUpdate(BaseModel):
     name: Optional[str] = None
     serial_number: Optional[str] = None
     customer: Optional[str] = None
+    vendor_id: Optional[str] = None
     status: Optional[str] = None
     remarks: Optional[str] = None
 
@@ -242,6 +244,16 @@ class StageUpdate(BaseModel):
     status: Optional[StageStatus] = None
     remarks: Optional[str] = None
     attachment_url: Optional[str] = None
+    approval_status: Optional[str] = None
+    conditional_action: Optional[str] = None
+
+
+class StageApprovalRequest(BaseModel):
+    """Request body for the dedicated stage approval endpoint."""
+    approval: str  # "approved" | "conditional_approved" | "not_approved"
+    condition_type: Optional[str] = None  # label of conditional requirement
+    reason: Optional[str] = None          # rejection reason (for not_approved)
+    plan: Optional[str] = None            # corrective plan (for not_approved)
 
 
 class StageReworkRequest(BaseModel):

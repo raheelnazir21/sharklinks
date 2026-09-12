@@ -5,7 +5,7 @@ import api from "@/services/api";
 import { 
   Plus, Search, Package, Calendar, AlertCircle, CheckCircle, Clock, 
   Building2, Tag, Shirt, Layers, ChevronLeft, Info, Edit3, Trash2, History, Factory,
-  Paperclip, Upload, X, Pin
+  Paperclip, Upload, X, Pin, Activity
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -17,8 +17,8 @@ import { useAuth } from "@/hooks/useAuth";
 const DEFAULT_BULK_STAGES = [
   { name: "customer_order_wrapping_card", label: "Customer Order / Wrapping Card" },
   { name: "pp_sample_development", label: "PP Sample Development" },
-  { name: "customer_approval", label: "Customer Approval" },
-  { name: "fabric_shade_continuity_approval", label: "Fabric Shade Continuity Approval" },
+  { name: "small_vet_dying_shade_band_continuity_approval", label: "Small Vet Dying — Shade Band Continuity Approval" },
+  { name: "full_flag_dying_production", label: "Full Flag Dying Production" },
   { name: "sublimation", label: "Sublimation" },
   { name: "bulk_fabric_cutting", label: "Bulk Fabric Cutting" },
   { name: "printing_embroidery_embellishment", label: "Printing / Embroidery / Embellishment" },
@@ -40,7 +40,7 @@ const DEFAULT_SAMPLE_STAGES = [
   { name: "stitching", label: "Stitching" },
   { name: "washing", label: "Washing" },
   { name: "finishing", label: "Finishing" },
-  { name: "qc_check", label: "QC Check" },
+  { name: "qc_check", label: "PPS QC Check" },
   { name: "dispatch", label: "Dispatch" },
   { name: "sample_completed", label: "Sample Completed" },
 ];
@@ -607,9 +607,42 @@ function OrdersContent() {
               <h3 className="text-white font-black text-2xl mb-1 uppercase tracking-tighter italic">
                 {isSampling ? order.product_name : order.style_name}
               </h3>
-              <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8`}>
+              <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-6`}>
                  {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
               </p>
+
+              {/* Individual Stage Progress & Buffer Indicator */}
+              <div className="mb-6 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <Activity className="h-3 w-3 text-cyan-400" />
+                    Stage Progress
+                  </span>
+                  <span className="font-mono text-white font-bold">{order.progress ?? 0}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-900 border border-slate-800">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      order.status === "completed"
+                        ? "bg-emerald-500"
+                        : order.is_delayed
+                        ? "bg-red-500"
+                        : `bg-gradient-to-r from-${themeColor}-500 to-blue-500`
+                    }`}
+                    style={{ width: `${order.progress ?? 0}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 pt-0.5">
+                  <span>{order.completed_stages ?? 0} / {order.total_stages ?? 0} stages</span>
+                  {order.is_delayed ? (
+                    <span className="text-red-400 font-black">Delayed {order.delay_days ? `(-${order.delay_days}d)` : ""}</span>
+                  ) : order.status === "completed" ? (
+                    <span className="text-emerald-400 font-black">Completed</span>
+                  ) : (
+                    <span className="text-emerald-400 font-black">On Schedule</span>
+                  )}
+                </div>
+              </div>
               {(() => {
                 const currentClassId = isSampling ? order.sample_class_id : order.bulk_class_id;
                 const targetClassId = isSampling ? sampleClassId : bulkClassId;
@@ -1118,31 +1151,49 @@ function StageMergingComponent({
             return (
               <div 
                 key={s.name} 
-                className={`flex items-center justify-between bg-slate-950 border transition-all duration-300 rounded-2xl px-6 py-4 ${
+                className={`bg-slate-950 border transition-all duration-300 rounded-2xl px-6 py-4 ${
                   isSelected ? "border-indigo-500 bg-slate-950 shadow-indigo-500/5 shadow-2xl" : "border-slate-900 hover:border-slate-800"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => handleToggleSelect(s.name)}
-                    className="h-4 w-4 accent-indigo-500 cursor-pointer"
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggleSelect(s.name)}
+                      className="h-4 w-4 accent-indigo-500 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                      {idx + 1}. {s.label}
+                    </span>
+                  </div>
+                  
+                  <input 
+                    type="number" min="0"
+                    placeholder="Skip"
+                    disabled={isSelected}
+                    className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-center disabled:opacity-40"
+                    style={{ color: themeHex }}
+                    value={stageDays[s.name] || ""}
+                    onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
                   />
-                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                    {idx + 1}. {s.label}
-                  </span>
                 </div>
-                
-                <input 
-                  type="number" min="0"
-                  placeholder="Skip"
-                  disabled={isSelected}
-                  className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-center disabled:opacity-40"
-                  style={{ color: themeHex }}
-                  value={stageDays[s.name] || ""}
-                  onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
-                />
+                {/* Per-stage buffer quick-fill buttons */}
+                {!isSelected && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-7">
+                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-700">Quick fill:</span>
+                    {[3, 7, 14, 21].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setStageDays({...stageDays, [s.name]: d})}
+                        className="rounded-full border border-slate-800 bg-slate-900 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-slate-400 hover:border-slate-600 hover:text-white"
+                      >
+                        {d}d
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

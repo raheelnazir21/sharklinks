@@ -27,3 +27,6 @@ from app.models.inline_qc import (  # noqa: F401
     FinishEndlineQCHourlyRow, CutPanelReport, CutPanelReportRow,
     BatchAuditReport, BatchAuditReportRow, TrafficLightStatus, AQLResult,
 )
+
+# Step 5 — Stage Comments & Notifications
+from app.models.comments_notifications import StageComment, Notification  # noqa: F401

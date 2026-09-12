@@ -42,6 +42,7 @@ export default function BulkProjectsPage() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === "super_admin";
   const [projects, setProjects] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,13 +54,18 @@ export default function BulkProjectsPage() {
     name: "",
     customer: "",
     serial_number: "",
+    vendor_id: "",
     remarks: "",
   });
 
   const fetchData = async () => {
     try {
-      const res = await api.get("/orders/bulk-classes");
-      setProjects(res.data.data || []);
+      const [projRes, vendorRes] = await Promise.all([
+        api.get("/orders/bulk-classes"),
+        api.get("/vendors/"),
+      ]);
+      setProjects(projRes.data.data || []);
+      setVendors(vendorRes.data.data || []);
     } catch (err) {
       console.warn(err);
     } finally {
@@ -82,7 +88,7 @@ export default function BulkProjectsPage() {
       }
       setIsModalOpen(false);
       setEditingProject(null);
-      setNewProject({ name: "", customer: "", serial_number: "", remarks: "" });
+      setNewProject({ name: "", customer: "", serial_number: "", vendor_id: "", remarks: "" });
       fetchData();
       setFeedback({ type: "success", title: "Mission Successful", message: editingProject ? "Bulk project updated successfully." : "Bulk project created successfully." });
     } catch (err) {
@@ -94,7 +100,7 @@ export default function BulkProjectsPage() {
 
   const openCreate = () => {
     setEditingProject(null);
-    setNewProject({ name: "", customer: "", serial_number: "", remarks: "" });
+    setNewProject({ name: "", customer: "", serial_number: "", vendor_id: "", remarks: "" });
     setIsModalOpen(true);
   };
 
@@ -104,6 +110,7 @@ export default function BulkProjectsPage() {
       name: project.name || "",
       customer: project.customer || "",
       serial_number: project.serial_number || "",
+      vendor_id: project.vendor_id || "",
       remarks: project.remarks || "",
     });
     setIsModalOpen(true);
@@ -209,6 +216,20 @@ export default function BulkProjectsPage() {
               onChange={(event) => setNewProject({ ...newProject, name: event.target.value })}
             />
           </Field>
+          <Field label="Manufacturing Vendor">
+            <select
+              className={formControlClass}
+              value={newProject.vendor_id}
+              onChange={(event) => setNewProject({ ...newProject, vendor_id: event.target.value })}
+            >
+              <option value="">Select a Vendor (optional)</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Remarks">
             <textarea
               rows={3}
@@ -254,7 +275,9 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 
 function BulkCard({ project, onEdit, onDelete, canEdit }: { project: any; onEdit: (project: any) => void; onDelete: (project: any) => void; canEdit?: boolean }) {
   const status = project.status || "active";
-  const progress = status === "completed" ? 100 : status === "hold" ? 42 : 68;
+  const progress = typeof project.progress === "number"
+    ? project.progress
+    : (status === "completed" ? 100 : 0);
   const delayed = status === "delayed";
   return (
     <article className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/[0.03] transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-950/5">
@@ -280,7 +303,7 @@ function BulkCard({ project, onEdit, onDelete, canEdit }: { project: any; onEdit
       </div>
 
       <div className="mt-5 grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs font-semibold text-slate-600">
-        <span className="flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-600" /> {project.vendor_names?.length ? project.vendor_names.join(", ") : "Vendor not assigned yet"}</span>
+        <span className="flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-600" /> {project.vendor_name || (project.vendor_names?.length ? project.vendor_names.join(", ") : "Vendor not assigned yet")}</span>
         <span className="flex items-center gap-2"><Calendar className="h-4 w-4 text-blue-600" /> {project.created_at ? new Date(project.created_at).toLocaleDateString() : "No date"}</span>
         <span className="flex items-center gap-2"><Timer className="h-4 w-4 text-cyan-600" /> Production tracking active</span>
       </div>
@@ -288,10 +311,14 @@ function BulkCard({ project, onEdit, onDelete, canEdit }: { project: any; onEdit
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between text-[11px] font-black uppercase tracking-widest text-slate-500">
           <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Production Progress</span>
-          <span>{progress}%</span>
+          <span className="font-mono font-bold text-slate-700">{progress}%</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-600" style={{ width: `${progress}%` }} />
+          <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="mt-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
+          <span>{project.total_stages ? `${project.completed_stages || 0}/${project.total_stages} stages completed` : "No active orders"}</span>
+          <span>{project.total_orders ? `${project.total_orders} order${project.total_orders > 1 ? "s" : ""}` : "0 orders"}</span>
         </div>
       </div>
 

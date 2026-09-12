@@ -7,6 +7,7 @@ from app.models.order import (
     OrderStatus,
     StageName,
     StageStatus,
+    StageApprovalStatus,
     TrackType,
 )
 
@@ -18,6 +19,7 @@ POSTGRES_ENUMS = {
     "stagestatus": StageStatus,
     "orderstatus": OrderStatus,
     "orderpriority": OrderPriority,
+    "stageapprovalstatus": StageApprovalStatus,
 }
 
 
@@ -133,6 +135,10 @@ def ensure_runtime_schema(engine: Engine) -> None:
             }
             if "created_by" not in bulk_class_cols:
                 conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN created_by CHAR(36)"))
+            if "vendor_id" not in bulk_class_cols:
+                conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN vendor_id CHAR(36)"))
+            if "parent_id" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN parent_id CHAR(36)"))
             
             # --- Chunks schema updates for SQLite ---
             # Check if production_stage_chunks exists
@@ -149,10 +155,18 @@ def ensure_runtime_schema(engine: Engine) -> None:
                         completion_date DATETIME
                     )
                 """))
-            # Check if chunk_id exists in production_stages
+            # Check if chunk_id and approval columns exist in production_stages
             ps_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(production_stages)")).fetchall()}
             if "chunk_id" not in ps_cols:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN chunk_id CHAR(36)"))
+            if "approval_status" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN approval_status VARCHAR(50)"))
+            if "conditional_action" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN conditional_action TEXT"))
+            if "rejection_reason" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN rejection_reason TEXT"))
+            if "corrective_action" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN corrective_action TEXT"))
 
             # --- inline_qc_reports schema updates ---
             inline_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(inline_qc_reports)")).fetchall()}
@@ -181,10 +195,16 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN floor_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN line_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS reference_attachments JSONB DEFAULT '[]'::jsonb"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES orders(id) ON DELETE SET NULL"))
             conn.execute(text("ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS uploaded_by UUID"))
             conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS assigned_manager_id UUID"))
             conn.execute(text("ALTER TABLE sample_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
             conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
+            conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS approval_status VARCHAR(50)"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS conditional_action TEXT"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS rejection_reason TEXT"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS corrective_action TEXT"))
             
             # --- Chunks schema updates for Postgres ---
             conn.execute(text("""

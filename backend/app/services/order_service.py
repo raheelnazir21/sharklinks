@@ -405,6 +405,89 @@ class OrderService:
         )
         db.commit()
 
+    @staticmethod
+    def promote_to_bulk(db: Session, sample_order_id: str, bulk_class_id: str, vendor_id: str, user_id: str) -> "Order":
+        """Create a new bulk order from a completed sample order, copying key metadata."""
+        sample_order = OrderRepository.get_by_id(db, sample_order_id)
+        if not sample_order:
+            raise HTTPException(status_code=404, detail="Sample order not found.")
+        if sample_order.track_type.value != "sampling":
+            raise HTTPException(status_code=400, detail="Only sampling orders can be promoted to bulk.")
+        if sample_order.status.value != "completed":
+            raise HTTPException(status_code=400, detail="Only completed sample orders can be promoted to bulk.")
+
+        from app.schemas.order import OrderCreate
+        from app.models.order import TrackType as TT
+
+        new_order_data = OrderCreate(
+            vendor_id=str(vendor_id),
+            order_no=sample_order.order_no,
+            style_name=sample_order.style_name,
+            product_name=sample_order.product_name,
+            product_type=sample_order.product_type,
+            fabric=sample_order.fabric,
+            tech_pack_no=sample_order.tech_pack_no,
+            quantity=sample_order.quantity,
+            priority=sample_order.priority,
+            track_type=TT.bulk,
+            bulk_class_id=bulk_class_id,
+            reference_image=sample_order.reference_image,
+            reference_attachments=[],  # fresh start
+            remarks=f"Promoted from sample order {sample_order.order_no or sample_order_id}",
+        )
+        new_order = OrderService.create_order(db, new_order_data, user_id)
+        # Mark parent_id to track lineage
+        new_order.parent_id = str(sample_order_id)
+        db.commit()
+        db.refresh(new_order)
+        OrderRepository.log_history(
+            db, str(new_order.id), "promoted_from_sample", user_id,
+            note=f"Promoted from sample order {sample_order_id}.",
+            new_value={"parent_id": str(sample_order_id), "bulk_class_id": str(bulk_class_id)},
+        )
+        return new_order
+
+    @staticmethod
+    def reorder(db: Session, original_order_id: str, quantity: int, ex_factory_date, requirements: str, vendor_id: str, user_id: str) -> "Order":
+        """Clone a completed bulk order with new quantity / ex-factory date."""
+        original = OrderRepository.get_by_id(db, original_order_id)
+        if not original:
+            raise HTTPException(status_code=404, detail="Order not found.")
+        if original.status.value != "completed":
+            raise HTTPException(status_code=400, detail="Only completed orders can be reordered.")
+
+        from app.schemas.order import OrderCreate
+        from app.models.order import TrackType as TT
+
+        new_order_data = OrderCreate(
+            vendor_id=str(vendor_id or original.vendor_id),
+            order_no=f"{original.order_no}-RO" if original.order_no else None,
+            style_name=original.style_name,
+            product_name=original.product_name,
+            product_type=original.product_type,
+            fabric=original.fabric,
+            tech_pack_no=original.tech_pack_no,
+            quantity=quantity,
+            ex_factory_date=ex_factory_date,
+            priority=original.priority,
+            track_type=TT.bulk,
+            bulk_class_id=str(original.bulk_class_id) if original.bulk_class_id else None,
+            requirements=requirements,
+            reference_image=original.reference_image,
+            reference_attachments=[],
+            remarks=f"Reorder of {original.order_no or original_order_id}",
+        )
+        new_order = OrderService.create_order(db, new_order_data, user_id)
+        new_order.parent_id = str(original_order_id)
+        db.commit()
+        db.refresh(new_order)
+        OrderRepository.log_history(
+            db, str(new_order.id), "reorder_created", user_id,
+            note=f"Reorder of {original_order_id}.",
+            new_value={"parent_id": str(original_order_id), "quantity": quantity},
+        )
+        return new_order
+
 
 class StageService:
     @staticmethod
@@ -421,8 +504,8 @@ class StageService:
         return [
             (1, StageName.customer_order),
             (2, StageName.pp_sample_development),
-            (3, StageName.customer_approval),
-            (4, StageName.fabric_shade_approval),
+            (3, StageName.small_vet_dying),
+            (4, StageName.full_flag_dying),
             (5, StageName.sublimation),
             (6, StageName.bulk_fabric_cutting),
             (7, StageName.bulk_embellishment),
@@ -561,14 +644,21 @@ class StageService:
         if order.track_type.value == "sampling" and qc_stage.stage_name.value != "qc_check":
             raise HTTPException(status_code=400, detail="Sample rejection can only be raised from QC Check.")
         if order.track_type.value == "bulk":
-            allowed_bulk_rejections = {
+            # Stages where rejection repeats the SAME stage only
+            bulk_same_stage_repeat = {
+                "small_vet_dying_shade_band_continuity_approval",
+                "full_flag_dying_production",
+                "final_random_inspection",
+                # Legacy stages
                 "pp_sample_development",
-                "customer_approval",
                 "fabric_shade_continuity_approval",
             }
-            if qc_stage.stage_name.value not in allowed_bulk_rejections:
-                raise HTTPException(status_code=400, detail="Bulk rejection is currently allowed only for PP Sample, Customer Approval, and Fabric Shade Approval.")
-            if qc_stage.stage_name.value in {"pp_sample_development", "fabric_shade_continuity_approval"} and repeat_stage.id != qc_stage.id:
+            # Stages where rejection can go back further
+            bulk_cascade_reject = {"customer_approval"}
+            all_allowed = bulk_same_stage_repeat | bulk_cascade_reject
+            if qc_stage.stage_name.value not in all_allowed:
+                raise HTTPException(status_code=400, detail="Rejection is not allowed for this bulk stage.")
+            if qc_stage.stage_name.value in bulk_same_stage_repeat and repeat_stage.id != qc_stage.id:
                 raise HTTPException(status_code=400, detail="This bulk stage can only repeat from itself.")
         if repeat_stage.stage_order > qc_stage.stage_order:
             raise HTTPException(status_code=400, detail="Repeat stage must be the current stage or an earlier stage.")
@@ -618,3 +708,88 @@ class StageService:
         db.commit()
         db.refresh(order)
         return order
+
+    @staticmethod
+    def approve_stage(
+        db: Session,
+        stage_id: str,
+        approval: str,          # "approved" | "conditional_approved" | "not_approved"
+        condition_type: str,    # text label for conditional requirement
+        reason: str,
+        plan: str,
+        user_id: str,
+    ) -> "ProductionStage":
+        """
+        3-state approval for QC Check (sampling) and approval-gated bulk stages.
+
+        approved            → mark stage completed, advance
+        conditional_approved→ mark stage completed, record condition note
+        not_approved        → trigger rework iteration (same as reject_stage_for_rework)
+        """
+        from app.models.order import StageApprovalStatus
+        from datetime import datetime
+
+        stage = StageRepository.get_by_id(db, stage_id)
+        if not stage:
+            raise HTTPException(status_code=404, detail="Stage not found.")
+
+        order = OrderRepository.get_by_id(db, str(stage.order_id))
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found.")
+
+        # ── APPROVED ──────────────────────────────────────────────────────────
+        if approval == "approved":
+            StageRepository.update(db, stage, {
+                "status": StageStatus.completed,
+                "approval_status": StageApprovalStatus.approved,
+                "completion_date": datetime.utcnow(),
+                "updated_by": user_id,
+            })
+            OrderService._check_all_stages_complete(db, str(order.id), user_id)
+            OrderRepository.log_history(
+                db, str(order.id), "stage_approved", user_id,
+                note=f"Stage '{stage.stage_name.value}' approved.",
+                new_value={"stage": stage.stage_name.value, "approval": "approved"},
+            )
+            db.commit()
+            db.refresh(stage)
+            return stage
+
+        # ── CONDITIONAL APPROVED ──────────────────────────────────────────────
+        if approval == "conditional_approved":
+            note_text = condition_type or "Conditional approval — see condition note."
+            StageRepository.update(db, stage, {
+                "status": StageStatus.completed,
+                "approval_status": StageApprovalStatus.conditional_approved,
+                "conditional_action": note_text,
+                "completion_date": datetime.utcnow(),
+                "updated_by": user_id,
+            })
+            OrderService._check_all_stages_complete(db, str(order.id), user_id)
+            OrderRepository.log_history(
+                db, str(order.id), "stage_conditional_approved", user_id,
+                note=f"Stage '{stage.stage_name.value}' conditionally approved. Condition: {note_text}",
+                new_value={"stage": stage.stage_name.value, "approval": "conditional_approved", "condition": note_text},
+            )
+            db.commit()
+            db.refresh(stage)
+            return stage
+
+        # ── NOT APPROVED (same as reject + rework) ────────────────────────────
+        if approval == "not_approved":
+            if not reason or not reason.strip():
+                raise HTTPException(status_code=400, detail="Rejection reason is required for 'Not Approved'.")
+            # For not_approved: repeat the same stage
+            StageService.reject_stage_for_rework(db, stage_id, stage_id, reason, plan or "", user_id)
+            # Re-fetch updated stage
+            stage = StageRepository.get_by_id(db, stage_id)
+            if stage:
+                StageRepository.update(db, stage, {
+                    "approval_status": StageApprovalStatus.not_approved,
+                    "updated_by": user_id,
+                })
+                db.commit()
+                db.refresh(stage)
+            return stage
+
+        raise HTTPException(status_code=400, detail="Invalid approval value. Use 'approved', 'conditional_approved', or 'not_approved'.")

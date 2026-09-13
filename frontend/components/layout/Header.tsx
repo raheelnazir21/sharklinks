@@ -37,7 +37,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
   });
 
   return (
-    <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm shadow-slate-950/[0.03] backdrop-blur md:min-h-36 md:gap-6 md:px-7 md:py-5">
+    <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-2 shadow-sm shadow-slate-950/[0.03] backdrop-blur md:min-h-[4.75rem] md:gap-6 md:px-7 md:py-3">
       {/* Hamburger — mobile only */}
       <button
         onClick={() => setMobileOpen(true)}

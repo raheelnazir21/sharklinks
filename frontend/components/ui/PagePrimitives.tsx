@@ -33,22 +33,22 @@ export function IndustrialHeading({
         };
 
   return (
-    <div className={`flex gap-4 ${align === "center" ? "justify-center text-center" : "items-start"}`}>
-      <div className={`${compact ? "h-12 w-2" : "h-16 w-2.5"} mt-1 shrink-0 rounded-full bg-gradient-to-b ${accent.bar} shadow-lg`} />
-      <div>
+    <div className={`flex ${compact ? "gap-3 items-center" : "gap-4 items-start"} ${align === "center" ? "justify-center text-center" : ""}`}>
+      <div className={`${compact ? "h-9 w-1.5" : "h-12 w-2"} shrink-0 rounded-full bg-gradient-to-b ${accent.bar} shadow-sm`} />
+      <div className="min-w-0">
         {eyebrow && (
-          <p className={`mb-2 text-xs font-black uppercase tracking-wider ${accent.eyebrow}`}>
+          <p className={`${compact ? "mb-0.5 text-[10px] md:text-[11px]" : "mb-1 text-xs"} font-black uppercase tracking-wider ${accent.eyebrow}`}>
             {eyebrow}
           </p>
         )}
         <h1
-          className={`${compact ? "text-3xl md:text-4xl" : "text-4xl md:text-6xl"} font-black italic uppercase leading-none tracking-tight text-slate-950`}
+          className={`${compact ? "text-xl md:text-2xl" : "text-2xl md:text-4xl"} font-black italic uppercase leading-tight tracking-tight text-slate-950 truncate`}
         >
           {title}
           {highlight && <span className={accent.highlight}> {highlight}</span>}
         </h1>
         {subtitle && (
-          <p className="mt-3 text-xs md:text-sm max-w-5xl font-bold uppercase tracking-wider text-slate-500">
+          <p className={`${compact ? "mt-0.5 text-[10px] md:text-[11px]" : "mt-2 text-xs md:text-sm"} max-w-5xl font-bold uppercase tracking-wider text-slate-500 truncate`}>
             {subtitle}
           </p>
         )}

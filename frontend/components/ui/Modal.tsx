@@ -8,9 +8,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-lg" }: ModalProps) {
   // Prevent scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -34,8 +35,8 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       />
       
       {/* Modal Content */}
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/10 animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-6">
+      <div className={`relative w-full ${maxWidth} max-h-[92vh] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/10 animate-in fade-in zoom-in duration-200`}>
+        <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-6 shrink-0">
           <h3 className="text-xl font-black tracking-tight text-slate-950">{title}</h3>
           <button
             onClick={onClose}

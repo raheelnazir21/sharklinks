@@ -167,6 +167,20 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN rejection_reason TEXT"))
             if "corrective_action" not in ps_cols:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN corrective_action TEXT"))
+            if "buffer_days" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN buffer_days INTEGER DEFAULT 0"))
+            if "condition_status" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN condition_status VARCHAR(50)"))
+            if "gated_stage_name" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN gated_stage_name VARCHAR(100)"))
+            if "condition_cleared_at" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN condition_cleared_at DATETIME"))
+            if "condition_cleared_by" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN condition_cleared_by CHAR(36)"))
+            if "clearance_attachment_url" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN clearance_attachment_url VARCHAR(500)"))
+            if "clearance_notes" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN clearance_notes TEXT"))
 
             # --- inline_qc_reports schema updates ---
             inline_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(inline_qc_reports)")).fetchall()}
@@ -205,6 +219,13 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS conditional_action TEXT"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS rejection_reason TEXT"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS corrective_action TEXT"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS buffer_days INTEGER DEFAULT 0"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS condition_status VARCHAR(50)"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS gated_stage_name VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS condition_cleared_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS condition_cleared_by UUID REFERENCES users(id) ON DELETE SET NULL"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS clearance_attachment_url VARCHAR(500)"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS clearance_notes TEXT"))
             
             # --- Chunks schema updates for Postgres ---
             conn.execute(text("""

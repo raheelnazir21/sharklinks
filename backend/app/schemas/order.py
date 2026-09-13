@@ -231,7 +231,8 @@ class StageCreate(BaseModel):
     start_date: Optional[datetime] = None
     completion_date: Optional[datetime] = None
     target_date: Optional[datetime] = None
-    target_days: Optional[int] = None # Added for manual day assignment
+    target_days: Optional[int] = None  # Added for manual day assignment
+    buffer_days: Optional[int] = 0    # Separate contingency time — does NOT inflate target_days
     responsible_person_id: Optional[str] = None
     remarks: Optional[str] = None
 
@@ -246,6 +247,7 @@ class StageUpdate(BaseModel):
     attachment_url: Optional[str] = None
     approval_status: Optional[str] = None
     conditional_action: Optional[str] = None
+    buffer_days: Optional[int] = None  # Separate contingency time — does NOT inflate target_days
 
 
 class StageApprovalRequest(BaseModel):
@@ -254,6 +256,7 @@ class StageApprovalRequest(BaseModel):
     condition_type: Optional[str] = None  # label of conditional requirement
     reason: Optional[str] = None          # rejection reason (for not_approved)
     plan: Optional[str] = None            # corrective plan (for not_approved)
+    repeat_from_stage_id: Optional[str] = None  # repeat from selected stage if not_approved
 
 
 class StageReworkRequest(BaseModel):
@@ -275,6 +278,15 @@ class StageOut(BaseModel):
     status: str
     remarks: Optional[str]
     attachment_url: Optional[str]
+    buffer_days: Optional[int] = 0
+    approval_status: Optional[str] = None
+    conditional_action: Optional[str] = None
+    condition_status: Optional[str] = None
+    gated_stage_name: Optional[str] = None
+    condition_cleared_at: Optional[datetime] = None
+    condition_cleared_by: Optional[str] = None
+    clearance_attachment_url: Optional[str] = None
+    clearance_notes: Optional[str] = None
     updated_at: datetime
 
     class Config:

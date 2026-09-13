@@ -226,7 +226,16 @@ class ProductionStage(Base):
     # Approval tracking (for QC Check / approval-gated bulk stages)
     approval_status = Column(Enum(StageApprovalStatus), nullable=True)
     conditional_action = Column(Text, nullable=True)  # Notes for conditional approvals
-    
+    condition_status = Column(String(50), nullable=True)  # "pending", "cleared"
+    gated_stage_name = Column(String(100), nullable=True)  # category or stage blocked
+    condition_cleared_at = Column(DateTime, nullable=True)
+    condition_cleared_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    clearance_attachment_url = Column(String(500), nullable=True)
+    clearance_notes = Column(Text, nullable=True)
+
+    # Buffer days — separate contingency time, does NOT inflate target_days
+    buffer_days = Column(Integer, nullable=True, default=0)
+
     updated_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -234,6 +243,7 @@ class ProductionStage(Base):
     chunk = relationship("ProductionStageChunk", back_populates="stages")
     responsible_person = relationship("User", foreign_keys=[responsible_person_id])
     updater = relationship("User", foreign_keys=[updated_by])
+    condition_clearer = relationship("User", foreign_keys=[condition_cleared_by])
 
 class Attachment(Base):
     __tablename__ = "order_attachments"

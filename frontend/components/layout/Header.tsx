@@ -13,6 +13,7 @@ import { LogOut, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/hooks/useSidebar";
+import { useHeader } from "@/hooks/useHeader";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import GlobalSearch from "@/components/layout/GlobalSearch";
 import { NotificationBell } from "@/components/ui/NotificationSystem";
@@ -26,12 +27,14 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth();
   const { setMobileOpen } = useSidebar();
   const pathname = usePathname();
-  const heading = title === "Dashboard" ? getPageHeading(pathname) : {
+  const { headerConfig } = useHeader();
+  
+  const heading = headerConfig || (title === "Dashboard" ? getPageHeading(pathname) : {
     eyebrow: "Textile QC",
     title,
     highlight: "",
     subtitle: subtitle || "Production and quality control workspace.",
-  };
+  });
 
   return (
     <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm shadow-slate-950/[0.03] backdrop-blur md:min-h-36 md:gap-6 md:px-7 md:py-5">
@@ -48,7 +51,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
       <div className="hidden sm:block min-w-0 flex-1">
         <IndustrialHeading
           eyebrow={heading.eyebrow}
-          title={heading.title}
+          title={heading.title || title || "Workspace"}
           highlight={heading.highlight}
           subtitle={heading.subtitle}
           compact
@@ -57,7 +60,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
       {/* Page title — mobile only (single line, no subtitle) */}
       <p className="sm:hidden flex-1 truncate text-sm font-black text-slate-900">
-        {heading.title} {heading.highlight}
+        {heading.title || title || "Workspace"} {heading.highlight}
       </p>
 
       <div className="flex items-center gap-2 shrink-0 md:gap-3">
@@ -109,6 +112,12 @@ function getPageHeading(pathname: string) {
     title: "Order",
     highlight: "Tracking",
     subtitle: "One frame for product class, current stage and delay risk",
+  };
+  if (pathname.startsWith("/qc-reports/defects")) return {
+    eyebrow: "Quality Configuration",
+    title: "Defect",
+    highlight: "Master",
+    subtitle: "Configure defect codes and categories for each QC stage",
   };
   if (pathname.startsWith("/qc-reports")) return {
     eyebrow: "Textile Quality Command Center",

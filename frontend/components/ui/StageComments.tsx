@@ -115,11 +115,11 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
       {/* Header */}
       <div className="flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-indigo-400" />
-        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
+        <span className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-wider">
           Production Comments
         </span>
         {comments.length > 0 && (
-          <span className="ml-auto text-[9px] font-black text-slate-600 uppercase tracking-widest">
+          <span className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-wider">
             {comments.length} {comments.length === 1 ? "comment" : "comments"}
           </span>
         )}
@@ -129,7 +129,7 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
       {!disabled && (
         <div className="flex gap-3 items-end">
           {/* Author avatar */}
-          <div className={`flex-shrink-0 h-8 w-8 rounded-full ${avatarColor(user?.full_name || "U")} flex items-center justify-center text-[10px] font-black text-white`}>
+          <div className={`flex-shrink-0 h-9 w-9 rounded-full ${avatarColor(user?.full_name || "U")} flex items-center justify-center text-xs font-black text-white`}>
             {(user?.full_name || "U").slice(0, 2).toUpperCase()}
           </div>
 
@@ -147,14 +147,14 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handlePost();
               }}
               placeholder="Write a comment… (Ctrl+Enter to post)"
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-[1.5rem] px-5 py-3 pr-14 text-xs font-bold text-white resize-none focus:ring-2 focus:ring-indigo-500/40 focus:outline-none transition-all placeholder:text-slate-700 leading-relaxed overflow-hidden"
+              className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 pr-14 text-sm font-semibold text-slate-900 resize-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none transition-all placeholder:text-slate-400 leading-relaxed overflow-hidden shadow-sm"
             />
             <button
               onClick={handlePost}
               disabled={posting || !text.trim()}
-              className="absolute right-3 bottom-3 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="absolute right-3 bottom-3 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
             >
-              {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
           </div>
         </div>
@@ -162,17 +162,17 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
 
       {/* Comments list */}
       {loading ? (
-        <div className="flex items-center gap-2 text-slate-600 text-xs py-4">
+        <div className="flex items-center gap-2 text-slate-400 text-sm py-4">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span className="font-bold">Loading comments…</span>
         </div>
       ) : comments.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 py-8 text-center">
-          <MessageSquare className="w-6 h-6 text-slate-700 mx-auto mb-2" />
-          <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
+          <MessageSquare className="w-7 h-7 text-slate-600 mx-auto mb-2" />
+          <p className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-wider">
             No comments yet
           </p>
-          <p className="text-[10px] font-bold text-slate-800 mt-1">
+          <p className="text-xs md:text-sm font-medium text-slate-500 mt-1">
             Be the first to leave a production note.
           </p>
         </div>
@@ -186,44 +186,44 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
             return (
               <div
                 key={comment.id}
-                className={`group flex gap-3 rounded-2xl p-4 transition-all ${
+                className={`group flex gap-3 rounded-2xl p-4 transition-all shadow-sm ${
                   isFirst
-                    ? "bg-indigo-950/40 border border-indigo-800/40"
-                    : "bg-slate-950/40 border border-slate-800/60"
+                    ? "bg-emerald-50/50 border border-emerald-200"
+                    : "bg-white border border-slate-200"
                 }`}
               >
                 {/* Avatar */}
-                <div className={`flex-shrink-0 h-8 w-8 rounded-full ${avatarColor(comment.author_name)} flex items-center justify-center text-[10px] font-black text-white`}>
+                <div className={`flex-shrink-0 h-9 w-9 rounded-full ${avatarColor(comment.author_name)} flex items-center justify-center text-xs font-black text-white shadow-sm`}>
                   {comment.author_initials}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-xs font-black text-white truncate">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-black text-slate-900 truncate">
                       {comment.author_name}
                     </span>
                     {isFirst && (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-full">
+                      <span className="text-xs font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
                         Latest
                       </span>
                     )}
-                    <span className="ml-auto text-[9px] font-bold text-slate-600 flex-shrink-0">
+                    <span className="ml-auto text-xs font-semibold text-slate-500 flex-shrink-0">
                       {timeAgo(comment.created_at)}
                     </span>
                     {canDelete && (
                       <button
                         onClick={() => handleDelete(comment.id)}
                         disabled={deletingId === comment.id}
-                        className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-slate-700 hover:text-rose-500"
+                        className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-slate-400 hover:text-rose-500"
                         title="Delete comment"
                       >
                         {deletingId === comment.id
-                          ? <Loader2 className="w-3 h-3 animate-spin" />
-                          : <Trash2 className="w-3 h-3" />}
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-white/80 leading-relaxed whitespace-pre-wrap break-words">
+                  <p className="text-sm font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
                     {comment.text}
                   </p>
                 </div>
@@ -235,7 +235,7 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
           {comments.length > DEFAULT_SHOW && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-950/40 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition hover:text-indigo-400 hover:border-indigo-800"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-950/40 py-3 text-xs font-black uppercase tracking-wider text-slate-400 transition hover:text-indigo-400 hover:border-indigo-800"
             >
               {expanded ? (
                 <>

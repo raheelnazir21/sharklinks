@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useHeader } from "@/hooks/useHeader";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -21,6 +22,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
 export default function VendorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { setHeaderConfig } = useHeader();
   const [vendor, setVendor] = useState<any>(null);
   const [floors, setFloors] = useState<any[]>([]);
   const [samplingOrders, setSamplingOrders] = useState<any[]>([]);
@@ -61,6 +63,19 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
   };
 
   useEffect(() => { fetchAll(); }, [id]);
+
+  useEffect(() => {
+    if (!vendor) return;
+    setHeaderConfig({
+      eyebrow: "Supplier Network",
+      title: vendor.name,
+      highlight: "Profile",
+      subtitle: `Code: ${vendor.code || "N/A"} • Country: ${vendor.country || "N/A"} • Floors: ${floors.length} • Lines: ${floors.reduce((acc: number, f: any) => acc + (f.lines?.length || 0), 0)}`,
+    });
+    return () => {
+      setHeaderConfig(null);
+    };
+  }, [vendor, floors, setHeaderConfig]);
 
   // ── Floor CRUD ──────────────────────────────────────────────────────────
   const handleAddFloor = async () => {
@@ -160,7 +175,7 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-8 pb-20">
       {/* Back */}
-      <Link href="/vendors" className="inline-flex items-center gap-3 text-slate-500 hover:text-slate-950 text-xs font-black uppercase tracking-widest transition-colors">
+      <Link href="/vendors" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-95">
         <ChevronLeft className="w-4 h-4" /> Back to Vendors
       </Link>
 
@@ -172,17 +187,19 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
             <Building2 className="w-12 h-12" />
           </div>
           <div className="flex-1">
-            <IndustrialHeading
-              eyebrow="Vendor Profile"
-              title={vendor.name}
-              highlight="Factory"
-              subtitle="Floor, line, sampling and bulk production history"
-              compact
-            />
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <span className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700">
+                Code: {vendor.code || "N/A"}
+              </span>
+              <span className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 border border-emerald-200 text-emerald-700">
+                Active Partner
+              </span>
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">{vendor.name}</h2>
             <div className="flex flex-wrap gap-6 text-xs font-bold text-slate-600">
-              {vendor.country && <span className="flex items-center gap-2"><MapPin className="w-4 h-4 text-indigo-400" /> {vendor.country}</span>}
-              {vendor.email && <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-indigo-400" /> {vendor.email}</span>}
-              {vendor.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-indigo-400" /> {vendor.phone}</span>}
+              {vendor.country && <span className="flex items-center gap-2"><MapPin className="w-4 h-4 text-indigo-500" /> {vendor.country}</span>}
+              {vendor.email && <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-indigo-500" /> {vendor.email}</span>}
+              {vendor.phone && <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-indigo-500" /> {vendor.phone}</span>}
             </div>
           </div>
           {/* Stats */}

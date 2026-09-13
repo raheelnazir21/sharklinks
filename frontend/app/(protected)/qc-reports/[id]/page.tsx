@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useHeader } from "@/hooks/useHeader";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
@@ -48,6 +49,7 @@ function getDeleteEndpoint(reportType: string, reportId: string): string {
 export default function QCReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { setHeaderConfig } = useHeader();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -67,6 +69,20 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
     };
     fetchDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (!report?.header) return;
+    const h = report.header;
+    setHeaderConfig({
+      eyebrow: `Inspection Certificate #${id.slice(0, 8).toUpperCase()}`,
+      title: (h.report_type || "QC").replace(/_/g, " "),
+      highlight: "Report",
+      subtitle: `Vendor: ${h.vendor_name || "N/A"} • Order: ${h.order_no || "N/A"} • Passed: ${h.quantity_passed || 0}/${h.quantity_checked || 0} Pcs`,
+    });
+    return () => {
+      setHeaderConfig(null);
+    };
+  }, [id, report, setHeaderConfig]);
 
   const handleDelete = async () => {
     if (!report) return;
@@ -104,8 +120,8 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
     <div className="max-w-6xl mx-auto space-y-10 pb-20">
       {/* Action Bar */}
       <div className="flex items-center justify-between">
-        <Link href="/qc-reports" className="flex items-center gap-2 text-slate-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all">
-          <ChevronLeft className="w-4 h-4" /> Back to Dashboard
+        <Link href="/qc-reports" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-95">
+          <ChevronLeft className="w-4 h-4" /> Back to QC Reports
         </Link>
         <div className="flex gap-3">
           {deleteEndpoint && (
@@ -181,19 +197,21 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
                  <ShieldCheck className="w-10 h-10" />
               </div>
               <div>
-                <IndustrialHeading
-                  eyebrow={`Inspection Certificate #${id.slice(0, 8).toUpperCase()}`}
-                  title={header.report_type.replace('_', ' ')}
-                  highlight="Report"
-                  subtitle="Quality result, defect log and approval evidence"
-                  compact
-                />
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  <span className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    Cert #{id.slice(0, 8).toUpperCase()}
+                  </span>
+                  <span className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    QC Inspection
+                  </span>
+                </div>
+                <h2 className="text-3xl font-black text-white capitalize tracking-tight">{header.report_type.replace(/_/g, ' ')} Report</h2>
                 <div className="flex gap-4 mt-4">
-                   <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-black uppercase tracking-widest">
-                     <CheckCircle2 className="w-3.5 h-3.5" /> FPY: {header.fpy_percent}%
+                   <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-xs font-black uppercase tracking-wider">
+                     <CheckCircle2 className="w-4 h-4" /> FPY: {header.fpy_percent}%
                    </span>
-                   <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-black uppercase tracking-widest">
-                     <AlertTriangle className="w-3.5 h-3.5" /> DHU: {header.dhu_percent}%
+                   <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-xs font-black uppercase tracking-wider">
+                     <AlertTriangle className="w-4 h-4" /> DHU: {header.dhu_percent}%
                    </span>
                 </div>
               </div>

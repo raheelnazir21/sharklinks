@@ -37,7 +37,7 @@ export function IndustrialHeading({
       <div className={`${compact ? "h-12 w-2" : "h-16 w-2.5"} mt-1 shrink-0 rounded-full bg-gradient-to-b ${accent.bar} shadow-lg`} />
       <div>
         {eyebrow && (
-          <p className={`mb-2 text-[10px] font-black uppercase tracking-[0.28em] ${accent.eyebrow}`}>
+          <p className={`mb-2 text-xs font-black uppercase tracking-wider ${accent.eyebrow}`}>
             {eyebrow}
           </p>
         )}
@@ -48,7 +48,7 @@ export function IndustrialHeading({
           {highlight && <span className={accent.highlight}> {highlight}</span>}
         </h1>
         {subtitle && (
-          <p className={`${compact ? "mt-3 text-[11px]" : "mt-4 text-xs"} max-w-5xl font-black uppercase tracking-[0.22em] text-slate-500 md:tracking-[0.26em]`}>
+          <p className="mt-3 text-xs md:text-sm max-w-5xl font-bold uppercase tracking-wider text-slate-500">
             {subtitle}
           </p>
         )}

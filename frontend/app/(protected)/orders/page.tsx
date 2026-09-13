@@ -45,7 +45,14 @@ const DEFAULT_SAMPLE_STAGES = [
   { name: "sample_completed", label: "Sample Completed" },
 ];
 
-const EX_FACTORY_BUFFER_DAYS = [15, 30];
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 
 type ReferenceAttachment = {
   url: string;
@@ -68,19 +75,6 @@ type BulkItem = {
   reference_attachments: ReferenceAttachment[];
 };
 
-function formatDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function addBufferDays(baseDateValue: string | null | undefined, days: number) {
-  const [year, month, day] = (baseDateValue || "").split("-").map(Number);
-  const baseDate = year && month && day ? new Date(year, month - 1, day) : new Date();
-  baseDate.setDate(baseDate.getDate() + days);
-  return formatDateInputValue(baseDate);
-}
 
 function createBlankBulkItem(): BulkItem {
   return {
@@ -97,6 +91,7 @@ function createBlankBulkItem(): BulkItem {
 function buildStagePayload(
   stages: Array<{ name: string; label: string }>,
   stageDays: Record<string, number>,
+  stageBuffers: Record<string, number>,
   moduleType: "sampling" | "bulk",
   chunkedStageNames: string[] = []
 ) {
@@ -106,6 +101,7 @@ function buildStagePayload(
       stage_name: stage.name,
       stage_order: index + 1,
       target_days: chunkedStageNames.includes(stage.name) ? 0 : Number(stageDays[stage.name]),
+      buffer_days: Number(stageBuffers[stage.name] || 0),
       module_type: moduleType,
       is_required: true,
     }));
@@ -154,6 +150,10 @@ function OrdersContent() {
   // Creation state
   const [bulkItems, setBulkItems] = useState<BulkItem[]>([createBlankBulkItem()]);
   const [stageDays, setStageDays] = useState<Record<string, number>>(
+    (isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES).reduce((acc, s) => ({ ...acc, [s.name]: 0 }), {})
+  );
+  // Buffer days — separate contingency time per stage, does NOT inflate target_days
+  const [stageBuffers, setStageBuffers] = useState<Record<string, number>>(
     (isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES).reduce((acc, s) => ({ ...acc, [s.name]: 0 }), {})
   );
 
@@ -383,7 +383,7 @@ function OrdersContent() {
       }));
 
       if (!isSampling) {
-        const selectedStages = buildStagePayload(DEFAULT_BULK_STAGES, stageDays, "bulk", chunkedStageNames);
+        const selectedStages = buildStagePayload(DEFAULT_BULK_STAGES, stageDays, stageBuffers, "bulk", chunkedStageNames);
         if (!selectedStages.length) {
           setFeedback({ type: "error", title: "Operation Failed", message: "Add predicted days for at least one bulk stage." });
           return;
@@ -415,7 +415,7 @@ function OrdersContent() {
         fetchData();
         setFeedback({ type: "success", title: "Mission Successful", message: "Bulk orders created successfully." });
       } else {
-        const selectedStages = buildStagePayload(DEFAULT_SAMPLE_STAGES, stageDays, "sampling", chunkedStageNames);
+        const selectedStages = buildStagePayload(DEFAULT_SAMPLE_STAGES, stageDays, stageBuffers, "sampling", chunkedStageNames);
         if (!selectedStages.length) {
           setFeedback({ type: "error", title: "Operation Failed", message: "Add predicted days for at least one sample stage." });
           return;
@@ -436,6 +436,7 @@ function OrdersContent() {
       setBulkItems([createBlankBulkItem()]);
       setChunks([]);
       setStageDays((isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES).reduce((acc, s) => ({ ...acc, [s.name]: 0 }), {}));
+      setStageBuffers((isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES).reduce((acc, s) => ({ ...acc, [s.name]: 0 }), {}));
     } catch (err: any) {
       console.error("Failed to create order entry", err);
       const message =
@@ -553,7 +554,7 @@ function OrdersContent() {
           <button
             type="button"
             onClick={() => router.push(isSampling ? "/samples" : "/bulk-projects")}
-            className="border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-600 px-8 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-2 active:scale-95"
+            className="border border-emerald-600 bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95"
           >
             <ChevronLeft className="w-4 h-4" /> Back to {isSampling ? "Samples" : "Bulk Projects"}
           </button>
@@ -739,10 +740,6 @@ function OrdersContent() {
                 <div>
                   <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Ex-Factory Date</label>
                   <input type="date" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={formData.ex_factory_date} onChange={(e) => setFormData({...formData, ex_factory_date: e.target.value})} />
-                  <ExFactoryBufferButtons
-                    baseLabel="today"
-                    onSelect={(days) => setFormData({...formData, ex_factory_date: addBufferDays(formData.ex_factory_date, days)})}
-                  />
                 </div>
                 <div>
                   <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Priority</label>
@@ -828,10 +825,6 @@ function OrdersContent() {
                 <div>
                   <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Ex-Factory Date</label>
                   <input type="date" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={formData.ex_factory_date} onChange={(e) => setFormData({...formData, ex_factory_date: e.target.value})} />
-                  <ExFactoryBufferButtons
-                    baseLabel="date sent"
-                    onSelect={(days) => setFormData({...formData, ex_factory_date: addBufferDays(formData.order_placement_date, days)})}
-                  />
                 </div>
               </div>
 
@@ -877,6 +870,8 @@ function OrdersContent() {
                   defaultStages={DEFAULT_SAMPLE_STAGES}
                   stageDays={stageDays}
                   setStageDays={setStageDays}
+                  stageBuffers={stageBuffers}
+                  setStageBuffers={setStageBuffers}
                   chunks={chunks}
                   setChunks={setChunks}
                   selectedMergeStages={selectedMergeStages}
@@ -927,10 +922,6 @@ function OrdersContent() {
                     <div>
                       <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Ex-Factory Date</label>
                       <input required type="date" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.ex_factory_date} onChange={(e) => updateBulkItem(idx, 'ex_factory_date', e.target.value)} />
-                      <ExFactoryBufferButtons
-                        baseLabel="today"
-                        onSelect={(days) => updateBulkItem(idx, 'ex_factory_date', addBufferDays(null, days))}
-                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -973,6 +964,8 @@ function OrdersContent() {
                   defaultStages={DEFAULT_BULK_STAGES}
                   stageDays={stageDays}
                   setStageDays={setStageDays}
+                  stageBuffers={stageBuffers}
+                  setStageBuffers={setStageBuffers}
                   chunks={chunks}
                   setChunks={setChunks}
                   selectedMergeStages={selectedMergeStages}
@@ -1020,6 +1013,8 @@ function StageMergingComponent({
   defaultStages,
   stageDays,
   setStageDays,
+  stageBuffers,
+  setStageBuffers,
   chunks,
   setChunks,
   selectedMergeStages,
@@ -1156,29 +1151,46 @@ function StageMergingComponent({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleToggleSelect(s.name)}
-                      className="h-4 w-4 accent-indigo-500 cursor-pointer"
+                      className="h-4 w-4 accent-indigo-500 cursor-pointer shrink-0"
                     />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest truncate">
                       {idx + 1}. {s.label}
                     </span>
                   </div>
                   
-                  <input 
-                    type="number" min="0"
-                    placeholder="Skip"
-                    disabled={isSelected}
-                    className="w-16 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[10px] font-black text-center disabled:opacity-40"
-                    style={{ color: themeHex }}
-                    value={stageDays[s.name] || ""}
-                    onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
-                  />
+                  {/* Target Days + Buffer Days side-by-side */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[6px] font-black uppercase tracking-widest text-slate-600">Target</span>
+                      <input 
+                        type="number" min="0"
+                        placeholder="—"
+                        disabled={isSelected}
+                        className="w-14 bg-slate-900 border border-slate-800 rounded-xl px-2 py-2 text-[10px] font-black text-center disabled:opacity-40"
+                        style={{ color: themeHex }}
+                        value={stageDays[s.name] || ""}
+                        onChange={(e) => setStageDays({...stageDays, [s.name]: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[6px] font-black uppercase tracking-widest text-amber-600">Buffer</span>
+                      <input 
+                        type="number" min="0"
+                        placeholder="0"
+                        disabled={isSelected}
+                        className="w-14 bg-slate-900 border border-amber-900/40 rounded-xl px-2 py-2 text-[10px] font-black text-center text-amber-400 disabled:opacity-40"
+                        value={stageBuffers?.[s.name] || ""}
+                        onChange={(e) => setStageBuffers?.({...stageBuffers, [s.name]: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+                  </div>
                 </div>
-                {/* Per-stage buffer quick-fill buttons */}
+                {/* Quick fill row for target days */}
                 {!isSelected && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-7">
                     <span className="text-[7px] font-black uppercase tracking-widest text-slate-700">Quick fill:</span>
@@ -1275,24 +1287,7 @@ function StageMergingComponent({
   );
 }
 
-function ExFactoryBufferButtons({ baseLabel, onSelect }: { baseLabel: string, onSelect: (days: number) => void }) {
-    return (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Dispatch buffer</span>
-          {EX_FACTORY_BUFFER_DAYS.map((days) => (
-            <button
-              key={days}
-              type="button"
-              onClick={() => onSelect(days)}
-              className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-300 hover:border-slate-600 hover:text-white"
-              title={`Set ex-factory ${days} days from ${baseLabel}`}
-            >
-              +{days} days
-            </button>
-          ))}
-        </div>
-    );
-}
+
 
 function ReferenceAttachmentButton({
   attachments,

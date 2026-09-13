@@ -1,7 +1,7 @@
 """
 Orders & Production Stages API.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -620,6 +620,15 @@ def get_stages(
             "chunk_id": str(s.chunk_id) if s.chunk_id else None,
             "chunk_name": s.chunk.name if s.chunk else None,
             "chunk_target_days": s.chunk.target_days if s.chunk else None,
+            "approval_status": s.approval_status.value if s.approval_status else None,
+            "conditional_action": s.conditional_action,
+            "condition_status": s.condition_status,
+            "gated_stage_name": s.gated_stage_name,
+            "condition_cleared_at": s.condition_cleared_at.isoformat() if s.condition_cleared_at else None,
+            "condition_cleared_by": str(s.condition_cleared_by) if s.condition_cleared_by else None,
+            "condition_cleared_by_name": s.condition_clearer.full_name if s.condition_clearer else None,
+            "clearance_attachment_url": s.clearance_attachment_url,
+            "clearance_notes": s.clearance_notes,
         }
         for s in stages
     ])
@@ -774,6 +783,7 @@ def approve_stage(
         reason=payload.reason or "",
         plan=payload.plan or "",
         user_id=str(current_user.id),
+        repeat_from_stage_id=payload.repeat_from_stage_id,
     )
     ActivityLogService.record(
         db,
@@ -786,6 +796,80 @@ def approve_stage(
     return success_response(
         data={"id": str(stage.id), "approval_status": payload.approval},
         message=f"Stage approval recorded: {payload.approval}."
+    )
+
+
+@router.post("/stages/{stage_id}/clear-condition", response_model=dict, summary="Clear Conditional Approval Defect with Mandatory Proof")
+def clear_stage_condition(
+    stage_id: str,
+    notes: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(AllStaff),
+):
+    """Clear a pending conditional defect approval by uploading mandatory proof and notes."""
+    _assert_stage_order_access(db, stage_id, current_user)
+
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="Mandatory proof attachment file must be uploaded to clear defect condition.")
+
+    if not notes or not notes.strip():
+        raise HTTPException(status_code=400, detail="Clearance notes/remarks are required.")
+
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Only PDF and image files (JPG, PNG, WebP) are allowed as proof attachments.")
+
+    stage = StageService.get_stage(db, stage_id)
+    if not stage:
+        raise HTTPException(status_code=404, detail="Stage not found.")
+
+    ext = file.filename.split(".")[-1].lower()
+    filename = f"clearance_{uuid.uuid4()}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    attachment_url = f"/api/uploads/attachments/{filename}"
+
+    # Add as Order attachment
+    attachment = Attachment(
+        order_id=stage.order_id,
+        file_name=f"[Clearance Proof] {file.filename}",
+        file_path=attachment_url,
+        file_type=file.content_type,
+        uploaded_by=current_user.id,
+    )
+    db.add(attachment)
+    db.flush()
+
+    cleared_stage = StageService.clear_stage_condition(
+        db,
+        stage_id=stage_id,
+        attachment_url=attachment_url,
+        clearance_notes=notes.strip(),
+        user_id=str(current_user.id),
+    )
+
+    ActivityLogService.record(
+        db,
+        action="STAGE_CONDITION_CLEARED",
+        entity_type="Order",
+        entity_id=str(stage.order_id),
+        user=current_user,
+        payload={"stage": stage.stage_name.value, "proof_file": file.filename, "notes": notes.strip()},
+    )
+
+    return success_response(
+        data={
+            "id": str(cleared_stage.id),
+            "condition_status": "cleared",
+            "clearance_attachment_url": attachment_url,
+            "clearance_notes": notes.strip(),
+            "condition_cleared_at": cleared_stage.condition_cleared_at.isoformat() if cleared_stage.condition_cleared_at else None,
+        },
+        message="Conditional defect cleared successfully with proof attachment. Downstream stage is now unlocked."
     )
 
 
@@ -805,7 +889,7 @@ def promote_to_bulk(
         raise HTTPException(status_code=400, detail="bulk_class_id and vendor_id are required.")
     assert_vendor_access(db, vendor_id, current_user)
     new_order = OrderService.promote_to_bulk(
-        db, order_id, bulk_class_id, vendor_id, str(current_user.id)
+        db, order_id, bulk_class_id, vendor_id, str(current_user.id), payload_data=payload
     )
     ActivityLogService.record(
         db,
@@ -829,25 +913,16 @@ def reorder(
     current_user: User = Depends(get_current_user),
     _=Depends(ManagerAccess),
 ):
-    """Clone a completed bulk order with new quantity/ex-factory date."""
+    """Clone a completed bulk order with full bulk order configuration."""
     _assert_order_access(db, order_id, current_user)
-    from datetime import date as _date
-    quantity = int(payload.get("quantity", 0))
-    if quantity <= 0:
-        raise HTTPException(status_code=400, detail="quantity must be a positive integer.")
-    ex_factory_raw = payload.get("ex_factory_date")
-    ex_factory = _date.fromisoformat(ex_factory_raw) if ex_factory_raw else None
     vendor_id = payload.get("vendor_id", "")
     if vendor_id:
         assert_vendor_access(db, vendor_id, current_user)
     new_order = OrderService.reorder(
         db,
         original_order_id=order_id,
-        quantity=quantity,
-        ex_factory_date=ex_factory,
-        requirements=payload.get("requirements", ""),
-        vendor_id=vendor_id,
         user_id=str(current_user.id),
+        data=payload,
     )
     ActivityLogService.record(
         db,
@@ -855,7 +930,7 @@ def reorder(
         entity_type="Order",
         entity_id=order_id,
         user=current_user,
-        payload={"details": f"Reorder created. New order: {new_order.id}", "quantity": quantity},
+        payload={"details": f"Reorder created. New order: {new_order.id}", "quantity": new_order.quantity},
     )
     return success_response(
         data={"id": str(new_order.id), "order_no": new_order.order_no},

@@ -6,7 +6,7 @@ Key rules:
 - Log every status change in order_history.
 """
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime
 from fastapi import HTTPException
 from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.repositories.order_repo import OrderRepository, StageRepository, BulkClassRepository, _id_variants
 from app.schemas.order import OrderCreate, OrderUpdate, StageCreate, StageUpdate, BulkOrderCreate, BulkClassCreate
 
-from app.models.order import Order, ProductionStage, OrderStatus, StageStatus, OrderProductionAssignment, Vendor, VendorFloor, VendorLine, VendorDepartment, LocationStatus, BulkClass, TrackType
+from app.models.order import Order, ProductionStage, OrderStatus, StageStatus, OrderProductionAssignment, Vendor, VendorFloor, VendorLine, VendorDepartment, LocationStatus, BulkClass, TrackType, StageApprovalStatus
 
 
 
@@ -144,7 +144,8 @@ class OrderService:
                     "stage_order": s_in.stage_order,
                     "status": StageStatus.pending,
                     "is_required": s_in.is_required,
-                    "target_date": stage_target_dt
+                    "target_date": stage_target_dt,
+                    "buffer_days": s_in.buffer_days or 0,
                 })
         else:
             # Use default track stages
@@ -406,8 +407,15 @@ class OrderService:
         db.commit()
 
     @staticmethod
-    def promote_to_bulk(db: Session, sample_order_id: str, bulk_class_id: str, vendor_id: str, user_id: str) -> "Order":
-        """Create a new bulk order from a completed sample order, copying key metadata."""
+    def promote_to_bulk(
+        db: Session,
+        sample_order_id: str,
+        bulk_class_id: str,
+        vendor_id: str,
+        user_id: str,
+        payload_data: Optional[dict] = None,
+    ) -> "Order":
+        """Create a new bulk order from a completed sample order, allowing streamlined full product form fields while pre-populating sample metadata."""
         sample_order = OrderRepository.get_by_id(db, sample_order_id)
         if not sample_order:
             raise HTTPException(status_code=404, detail="Sample order not found.")
@@ -416,25 +424,91 @@ class OrderService:
         if sample_order.status.value != "completed":
             raise HTTPException(status_code=400, detail="Only completed sample orders can be promoted to bulk.")
 
-        from app.schemas.order import OrderCreate
-        from app.models.order import TrackType as TT
+        from app.schemas.order import OrderCreate, StageCreate, StageChunkCreate, ProductionAssignmentCreate
+        from app.models.order import TrackType as TT, OrderPriority
+
+        data = payload_data or {}
+        
+        # Product details: use provided values from form, fallback to sample order
+        product_name = data.get("product_name") or sample_order.product_name
+        style_name = data.get("style_name") or sample_order.style_name
+        order_no = data.get("order_no") or sample_order.order_no
+        product_type = data.get("product_type") or sample_order.product_type
+        fabric = data.get("fabric") or sample_order.fabric
+        tech_pack_no = data.get("tech_pack_no") or sample_order.tech_pack_no
+        
+        # Quantity
+        qty = sample_order.quantity
+        if data.get("quantity") is not None and str(data.get("quantity")).strip():
+            try:
+                qty = int(data.get("quantity"))
+            except ValueError:
+                qty = sample_order.quantity
+
+        # Dates
+        ex_factory_date = data.get("ex_factory_date")
+        if isinstance(ex_factory_date, str) and ex_factory_date.strip():
+            from datetime import datetime
+            try:
+                ex_factory_date = datetime.strptime(ex_factory_date.strip(), "%Y-%m-%d").date()
+            except Exception:
+                ex_factory_date = None
+
+        order_placement_date = data.get("order_placement_date")
+        if isinstance(order_placement_date, str) and order_placement_date.strip():
+            from datetime import datetime
+            try:
+                order_placement_date = datetime.strptime(order_placement_date.strip(), "%Y-%m-%d").date()
+            except Exception:
+                order_placement_date = None
+
+        priority_val = data.get("priority")
+        priority = OrderPriority(priority_val) if priority_val and hasattr(OrderPriority, priority_val) else sample_order.priority
+
+        requirements = data.get("requirements") if data.get("requirements") is not None else sample_order.requirements
+        reference_image = data.get("reference_image") or sample_order.reference_image
+        ref_attachments = data.get("reference_attachments") if data.get("reference_attachments") is not None else (sample_order.reference_attachments or [])
+
+        # Parse stages, stage chunks, and assignments if provided
+        stages_in = None
+        if data.get("stages"):
+            stages_in = [StageCreate(**s) if isinstance(s, dict) else s for s in data["stages"]]
+
+        chunks_in = None
+        if data.get("stage_chunks"):
+            chunks_in = [StageChunkCreate(**c) if isinstance(c, dict) else c for c in data["stage_chunks"]]
+
+        assignments_in = None
+        if data.get("assignments"):
+            assignments_in = [
+                ProductionAssignmentCreate(**a) if isinstance(a, dict) else a
+                for a in data["assignments"]
+                if isinstance(a, dict) and a.get("floor_id")
+            ]
 
         new_order_data = OrderCreate(
             vendor_id=str(vendor_id),
-            order_no=sample_order.order_no,
-            style_name=sample_order.style_name,
-            product_name=sample_order.product_name,
-            product_type=sample_order.product_type,
-            fabric=sample_order.fabric,
-            tech_pack_no=sample_order.tech_pack_no,
-            quantity=sample_order.quantity,
-            priority=sample_order.priority,
+            order_no=order_no,
+            style_name=style_name,
+            product_name=product_name,
+            product_type=product_type,
+            fabric=fabric,
+            tech_pack_no=tech_pack_no,
+            quantity=qty,
+            ex_factory_date=ex_factory_date,
+            order_placement_date=order_placement_date,
+            priority=priority,
             track_type=TT.bulk,
             bulk_class_id=bulk_class_id,
-            reference_image=sample_order.reference_image,
-            reference_attachments=[],  # fresh start
-            remarks=f"Promoted from sample order {sample_order.order_no or sample_order_id}",
+            reference_image=reference_image,
+            reference_attachments=ref_attachments,
+            requirements=requirements,
+            remarks=data.get("remarks") or f"Promoted from sample order {sample_order.order_no or sample_order_id}",
+            stages=stages_in,
+            stage_chunks=chunks_in,
+            assignments=assignments_in,
         )
+
         new_order = OrderService.create_order(db, new_order_data, user_id)
         # Mark parent_id to track lineage
         new_order.parent_id = str(sample_order_id)
@@ -448,35 +522,101 @@ class OrderService:
         return new_order
 
     @staticmethod
-    def reorder(db: Session, original_order_id: str, quantity: int, ex_factory_date, requirements: str, vendor_id: str, user_id: str) -> "Order":
-        """Clone a completed bulk order with new quantity / ex-factory date."""
+    def reorder(
+        db: Session,
+        original_order_id: str,
+        user_id: str,
+        data: dict = None,
+        quantity: int = None,
+        ex_factory_date = None,
+        requirements: str = None,
+        vendor_id: str = None,
+    ) -> "Order":
+        """Clone a completed bulk order with full bulk order customization."""
         original = OrderRepository.get_by_id(db, original_order_id)
         if not original:
             raise HTTPException(status_code=404, detail="Order not found.")
         if original.status.value != "completed":
             raise HTTPException(status_code=400, detail="Only completed orders can be reordered.")
 
-        from app.schemas.order import OrderCreate
+        from app.schemas.order import OrderCreate, StageCreate, StageChunkCreate, ProductionAssignmentCreate
         from app.models.order import TrackType as TT
+        from datetime import date as _date
+
+        payload = data or {}
+        qty = int(payload.get("quantity") if payload.get("quantity") is not None else (quantity or 0))
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail="quantity must be a positive integer.")
+
+        ex_factory_raw = payload.get("ex_factory_date") if "ex_factory_date" in payload else ex_factory_date
+        if isinstance(ex_factory_raw, str) and ex_factory_raw.strip():
+            final_ex_factory = _date.fromisoformat(ex_factory_raw)
+        elif isinstance(ex_factory_raw, _date):
+            final_ex_factory = ex_factory_raw
+        else:
+            final_ex_factory = None
+
+        order_placement_raw = payload.get("order_placement_date")
+        if isinstance(order_placement_raw, str) and order_placement_raw.strip():
+            final_order_placement = _date.fromisoformat(order_placement_raw)
+        elif isinstance(order_placement_raw, _date):
+            final_order_placement = order_placement_raw
+        else:
+            final_order_placement = None
+
+        final_vendor_id = payload.get("vendor_id") or vendor_id or str(original.vendor_id)
+        bulk_class_id = payload.get("bulk_class_id") or (str(original.bulk_class_id) if original.bulk_class_id else None)
+        product_name = payload.get("product_name") or original.product_name
+        style_name = payload.get("style_name") or original.style_name
+        product_type = payload.get("product_type") or original.product_type
+        fabric = payload.get("fabric") if "fabric" in payload else original.fabric
+        tech_pack_no = payload.get("tech_pack_no") if "tech_pack_no" in payload else original.tech_pack_no
+        order_no = payload.get("order_no") or (f"{original.order_no}-RO" if original.order_no else None)
+        priority = payload.get("priority") or (original.priority.value if hasattr(original.priority, "value") else str(original.priority))
+        reqs = payload.get("requirements") if "requirements" in payload else (requirements if requirements is not None else (original.requirements or ""))
+        reference_image = payload.get("reference_image") or original.reference_image
+        ref_attachments = payload.get("reference_attachments") if payload.get("reference_attachments") is not None else (original.reference_attachments or [])
+
+        # Parse stages, stage chunks, and assignments if provided
+        stages_in = None
+        if payload.get("stages"):
+            stages_in = [StageCreate(**s) if isinstance(s, dict) else s for s in payload["stages"]]
+
+        chunks_in = None
+        if payload.get("stage_chunks"):
+            chunks_in = [StageChunkCreate(**c) if isinstance(c, dict) else c for c in payload["stage_chunks"]]
+
+        assignments_in = None
+        if payload.get("assignments"):
+            assignments_in = [
+                ProductionAssignmentCreate(**a) if isinstance(a, dict) else a
+                for a in payload["assignments"]
+                if isinstance(a, dict) and a.get("floor_id")
+            ]
 
         new_order_data = OrderCreate(
-            vendor_id=str(vendor_id or original.vendor_id),
-            order_no=f"{original.order_no}-RO" if original.order_no else None,
-            style_name=original.style_name,
-            product_name=original.product_name,
-            product_type=original.product_type,
-            fabric=original.fabric,
-            tech_pack_no=original.tech_pack_no,
-            quantity=quantity,
-            ex_factory_date=ex_factory_date,
-            priority=original.priority,
+            vendor_id=str(final_vendor_id),
+            order_no=order_no,
+            style_name=style_name,
+            product_name=product_name,
+            product_type=product_type,
+            fabric=fabric,
+            tech_pack_no=tech_pack_no,
+            quantity=qty,
+            ex_factory_date=final_ex_factory,
+            order_placement_date=final_order_placement,
+            priority=priority,
             track_type=TT.bulk,
-            bulk_class_id=str(original.bulk_class_id) if original.bulk_class_id else None,
-            requirements=requirements,
-            reference_image=original.reference_image,
-            reference_attachments=[],
-            remarks=f"Reorder of {original.order_no or original_order_id}",
+            bulk_class_id=str(bulk_class_id) if bulk_class_id else None,
+            reference_image=reference_image,
+            reference_attachments=ref_attachments,
+            requirements=reqs,
+            remarks=payload.get("remarks") or f"Reorder of {original.order_no or original_order_id}",
+            stages=stages_in,
+            stage_chunks=chunks_in,
+            assignments=assignments_in,
         )
+
         new_order = OrderService.create_order(db, new_order_data, user_id)
         new_order.parent_id = str(original_order_id)
         db.commit()
@@ -484,7 +624,7 @@ class OrderService:
         OrderRepository.log_history(
             db, str(new_order.id), "reorder_created", user_id,
             note=f"Reorder of {original_order_id}.",
-            new_value={"parent_id": str(original_order_id), "quantity": quantity},
+            new_value={"parent_id": str(original_order_id), "quantity": qty},
         )
         return new_order
 
@@ -585,6 +725,38 @@ class StageService:
             if prev_stages:
                 raise HTTPException(400, f"Cannot update this stage. Previous stage ({prev_stages[0].stage_name.value}) must be COMPLETED first.")
 
+            # Conditional Approval Downstream Gating (Bulk orders only)
+            track_val = order.track_type.value if hasattr(order.track_type, "value") else str(order.track_type)
+            if track_val == "bulk":
+                current_st_name = (stage.stage_name.value if hasattr(stage.stage_name, "value") else str(stage.stage_name)).lower()
+                pending_conditions = db.query(ProductionStage).filter(
+                    ProductionStage.order_id == order.id,
+                    ProductionStage.stage_order < stage.stage_order,
+                    ProductionStage.approval_status == StageApprovalStatus.conditional_approved,
+                    ProductionStage.condition_status == "pending"
+                ).all()
+
+                for pc in pending_conditions:
+                    gated = (pc.gated_stage_name or "").lower()
+                    c_action = (pc.conditional_action or "").lower()
+                    is_blocked = False
+
+                    # 1. Fabric shade / resubmission before bulk fabric dying -> blocks dyeing stages
+                    if gated == "bulk_dying" or "dying" in c_action or "shade" in c_action:
+                        is_blocked = "dying" in current_st_name
+                    # 2. Washing execution -> blocks washing, cutting, or fabrication
+                    elif gated == "washing_fabrication" or "washing" in c_action:
+                        is_blocked = "washing" in current_st_name or "fabric_cutting" in current_st_name or "fabrication" in current_st_name
+                    # 3. Embellishment / printing / embroidery strike off -> blocks embellishment
+                    elif gated == "embellishment" or "strike" in c_action or "embellish" in c_action or "printing" in c_action:
+                        is_blocked = "embellish" in current_st_name or "printing" in current_st_name
+
+                    if is_blocked:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Stage '{stage.stage_name.value}' is LOCKED by pending conditional defect from {pc.stage_name.value}: \"{pc.conditional_action}\". Mandatory proof attachment must be uploaded to clear this defect before proceeding."
+                        )
+
         # ─── 2. Handle Special Stages ──────────────────────────────────────────
         # No auto-approval here anymore, using manual gates.
         pass
@@ -644,21 +816,24 @@ class StageService:
         if order.track_type.value == "sampling" and qc_stage.stage_name.value != "qc_check":
             raise HTTPException(status_code=400, detail="Sample rejection can only be raised from QC Check.")
         if order.track_type.value == "bulk":
-            # Stages where rejection repeats the SAME stage only
-            bulk_same_stage_repeat = {
-                "small_vet_dying_shade_band_continuity_approval",
-                "full_flag_dying_production",
-                "final_random_inspection",
-                # Legacy stages
+            allowed_bulk_rejection_stages = {
                 "pp_sample_development",
+                "pp_sample",
+                "small_vet_dying_shade_band_continuity_approval",
+                "small_vet_dying",
+                "fabric_shade_approval",
                 "fabric_shade_continuity_approval",
+                "full_flag_dying_production",
+                "full_flag_dying",
+                "final_random_inspection",
+                "final_qa_audit",
+                "final_random_qa_audit",
+                "customer_approval",
             }
-            # Stages where rejection can go back further
-            bulk_cascade_reject = {"customer_approval"}
-            all_allowed = bulk_same_stage_repeat | bulk_cascade_reject
-            if qc_stage.stage_name.value not in all_allowed:
-                raise HTTPException(status_code=400, detail="Rejection is not allowed for this bulk stage.")
-            if qc_stage.stage_name.value in bulk_same_stage_repeat and repeat_stage.id != qc_stage.id:
+            if qc_stage.stage_name.value not in allowed_bulk_rejection_stages:
+                raise HTTPException(status_code=400, detail="Rejection is only permitted on designated inspection/approval stages.")
+            # Bulk stages repeat the SAME stage only (unless customer_approval)
+            if qc_stage.stage_name.value != "customer_approval" and repeat_stage.id != qc_stage.id:
                 raise HTTPException(status_code=400, detail="This bulk stage can only repeat from itself.")
         if repeat_stage.stage_order > qc_stage.stage_order:
             raise HTTPException(status_code=400, detail="Repeat stage must be the current stage or an earlier stage.")
@@ -718,6 +893,7 @@ class StageService:
         reason: str,
         plan: str,
         user_id: str,
+        repeat_from_stage_id: Optional[str] = None,
     ) -> "ProductionStage":
         """
         3-state approval for QC Check (sampling) and approval-gated bulk stages.
@@ -758,18 +934,36 @@ class StageService:
         # ── CONDITIONAL APPROVED ──────────────────────────────────────────────
         if approval == "conditional_approved":
             note_text = condition_type or "Conditional approval — see condition note."
+            track_val = order.track_type.value if hasattr(order.track_type, "value") else str(order.track_type)
+
+            gated_category = None
+            condition_status = None
+            if track_val == "bulk":
+                c_lower = note_text.lower()
+                if "shade" in c_lower or "dying" in c_lower:
+                    gated_category = "bulk_dying"
+                elif "washing" in c_lower or "fabric" in c_lower:
+                    gated_category = "washing_fabrication"
+                elif "embellish" in c_lower or "print" in c_lower or "embroidery" in c_lower or "strike" in c_lower:
+                    gated_category = "embellishment"
+                else:
+                    gated_category = "custom"
+                condition_status = "pending"
+
             StageRepository.update(db, stage, {
                 "status": StageStatus.completed,
                 "approval_status": StageApprovalStatus.conditional_approved,
                 "conditional_action": note_text,
+                "condition_status": condition_status,
+                "gated_stage_name": gated_category,
                 "completion_date": datetime.utcnow(),
                 "updated_by": user_id,
             })
             OrderService._check_all_stages_complete(db, str(order.id), user_id)
             OrderRepository.log_history(
                 db, str(order.id), "stage_conditional_approved", user_id,
-                note=f"Stage '{stage.stage_name.value}' conditionally approved. Condition: {note_text}",
-                new_value={"stage": stage.stage_name.value, "approval": "conditional_approved", "condition": note_text},
+                note=f"Stage '{stage.stage_name.value}' conditionally approved. Gated stage: {gated_category}. Condition: {note_text}",
+                new_value={"stage": stage.stage_name.value, "approval": "conditional_approved", "condition": note_text, "gated_category": gated_category},
             )
             db.commit()
             db.refresh(stage)
@@ -779,8 +973,8 @@ class StageService:
         if approval == "not_approved":
             if not reason or not reason.strip():
                 raise HTTPException(status_code=400, detail="Rejection reason is required for 'Not Approved'.")
-            # For not_approved: repeat the same stage
-            StageService.reject_stage_for_rework(db, stage_id, stage_id, reason, plan or "", user_id)
+            target_repeat_id = repeat_from_stage_id or stage_id
+            StageService.reject_stage_for_rework(db, stage_id, target_repeat_id, reason, plan or "", user_id)
             # Re-fetch updated stage
             stage = StageRepository.get_by_id(db, stage_id)
             if stage:
@@ -793,3 +987,45 @@ class StageService:
             return stage
 
         raise HTTPException(status_code=400, detail="Invalid approval value. Use 'approved', 'conditional_approved', or 'not_approved'.")
+
+    @staticmethod
+    def clear_stage_condition(
+        db: Session,
+        stage_id: str,
+        attachment_url: str,
+        clearance_notes: str,
+        user_id: str,
+    ) -> ProductionStage:
+        stage = StageRepository.get_by_id(db, stage_id)
+        if not stage:
+            raise HTTPException(status_code=404, detail="Stage not found.")
+        if stage.approval_status != StageApprovalStatus.conditional_approved:
+            raise HTTPException(status_code=400, detail="Stage is not conditionally approved.")
+        if stage.condition_status == "cleared":
+            raise HTTPException(status_code=400, detail="Condition is already cleared.")
+
+        order = OrderRepository.get_by_id(db, str(stage.order_id))
+        if not order:
+            raise HTTPException(status_code=404, detail="Associated order not found.")
+
+        updated = StageRepository.update(db, stage, {
+            "condition_status": "cleared",
+            "condition_cleared_at": datetime.utcnow(),
+            "condition_cleared_by": user_id,
+            "clearance_attachment_url": attachment_url,
+            "clearance_notes": clearance_notes,
+            "updated_by": user_id,
+        })
+
+        OrderRepository.log_history(
+            db,
+            str(order.id),
+            "stage_condition_cleared",
+            user_id,
+            old_value={"stage": stage.stage_name.value, "condition_status": "pending"},
+            new_value={"stage": stage.stage_name.value, "condition_status": "cleared", "attachment": attachment_url, "notes": clearance_notes},
+            note=f"Condition on '{stage.stage_name.value}' cleared with proof attachment. Notes: {clearance_notes}",
+        )
+        db.commit()
+        db.refresh(stage)
+        return stage

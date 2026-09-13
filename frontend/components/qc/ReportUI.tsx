@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { ArrowLeft, Download, Printer, Save } from "lucide-react";
+import { useHeader } from "@/hooks/useHeader";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 
 type ReportWorkspaceProps = {
@@ -269,36 +270,45 @@ export function ReportToolbar({
   onDownload,
   children,
 }: ReportToolbarProps) {
+  const { setHeaderConfig } = useHeader();
+
+  useEffect(() => {
+    setHeaderConfig({
+      eyebrow: meta || "QC Inspection",
+      title: title.split(" ").slice(0, -1).join(" ") || title,
+      highlight: title.split(" ").slice(-1).join(" "),
+      subtitle: subtitle || "Complete this digital QC audit form or print the standardized sheet.",
+    });
+    return () => {
+      setHeaderConfig(null);
+    };
+  }, [title, subtitle, meta, setHeaderConfig]);
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm print:hidden">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <IndustrialHeading
-          eyebrow={meta}
-          title={title.split(" ").slice(0, -1).join(" ") || title}
-          highlight={title.split(" ").slice(-1).join(" ")}
-          subtitle={subtitle}
-          compact
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          {children}
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => { window.location.href = "/qc-reports"; }}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase text-slate-700 transition hover:bg-slate-100"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 transition hover:bg-slate-100"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Reports Management
+            <ArrowLeft className="h-4 w-4" /> Back to QC Center
           </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {children}
           <button
             type="button"
             onClick={onPrint || (() => window.print())}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase text-slate-700 transition hover:bg-slate-100"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 transition hover:bg-slate-100"
           >
             <Printer className="h-4 w-4" /> Print
           </button>
           <button
             type="button"
             onClick={onDownload || (() => downloadReportAsDoc(title))}
-            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-xs font-black uppercase text-indigo-700 transition hover:bg-indigo-600 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-indigo-700 transition hover:bg-indigo-600 hover:text-white"
           >
             <Download className="h-4 w-4" /> Download Form
           </button>
@@ -306,7 +316,7 @@ export function ReportToolbar({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-black uppercase text-white shadow-lg shadow-indigo-950/30 transition hover:bg-indigo-500 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-950/20 transition hover:bg-indigo-500 disabled:opacity-50"
           >
             <Save className="h-4 w-4" /> {saving ? savingLabel : saveLabel}
           </button>

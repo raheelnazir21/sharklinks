@@ -17,6 +17,7 @@ from app.utils.response import success_response
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+AuditReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
 
 UPLOAD_DIR = "uploads/audit"
@@ -63,7 +64,7 @@ def _serialize_audit(audit: OrderAudit) -> dict:
 # ── GET audit record ────────────────────────────────────────────────────────
 
 @router.get("/{order_id}", response_model=dict, summary="Get Audit Record")
-def get_audit(order_id: str, db: Session = Depends(get_db), _=Depends(AllStaff)):
+def get_audit(order_id: str, db: Session = Depends(get_db), _=Depends(AuditReadAccess)):
     audit = _get_or_create_audit(db, order_id)
     return success_response(data=_serialize_audit(audit))
 

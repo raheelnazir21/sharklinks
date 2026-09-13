@@ -106,6 +106,8 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
     }
   };
 
+  const isViewer = user?.role === "viewer";
+  const effectiveDisabled = disabled || isViewer;
   const isAdmin = user?.role === "super_admin" || user?.role === "admin";
   const visibleComments = expanded ? comments : comments.slice(0, DEFAULT_SHOW);
   const hiddenCount = comments.length - DEFAULT_SHOW;
@@ -126,7 +128,7 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
       </div>
 
       {/* Input box */}
-      {!disabled && (
+      {!effectiveDisabled && (
         <div className="flex gap-3 items-end">
           {/* Author avatar */}
           <div className={`flex-shrink-0 h-9 w-9 rounded-full ${avatarColor(user?.full_name || "U")} flex items-center justify-center text-xs font-black text-white`}>
@@ -180,7 +182,7 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
         <div className="space-y-3">
           {visibleComments.map((comment, idx) => {
             const isOwn = user && comment.author_id === user.id;
-            const canDelete = isOwn || isAdmin;
+            const canDelete = !isViewer && (isOwn || isAdmin);
             const isFirst = idx === 0;
 
             return (

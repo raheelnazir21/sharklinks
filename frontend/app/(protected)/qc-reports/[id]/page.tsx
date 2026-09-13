@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useHeader } from "@/hooks/useHeader";
+import { useAuth } from "@/hooks/useAuth";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import AttachmentPanel from "@/components/qc/AttachmentPanel";
 
@@ -49,6 +50,8 @@ function getDeleteEndpoint(reportType: string, reportId: string): string {
 export default function QCReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const { setHeaderConfig } = useHeader();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +127,7 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
           <ChevronLeft className="w-4 h-4" /> Back to QC Reports
         </Link>
         <div className="flex gap-3">
-          {deleteEndpoint && (
+          {deleteEndpoint && !isViewer && (
             <>
               <Link href={editRoute} className="px-6 py-3 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-amber-500/30 flex items-center gap-2">
                 <Pencil className="w-4 h-4" /> Edit Report

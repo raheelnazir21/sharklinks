@@ -127,7 +127,9 @@ function OrdersContent() {
   const bulkClassId = searchParams.get("bulk_class_id");
   
   const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const isSuperAdmin = user?.role === "super_admin";
+  const canManage = !isViewer;
   const isSampling = track === "sampling";
   const themeColor = isSampling ? "blue" : "emerald";
   const themeHex = isSampling ? "#3b82f6" : "#10b981";
@@ -559,13 +561,15 @@ function OrdersContent() {
             <ChevronLeft className="w-4 h-4" /> Back to {isSampling ? "Samples" : "Bulk Projects"}
           </button>
         </div>
-        <button 
-          onClick={openCreateOrder}
-          style={{ backgroundColor: themeHex }}
-          className="hover:opacity-90 text-white px-10 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 shadow-2xl active:scale-95"
-        >
-          <Plus className="w-5 h-5" /> {isSampling ? "Initiate Prototype" : "Register Style PO"}
-        </button>
+        {canManage && (
+          <button 
+            onClick={openCreateOrder}
+            style={{ backgroundColor: themeHex }}
+            className="hover:opacity-90 text-white px-10 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-4 shadow-2xl active:scale-95"
+          >
+            <Plus className="w-5 h-5" /> {isSampling ? "Initiate Prototype" : "Register Style PO"}
+          </button>
+        )}
       </div>
 
       <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-6 flex flex-wrap gap-6 items-center shadow-xl">
@@ -647,8 +651,8 @@ function OrdersContent() {
               {(() => {
                 const currentClassId = isSampling ? order.sample_class_id : order.bulk_class_id;
                 const targetClassId = isSampling ? sampleClassId : bulkClassId;
-                const showButton = !!targetClassId && String(currentClassId) !== String(targetClassId);
-                const buttonCount = 3 + (showButton ? 1 : 0);
+                const showButton = canManage && !!targetClassId && String(currentClassId) !== String(targetClassId);
+                const buttonCount = (canManage ? 2 : 0) + 1 + (showButton ? 1 : 0);
                 return (
                   <div className="mt-6 grid gap-2" style={{ gridTemplateColumns: `repeat(${buttonCount},1fr)` }}>
                     {showButton && (
@@ -669,16 +673,18 @@ function OrdersContent() {
                         {currentClassId ? 'Reassign' : 'Assign'}
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openEditOrder(order);
-                      }}
-                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-blue-500/40 hover:text-blue-400"
-                    >
-                      <Edit3 className="mx-auto mb-1 h-4 w-4" /> Edit
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openEditOrder(order);
+                        }}
+                        className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-blue-500/40 hover:text-blue-400"
+                      >
+                        <Edit3 className="mx-auto mb-1 h-4 w-4" /> Edit
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={(event) => {
@@ -689,16 +695,18 @@ function OrdersContent() {
                     >
                       <History className="mx-auto mb-1 h-4 w-4" /> History
                     </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setDeleteTarget(order);
-                      }}
-                      className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-red-500/40 hover:text-red-400"
-                    >
-                      <Trash2 className="mx-auto mb-1 h-4 w-4" /> Delete
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDeleteTarget(order);
+                        }}
+                        className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-red-500/40 hover:text-red-400"
+                      >
+                        <Trash2 className="mx-auto mb-1 h-4 w-4" /> Delete
+                      </button>
+                    )}
                   </div>
                 );
               })()}

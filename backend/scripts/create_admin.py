@@ -33,7 +33,7 @@ ROLE_PERMISSIONS = {
     RoleEnum.qc_officer: [
         "read:orders", "write:qc_reports", "read:defects",
     ],
-    RoleEnum.viewer: ["read:reports", "read:analytics"],
+    RoleEnum.viewer: ["read:all"],
 }
 
 

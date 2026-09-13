@@ -40,7 +40,9 @@ function getApiError(err: unknown, fallback: string) {
 
 export default function SamplesPage() {
   const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const isSuperAdmin = user?.role === "super_admin";
+  const canManage = !isViewer;
   const [samples, setSamples] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,9 +177,11 @@ export default function SamplesPage() {
               ))}
             </select>
           </div>
-          <PrimaryButton onClick={openCreate}>
-            <Plus className="h-4 w-4" /> New Sample
-          </PrimaryButton>
+          {canManage && (
+            <PrimaryButton onClick={openCreate}>
+              <Plus className="h-4 w-4" /> New Sample
+            </PrimaryButton>
+          )}
         </div>
       </PageToolbar>
 
@@ -192,7 +196,14 @@ export default function SamplesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((sample) => (
-            <SampleCard key={sample.id} sample={sample} onEdit={openEdit} onDelete={setDeleteTarget} canEdit={isSuperAdmin} />
+            <SampleCard
+              key={sample.id}
+              sample={sample}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
+              canEdit={!isViewer && isSuperAdmin}
+              canDelete={!isViewer && isSuperAdmin}
+            />
           ))}
           {filtered.length === 0 && (
             <EmptyState
@@ -293,7 +304,19 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function SampleCard({ sample, onEdit, onDelete, canEdit }: { sample: any; onEdit: (sample: any) => void; onDelete: (sample: any) => void; canEdit?: boolean }) {
+function SampleCard({
+  sample,
+  onEdit,
+  onDelete,
+  canEdit,
+  canDelete,
+}: {
+  sample: any;
+  onEdit: (sample: any) => void;
+  onDelete: (sample: any) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
+}) {
   const progress = typeof sample.progress === "number"
     ? sample.progress
     : (sample.status === "completed" ? 100 : 0);
@@ -308,7 +331,9 @@ function SampleCard({ sample, onEdit, onDelete, canEdit }: { sample: any; onEdit
           {canEdit && (
             <button type="button" onClick={() => onEdit(sample)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-cyan-700"><Edit3 className="h-4 w-4" /></button>
           )}
-          <button type="button" onClick={() => onDelete(sample)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+          {canDelete && (
+            <button type="button" onClick={() => onDelete(sample)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+          )}
         </div>
       </div>
 

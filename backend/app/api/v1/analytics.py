@@ -10,7 +10,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles
-from app.core.access_control import is_admin_user, scoped_vendor_query
+from app.core.access_control import is_admin_user, scoped_vendor_query, can_view_all_company_data
 from app.models.user import RoleEnum, User
 from app.models.order import (
     Order,
@@ -132,7 +132,7 @@ def get_order_tracking(
         orders_q = orders_q.filter(Order.track_type == track_type)
     if vendor_id:
         orders_q = orders_q.filter(Order.vendor_id == vendor_id)
-    if not _is_admin_user(current_user):
+    if not can_view_all_company_data(current_user):
         allowed_vendor_ids = [str(vendor.id) for vendor in scoped_vendor_query(db, current_user).all()]
         orders_q = orders_q.filter(cast(Order.vendor_id, String).in_(allowed_vendor_ids))
 

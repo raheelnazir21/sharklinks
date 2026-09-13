@@ -1,8 +1,10 @@
 "use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { Paperclip, Upload, X, Download, FileText, Image, File } from "lucide-react";
 import api from "@/services/api";
 import { formatLocalDateTime } from "@/services/dateUtils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Attachment {
   id: string;
@@ -38,6 +40,9 @@ const EMPTY_ATTACHMENTS: Attachment[] = [];
 export default function AttachmentPanel({
   reportId, initialAttachments = EMPTY_ATTACHMENTS, pendingFiles, onPendingChange
 }: AttachmentPanelProps) {
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
+  const canManage = !isViewer;
   const [attachments, setAttachments] = useState<Attachment[]>(initialAttachments);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -109,38 +114,40 @@ export default function AttachmentPanel({
       </h3>
 
       {/* Drop zone */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); handleFileSelect(e.dataTransfer.files); }}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${
-          dragging
-            ? "border-indigo-500 bg-indigo-500/10"
-            : "border-slate-700 hover:border-slate-500 hover:bg-slate-800/50"
-        }`}
-      >
-        <Upload className={`w-7 h-7 mx-auto mb-3 ${dragging ? "text-indigo-400" : "text-slate-600"}`} />
-        <p className="text-slate-400 text-xs font-bold">
-          Drag & drop files here or <span className="text-indigo-400 underline">browse</span>
-        </p>
-        <p className="text-slate-600 text-[10px] mt-1 font-black uppercase tracking-widest">
-          PDF · DOCX · XLSX · JPG · PNG · TXT
-        </p>
-        {uploading && (
-          <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-2 animate-pulse">
-            Uploading {uploading}…
+      {canManage && (
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); handleFileSelect(e.dataTransfer.files); }}
+          onClick={() => fileInputRef.current?.click()}
+          className={`relative border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${
+            dragging
+              ? "border-indigo-500 bg-indigo-500/10"
+              : "border-slate-700 hover:border-slate-500 hover:bg-slate-800/50"
+          }`}
+        >
+          <Upload className={`w-7 h-7 mx-auto mb-3 ${dragging ? "text-indigo-400" : "text-slate-600"}`} />
+          <p className="text-slate-400 text-xs font-bold">
+            Drag & drop files here or <span className="text-indigo-400 underline">browse</span>
           </p>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept={ALLOWED_EXT}
-          className="hidden"
-          onChange={e => handleFileSelect(e.target.files)}
-        />
-      </div>
+          <p className="text-slate-600 text-[10px] mt-1 font-black uppercase tracking-widest">
+            PDF · DOCX · XLSX · JPG · PNG · TXT
+          </p>
+          {uploading && (
+            <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-2 animate-pulse">
+              Uploading {uploading}…
+            </p>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ALLOWED_EXT}
+            className="hidden"
+            onChange={e => handleFileSelect(e.target.files)}
+          />
+        </div>
+      )}
 
       {/* Saved attachments */}
       {attachments.length > 0 && (
@@ -164,14 +171,16 @@ export default function AttachmentPanel({
               >
                 <Download className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(att.id)}
-                className="p-1.5 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                title="Delete"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(att.id)}
+                  className="p-1.5 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Delete"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </li>
           ))}
         </ul>

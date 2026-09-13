@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import Modal from "@/components/ui/Modal";
+import { useAuth } from "@/hooks/useAuth";
 import {
   EmptyState,
   Field,
@@ -15,6 +16,9 @@ import {
 import { CheckCircle, Clock, Eye, FileText, User, XCircle } from "lucide-react";
 
 export default function ApprovalsPage() {
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
+  const canAction = !isViewer;
   const [pendingReports, setPendingReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [rejecting, setRejecting] = useState<any | null>(null);
@@ -74,6 +78,7 @@ export default function ApprovalsPage() {
             <ApprovalCard
               key={report.id}
               report={report}
+              canAction={canAction}
               onApprove={() => approveReport(report.id)}
               onReject={() => {
                 setRejecting(report);
@@ -134,10 +139,12 @@ function ApprovalStat({ label, value }: { label: string; value: number }) {
 
 function ApprovalCard({
   report,
+  canAction = true,
   onApprove,
   onReject,
 }: {
   report: any;
+  canAction?: boolean;
   onApprove: () => void;
   onReject: () => void;
 }) {
@@ -167,18 +174,22 @@ function ApprovalCard({
         <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
           <Eye className="h-4 w-4" /> Review
         </button>
-        <button
-          onClick={onReject}
-          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-800 transition hover:bg-blue-100"
-        >
-          <XCircle className="h-4 w-4" /> Reject
-        </button>
-        <button
-          onClick={onApprove}
-          className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-500"
-        >
-          <CheckCircle className="h-4 w-4" /> Approve
-        </button>
+        {canAction && (
+          <>
+            <button
+              onClick={onReject}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-800 transition hover:bg-blue-100"
+            >
+              <XCircle className="h-4 w-4" /> Reject
+            </button>
+            <button
+              onClick={onApprove}
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-500"
+            >
+              <CheckCircle className="h-4 w-4" /> Approve
+            </button>
+          </>
+        )}
       </div>
     </article>
   );

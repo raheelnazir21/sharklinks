@@ -10,7 +10,7 @@ import json
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles, get_current_user
-from app.core.access_control import assert_vendor_access, is_admin_user, scoped_vendor_query
+from app.core.access_control import assert_vendor_access, is_admin_user, can_view_all_company_data, scoped_vendor_query
 from app.models.audit_log import AuditLog
 from app.models.user import RoleEnum, User
 from app.models.order import Attachment, TrackType, OrderHistory, Order, OrderStatus
@@ -27,6 +27,7 @@ from app.utils.response import success_response
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+OrderReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
 SuperAdminOnly = require_roles([RoleEnum.super_admin])
 
@@ -39,14 +40,14 @@ def _is_admin_user(user: User) -> bool:
 
 
 def _allowed_vendor_ids(db: Session, user: User) -> Optional[list[str]]:
-    if _is_admin_user(user):
+    if can_view_all_company_data(user):
         return None
     return [str(vendor.id) for vendor in scoped_vendor_query(db, user).all()]
 
 
 def _assert_order_access(db: Session, order_id: str, user: User) -> Order:
     order = OrderService.get_order(db, order_id)
-    if _is_admin_user(user):
+    if can_view_all_company_data(user):
         return order
     if order.vendor_id and str(order.vendor_id) in (_allowed_vendor_ids(db, user) or []):
         return order
@@ -64,7 +65,7 @@ def _assert_stage_order_access(db: Session, stage_id: str, user: User) -> Order:
 def list_sample_classes(
     vendor_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     if vendor_id:
         assert_vendor_access(db, vendor_id, current_user)
@@ -194,13 +195,12 @@ def delete_sample_class(
 @router.get("/bulk-classes", response_model=dict, summary="List Bulk Projects")
 def list_bulk_classes(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _=Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     allowed_vendor_ids = _allowed_vendor_ids(db, current_user)
     classes = OrderService.list_bulk_classes(
         db,
-        created_by=None if _is_admin_user(current_user) else str(current_user.id),
+        created_by=None if can_view_all_company_data(current_user) else str(current_user.id),
         allowed_vendor_ids=allowed_vendor_ids,
     )
     result = []
@@ -324,14 +324,13 @@ def delete_bulk_class(
 def get_bulk_class(
     bc_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _=Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     bc = BulkClassRepository.get_by_id(db, bc_id)
     if not bc:
         from fastapi import HTTPException
         raise HTTPException(404, "Bulk Project not found.")
-    if not _is_admin_user(current_user) and str(bc.created_by) != str(current_user.id):
+    if not can_view_all_company_data(current_user) and str(bc.created_by) != str(current_user.id):
         allowed_vendor_ids = set(_allowed_vendor_ids(db, current_user) or [])
         if not any(str(order.vendor_id) in allowed_vendor_ids for order in bc.orders if order.is_active):
             raise HTTPException(status_code=403, detail="You can only access your assigned bulk projects.")
@@ -384,7 +383,7 @@ def list_orders(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     if vendor_id:
         assert_vendor_access(db, vendor_id, current_user)
@@ -474,7 +473,7 @@ def delete_order(
 def get_order_history(
     order_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     _assert_order_access(db, order_id, current_user)
     order_events = db.query(OrderHistory).filter(OrderHistory.order_id == order_id).order_by(OrderHistory.created_at.desc()).all()
@@ -526,7 +525,7 @@ def get_order_history(
 def get_order(
     order_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     order = _assert_order_access(db, order_id, current_user)
     return success_response(data={
@@ -599,7 +598,7 @@ def update_order(
 def get_stages(
     order_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     _assert_order_access(db, order_id, current_user)
     stages = StageService.get_stages(db, order_id)
@@ -638,7 +637,7 @@ def get_stages(
 def get_order_assignments(
     order_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(OrderReadAccess),
 ):
     _assert_order_access(db, order_id, current_user)
     from app.models.order import OrderProductionAssignment

@@ -11,6 +11,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 const ALL_COLUMNS = [
   { id: "date", label: "Date" },
@@ -90,6 +91,8 @@ const toneClasses: Record<string, { icon: string; badge: string; ring: string }>
 };
 
 export default function QCReportsDashboard() {
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const [activeTab, setActiveTab] = useState("dashboard"); // dashboard | analysis
   const [reports, setReports] = useState([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -174,41 +177,43 @@ export default function QCReportsDashboard() {
       </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-5">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Create Inspection</p>
-            <h2 className="text-xl font-black uppercase tracking-tight text-slate-950 mt-1">Select Report Type</h2>
+      {!isViewer && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-5">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Create Inspection</p>
+              <h2 className="text-xl font-black uppercase tracking-tight text-slate-950 mt-1">Select Report Type</h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {REPORT_TYPES.map((report) => {
+              const Icon = report.icon;
+              const tone = toneClasses[report.tone];
+              return (
+                <Link
+                  key={report.href}
+                  href={report.href}
+                  className={`group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 ${tone.ring}`}
+                >
+                  <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl border ${tone.icon}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-sm font-black uppercase leading-tight text-slate-950">{report.title}</h3>
+                  <p className="mt-2 min-h-10 text-xs font-bold leading-5 text-slate-500">{report.subtitle}</p>
+                  <div className={`mt-4 rounded-lg border px-3 py-2 text-[9px] font-black uppercase tracking-widest ${tone.badge}`}>
+                    {report.fields}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-950">
+                    Open Report
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {REPORT_TYPES.map((report) => {
-            const Icon = report.icon;
-            const tone = toneClasses[report.tone];
-            return (
-              <Link
-                key={report.href}
-                href={report.href}
-                className={`group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 ${tone.ring}`}
-              >
-                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl border ${tone.icon}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-black uppercase leading-tight text-slate-950">{report.title}</h3>
-                <p className="mt-2 min-h-10 text-xs font-bold leading-5 text-slate-500">{report.subtitle}</p>
-                <div className={`mt-4 rounded-lg border px-3 py-2 text-[9px] font-black uppercase tracking-widest ${tone.badge}`}>
-                  {report.fields}
-                </div>
-                <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-950">
-                  Open Report
-                  <ArrowRight className="h-4 w-4" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 bg-white p-1.5 rounded-[1.5rem] border border-slate-200 w-fit shadow-sm">

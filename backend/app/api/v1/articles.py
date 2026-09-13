@@ -15,8 +15,9 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/articles", tags=["Articles & Colors"])
 
-QCAccess      = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
-ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
+QCAccess          = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+ArticleReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
+ManagerAccess     = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
 
 
 # ─── Article Codes ────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ def list_articles(
     track_type: Optional[str] = Query(None),
     is_active: bool = Query(True),
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    _=Depends(ArticleReadAccess),
 ):
     q = db.query(ArticleCode).filter(ArticleCode.is_active == is_active)
     if track_type:
@@ -88,7 +89,7 @@ def create_article(
 
 
 @router.get("/{article_id}", summary="Get article detail with colors")
-def get_article(article_id: str, db: Session = Depends(get_db), _=Depends(QCAccess)):
+def get_article(article_id: str, db: Session = Depends(get_db), _=Depends(ArticleReadAccess)):
     article = db.query(ArticleCode).filter(ArticleCode.id == article_id).first()
     if not article:
         raise HTTPException(404, "Article not found.")

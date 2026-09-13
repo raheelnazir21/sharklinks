@@ -37,6 +37,7 @@ from app.utils.response import success_response
 router = APIRouter(prefix="/qc-reports", tags=["QC Reports"], redirect_slashes=True)
 
 QCAccess      = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+QCReadAccess  = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
 
 QC_ATTACHMENTS_DIR = "uploads/qc_attachments"
@@ -47,7 +48,7 @@ os.makedirs(QC_ATTACHMENTS_DIR, exist_ok=True)
 
 @router.get("/analytics", response_model=dict, summary="Get Quality Analytics")
 @router.get("/analytics/", response_model=dict, summary="Get Quality Analytics")
-def get_analytics(db: Session = Depends(get_db), _=Depends(QCAccess)):
+def get_analytics(db: Session = Depends(get_db), _=Depends(QCReadAccess)):
     base = QCService.get_analytics(db)
 
     inline_reports = db.query(InlineQCReport).all()
@@ -111,7 +112,7 @@ def get_analytics(db: Session = Depends(get_db), _=Depends(QCAccess)):
 def list_categories(
     report_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    _=Depends(QCReadAccess),
 ):
     cats = DefectMasterRepository.get_categories(db, report_type=report_type)
     return success_response(data=[{"id": c.id, "name": c.name, "report_type": c.report_type} for c in cats])
@@ -130,7 +131,7 @@ def list_defects(
     report_type: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    _=Depends(QCReadAccess),
 ):
     codes = DefectMasterRepository.get_defects(db, report_type=report_type, category_id=category_id)
     return success_response(data=[
@@ -155,10 +156,10 @@ def list_reports(
     report_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(QCAccess),
+    current_user: User = Depends(QCReadAccess),
 ):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
     user_id_filter = None if is_admin else current_user.id
 
     reports = QCReportRepository.get_all(db, vendor_id=vendor_id, report_type=report_type, status=status, user_id=user_id_filter)
@@ -313,7 +314,7 @@ def submit_report(
 
 @router.get("/pending-approvals", summary="List Pending QC Reports for Approval")
 @router.get("/pending-approvals/", summary="List Pending QC Reports for Approval")
-def list_pending_reports(db: Session = Depends(get_db), _=Depends(ManagerAccess)):
+def list_pending_reports(db: Session = Depends(get_db), _=Depends(QCReadAccess)):
     reports = QCService.list_reports(db, status=ReportStatus.submitted)
     return success_response(data=[
         {
@@ -368,10 +369,10 @@ def list_detailed_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(QCAccess),
+    current_user: User = Depends(QCReadAccess),
 ):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
     user_id_filter = None if is_admin else current_user.id
 
     items, total = QCReportRepository.get_flattened_logs(
@@ -611,10 +612,10 @@ def list_detailed_logs(
 def get_report_detail(
     report_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(QCAccess),
+    current_user: User = Depends(QCReadAccess),
 ):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
     report_id_str = str(report_id)
     report = QCReportRepository.get_by_id(db, report_id_str)
     if not report:
@@ -1041,7 +1042,7 @@ def download_attachment(
     report_id: str,
     attachment_id: str,
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    _=Depends(QCReadAccess),
 ):
     att = db.query(QCReportAttachment).filter(
         QCReportAttachment.id == attachment_id,
@@ -1084,7 +1085,7 @@ def delete_attachment(
 def list_operator_flags(
     line_id: str = Query(...),
     db: Session = Depends(get_db),
-    _=Depends(QCAccess),
+    _=Depends(QCReadAccess),
 ):
     flags = db.query(OperatorFlag).filter(OperatorFlag.line_id == line_id).order_by(OperatorFlag.operator_number).all()
     return success_response(data=[

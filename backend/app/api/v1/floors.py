@@ -22,6 +22,7 @@ router = APIRouter(prefix="/vendors", tags=["Floors & Lines"])
 
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+FloorReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 
 
 # ─── Schemas ───────────────────────────────────────────────────────────────
@@ -154,7 +155,7 @@ def list_departments(
     department_type: Optional[str] = Query(None),
     ensure_sampling: bool = Query(True),
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(FloorReadAccess),
 ):
     vendor = assert_vendor_access(db, vendor_id, current_user)
     if ensure_sampling and (department_type in (None, "", "sampling")):
@@ -220,7 +221,7 @@ def list_floors(
     vendor_id: str,
     idle_only: bool = Query(False, description="Return only idle/available floors"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(FloorReadAccess),
 ):
     vendor = assert_vendor_access(db, vendor_id, current_user)
 
@@ -307,7 +308,7 @@ def list_lines(
     floor_id: str,
     idle_only: bool = Query(False, description="Return only idle lines"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(FloorReadAccess),
 ):
     assert_vendor_access(db, vendor_id, current_user)
     floor = db.query(VendorFloor).filter(
@@ -498,7 +499,7 @@ def assign_production(
 def list_vendor_assignments(
     vendor_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff),
+    current_user: User = Depends(FloorReadAccess),
 ):
     assert_vendor_access(db, vendor_id, current_user)
     assignments = db.query(OrderProductionAssignment).filter(

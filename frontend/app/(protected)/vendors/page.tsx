@@ -85,7 +85,9 @@ function getApiError(err: unknown, fallback: string) {
 
 export default function VendorsPage() {
   const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const isSuperAdmin = user?.role === "super_admin";
+  const canManage = !isViewer;
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [managers, setManagers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,13 +183,13 @@ export default function VendorsPage() {
       await api.delete(`/vendors/${deleteTarget.id}`);
       setDeleteTarget(null);
       fetchVendors();
-      setFeedback({ type: "success", title: "Mission Successful", message: "Vendor deactivated successfully." });
-    } catch (err: any) {
       setFeedback({
-        type: "error",
-        title: "Operation Failed",
-        message: getApiError(err, "Failed to deactivate vendor."),
+        type: "success",
+        title: "Mission Successful",
+        message: "Vendor and related active orders deactivated successfully.",
       });
+    } catch (err) {
+      setFeedback({ type: "error", title: "Operation Failed", message: getApiError(err, "Failed to deactivate vendor.") });
     } finally {
       setIsSubmitting(false);
     }
@@ -195,14 +197,16 @@ export default function VendorsPage() {
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="flex justify-end">
-        <button 
-          onClick={openCreate}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
-        >
-          <Plus className="w-4 h-4" /> Add New Vendor
-        </button>
-      </div>
+      {canManage && (
+        <div className="flex justify-end">
+          <button 
+            onClick={openCreate}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+          >
+            <Plus className="w-4 h-4" /> Add New Vendor
+          </button>
+        </div>
+      )}
 
       {/* Filters Bar */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-4 items-center shadow-sm">
@@ -244,14 +248,16 @@ export default function VendorsPage() {
                       <Edit3 className="w-4 h-4" />
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(vendor)}
-                    className="text-slate-500 hover:text-red-700 p-2 bg-slate-50 rounded-xl border border-slate-200 transition-all"
-                    title="Deactivate vendor"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(vendor)}
+                      className="text-slate-500 hover:text-red-700 p-2 bg-slate-50 rounded-xl border border-slate-200 transition-all"
+                      title="Deactivate vendor"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -293,7 +299,9 @@ export default function VendorsPage() {
                 <Building2 className="w-10 h-10 text-slate-700" />
               </div>
               <p className="text-slate-500 font-bold uppercase tracking-widest">No Vendors Registered</p>
-              <button onClick={openCreate} className="text-indigo-400 text-xs font-black mt-4 hover:underline uppercase tracking-widest">Add your first supplier →</button>
+              {canManage && (
+                <button onClick={openCreate} className="text-indigo-400 text-xs font-black mt-4 hover:underline uppercase tracking-widest">Add your first supplier →</button>
+              )}
             </div>
           )}
         </div>

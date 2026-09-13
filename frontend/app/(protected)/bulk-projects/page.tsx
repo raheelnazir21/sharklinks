@@ -40,7 +40,9 @@ function getApiError(err: unknown, fallback: string) {
 
 export default function BulkProjectsPage() {
   const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const isSuperAdmin = user?.role === "super_admin";
+  const canManage = !isViewer;
   const [projects, setProjects] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,9 +157,11 @@ export default function BulkProjectsPage() {
             onChange={setSearchTerm}
             placeholder="Search bulk project, customer, project number..."
           />
-          <PrimaryButton onClick={openCreate}>
-            <Plus className="h-4 w-4" /> New Bulk Project
-          </PrimaryButton>
+          {canManage && (
+            <PrimaryButton onClick={openCreate}>
+              <Plus className="h-4 w-4" /> New Bulk Project
+            </PrimaryButton>
+          )}
         </div>
       </PageToolbar>
 
@@ -173,7 +177,14 @@ export default function BulkProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((project) => (
-            <BulkCard key={project.id} project={project} onEdit={openEdit} onDelete={setDeleteTarget} canEdit={isSuperAdmin} />
+            <BulkCard
+              key={project.id}
+              project={project}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
+              canEdit={!isViewer && isSuperAdmin}
+              canDelete={!isViewer && isSuperAdmin}
+            />
           ))}
           {filtered.length === 0 && (
             <EmptyState
@@ -273,7 +284,19 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function BulkCard({ project, onEdit, onDelete, canEdit }: { project: any; onEdit: (project: any) => void; onDelete: (project: any) => void; canEdit?: boolean }) {
+function BulkCard({
+  project,
+  onEdit,
+  onDelete,
+  canEdit,
+  canDelete,
+}: {
+  project: any;
+  onEdit: (project: any) => void;
+  onDelete: (project: any) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
+}) {
   const status = project.status || "active";
   const progress = typeof project.progress === "number"
     ? project.progress
@@ -292,7 +315,9 @@ function BulkCard({ project, onEdit, onDelete, canEdit }: { project: any; onEdit
           {canEdit && (
             <button type="button" onClick={() => onEdit(project)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-700"><Edit3 className="h-4 w-4" /></button>
           )}
-          <button type="button" onClick={() => onDelete(project)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+          {canDelete && (
+            <button type="button" onClick={() => onDelete(project)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,7 @@ import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import OrderHistoryModal from "@/components/orders/OrderHistoryModal";
 import StageComments from "@/components/ui/StageComments";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DEFAULT_BULK_STAGES,
   buildStagePayload,
@@ -32,6 +33,9 @@ import {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
+  const canManage = !isViewer;
   const { setHeaderConfig } = useHeader();
   const [order, setOrder] = useState<any>(null);
   const [stages, setStages] = useState<any[]>([]);
@@ -776,9 +780,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const exFactoryDate = order?.ex_factory_date ? new Date(order.ex_factory_date) : null;
   const isExFactoryPassed = exFactoryDate && today > exFactoryDate && order?.status !== "completed";
 
-  // Can always update remarks/data if it's not locked
+  // Can always update remarks/data if it's not locked and user is not a viewer
   const isSelectable = (idx: number) => idx === 0 || stages[idx - 1].status === "completed";
-  const canUpdateCurrent = currentStage && isSelectable(currentIndex);
+  const canUpdateCurrent = !isViewer && currentStage && isSelectable(currentIndex);
   // Sample flow: ONLY the QC stage (qc_check) has rejection menu
   const canRejectSampleStage = isSampling && currentStage?.stage_name === "qc_check" && canUpdateCurrent;
   // Bulk flow: ONLY the 4 designated stages have rejection checks:
@@ -871,6 +875,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in duration-700">
+      {/* Viewer Notice Banner */}
+      {isViewer && (
+        <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 px-6 py-3.5 rounded-2xl">
+          <Info className="w-5 h-5 text-blue-500 shrink-0" />
+          <p className="text-xs font-bold text-blue-900">
+            <strong>Viewer Mode:</strong> You have company-wide read access to view all orders, stages, logs, and attachments. Edits and phase actions are disabled.
+          </p>
+        </div>
+      )}
+
       {/* Action & Meta Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4 flex-wrap">
@@ -902,7 +916,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               History
             </button>
             {/* Move to Bulk button — only for completed sample orders */}
-            {isSampling && order.status === "completed" && (
+            {canManage && isSampling && order.status === "completed" && (
               <button
                 type="button"
                 onClick={openMoveToBulkModal}
@@ -912,7 +926,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </button>
             )}
             {/* Reorder button — only for completed bulk orders */}
-            {!isSampling && order.status === "completed" && (
+            {canManage && !isSampling && order.status === "completed" && (
               <button
                 type="button"
                 onClick={openReorderModal}
@@ -1266,7 +1280,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 )}
 
-                {!canUpdateCurrent && currentStage.status !== "completed" && (
+                {!isViewer && !canUpdateCurrent && currentStage.status !== "completed" && (
                   <div className="bg-slate-950/40 border border-slate-800 rounded-3xl p-6 flex items-center gap-4 max-w-xs">
                     <Lock className="w-6 h-6 text-slate-700" />
                     <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed tracking-wider">
@@ -1302,17 +1316,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setClearConditionDialog({
-                        stageId: upstreamLockStage.id,
-                        stageName: upstreamLockStage.stage_name,
-                        conditionAction: upstreamLockStage.conditional_action,
-                      })}
-                      className="shrink-0 px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5"
-                    >
-                      <Upload className="w-4 h-4" /> Clear Defect & Upload Proof
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => setClearConditionDialog({
+                          stageId: upstreamLockStage.id,
+                          stageName: upstreamLockStage.stage_name,
+                          conditionAction: upstreamLockStage.conditional_action,
+                        })}
+                        className="shrink-0 px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5"
+                      >
+                        <Upload className="w-4 h-4" /> Clear Defect & Upload Proof
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1404,17 +1420,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         </a>
                       )
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => setClearConditionDialog({
-                          stageId: currentStage.id,
-                          stageName: currentStage.stage_name,
-                          conditionAction: currentStage.conditional_action,
-                        })}
-                        className="shrink-0 px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5"
-                      >
-                        <Upload className="w-4 h-4" /> Clear Defect & Upload Proof
-                      </button>
+                      canManage && (
+                        <button
+                          type="button"
+                          onClick={() => setClearConditionDialog({
+                            stageId: currentStage.id,
+                            stageName: currentStage.stage_name,
+                            conditionAction: currentStage.conditional_action,
+                          })}
+                          className="shrink-0 px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5"
+                        >
+                          <Upload className="w-4 h-4" /> Clear Defect & Upload Proof
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
@@ -1470,7 +1488,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <StageComments
                 stageId={currentStage.id}
                 orderId={id}
-                disabled={false}
+                disabled={isViewer}
               />
 
               {/* QC Rejection History / CA & PA Log */}
@@ -1606,10 +1624,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <h3 className="text-white font-black text-xl uppercase tracking-tighter italic flex items-center gap-4">
                 <Paperclip className="w-6 h-6 text-indigo-500" /> Phase Documents
               </h3>
-              <label className={`cursor-pointer px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${uploading ? 'opacity-50' : ''}`}>
-                <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Add Phase Data'}
-                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-              </label>
+              {canManage && (
+                <label className={`cursor-pointer px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${uploading ? 'opacity-50' : ''}`}>
+                  <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Add Phase Data'}
+                  <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                </label>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -27,6 +27,7 @@ from app.utils.response import success_response
 router = APIRouter(prefix="/advanced-qc", tags=["Advanced QC"])
 
 AllStaff = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+AdvancedQCReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 
 
 # ─── AQL TABLE (ISO 2859 simplified for 2.5 AQL) ──────────────────────────────
@@ -485,9 +486,9 @@ def _serialize_batch_audit_report(r: BatchAuditReport) -> dict:
 # ─── INLINE QC ENDPOINTS ──────────────────────────────────────────────────────
 
 @router.get("/inline/", summary="List Inline QC Reports")
-def list_inline_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def list_inline_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     q = db.query(InlineQCReport).options(
         joinedload(InlineQCReport.vendor),
@@ -500,9 +501,9 @@ def list_inline_reports(skip: int = 0, limit: int = 50, db: Session = Depends(ge
     return success_response(data=[_serialize_inline_report(r) for r in reports])
 
 @router.get("/inline/{report_id}", summary="Get Inline QC Report Detail")
-def get_inline_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def get_inline_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     r = db.query(InlineQCReport).options(
         joinedload(InlineQCReport.vendor),
@@ -708,9 +709,9 @@ def delete_inline_report(report_id: str, db: Session = Depends(get_db), current_
 # ─── CUT PANEL QC ENDPOINTS ──────────────────────────────────────────────────
 
 @router.get("/cut-panel/", summary="List Cut Panel Reports")
-def list_cut_panel_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def list_cut_panel_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     q = db.query(CutPanelReport).options(
         joinedload(CutPanelReport.vendor),
@@ -725,9 +726,9 @@ def list_cut_panel_reports(skip: int = 0, limit: int = 50, db: Session = Depends
 
 
 @router.get("/cut-panel/{report_id}", summary="Get Cut Panel Report")
-def get_cut_panel_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def get_cut_panel_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     report = db.query(CutPanelReport).options(
         joinedload(CutPanelReport.vendor),
@@ -874,9 +875,9 @@ def delete_cut_panel_report(report_id: str, db: Session = Depends(get_db), curre
 # ─── BATCH AUDIT ENDPOINTS ───────────────────────────────────────────────────
 
 @router.get("/batch-audit/", summary="List Batch Audit Reports")
-def list_batch_audit_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def list_batch_audit_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     q = db.query(BatchAuditReport).options(
         joinedload(BatchAuditReport.vendor),
@@ -891,9 +892,9 @@ def list_batch_audit_reports(skip: int = 0, limit: int = 50, db: Session = Depen
 
 
 @router.get("/batch-audit/{report_id}", summary="Get Batch Audit Report")
-def get_batch_audit_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def get_batch_audit_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     report = db.query(BatchAuditReport).options(
         joinedload(BatchAuditReport.vendor),
@@ -1060,9 +1061,9 @@ def delete_batch_audit_report(report_id: str, db: Session = Depends(get_db), cur
 # ─── FINISH / ENDLINE QC ENDPOINTS ───────────────────────────────────────────
 
 @router.get("/finish-endline/", summary="List Finish/Endline QC Reports")
-def list_finish_reports(report_type: Optional[str] = None, skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def list_finish_reports(report_type: Optional[str] = None, skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     q = db.query(FinishEndlineQCReport).options(
         joinedload(FinishEndlineQCReport.vendor),
@@ -1077,9 +1078,9 @@ def list_finish_reports(report_type: Optional[str] = None, skip: int = 0, limit:
     return success_response(data=[_serialize_finish_report(r) for r in reports])
 
 @router.get("/finish-endline/{report_id}", summary="Get Finish/Endline QC Report")
-def get_finish_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AllStaff)):
+def get_finish_report(report_id: str, db: Session = Depends(get_db), current_user: User = Depends(AdvancedQCReadAccess)):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     r = db.query(FinishEndlineQCReport).options(
         joinedload(FinishEndlineQCReport.vendor),
@@ -1374,10 +1375,10 @@ def _serialize_random_inline_report(r: RandomInlineQCReport) -> dict:
 def list_random_inline_reports(
     skip: int = 0, limit: int = 50,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff)
+    current_user: User = Depends(AdvancedQCReadAccess)
 ):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     q = db.query(RandomInlineQCReport).options(
         joinedload(RandomInlineQCReport.vendor),
@@ -1395,10 +1396,10 @@ def list_random_inline_reports(
 def get_random_inline_report(
     report_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(AllStaff)
+    current_user: User = Depends(AdvancedQCReadAccess)
 ):
     role_name = current_user.role.name.value if hasattr(current_user.role.name, "value") else current_user.role.name
-    is_admin = role_name in ("super_admin", "admin")
+    is_admin = role_name in ("super_admin", "admin", "viewer")
 
     report = db.query(RandomInlineQCReport).options(
         joinedload(RandomInlineQCReport.vendor),

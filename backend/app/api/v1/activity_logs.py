@@ -12,14 +12,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles
-from app.core.access_control import is_admin_user
+from app.core.access_control import is_admin_user, can_view_all_company_data
 from app.models.audit_log import AuditLog
 from app.models.user import RoleEnum, User
 from app.utils.response import success_response
 
 router = APIRouter(prefix="/activity-logs", tags=["Activity Logs"])
 
-ActivityLogAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
+ActivityLogAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.viewer])
 
 
 def _payload(log: AuditLog) -> dict:
@@ -70,7 +70,7 @@ def list_activity_logs(
     current_user: User = Depends(ActivityLogAccess),
 ):
     query = _base_query(db)
-    if not is_admin_user(current_user):
+    if not can_view_all_company_data(current_user):
         query = query.filter(AuditLog.user_id == current_user.id)
 
     if action:
@@ -106,7 +106,7 @@ def recent_activity_logs(
     current_user: User = Depends(ActivityLogAccess),
 ):
     query = _base_query(db)
-    if not is_admin_user(current_user):
+    if not can_view_all_company_data(current_user):
         query = query.filter(AuditLog.user_id == current_user.id)
     logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
     return success_response(data=[_serialize_log(log) for log in logs])
@@ -118,7 +118,7 @@ def export_activity_logs(
     current_user: User = Depends(ActivityLogAccess),
 ):
     query = _base_query(db)
-    if not is_admin_user(current_user):
+    if not can_view_all_company_data(current_user):
         query = query.filter(AuditLog.user_id == current_user.id)
     logs = query.order_by(AuditLog.created_at.desc()).limit(5000).all()
     buffer = io.StringIO()

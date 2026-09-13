@@ -42,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Vendors",
     href: "/vendors",
     group: "Management",
-    roles: ["super_admin", "admin", "manager"],
+    roles: ["super_admin", "admin", "manager", "viewer"],
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -53,7 +53,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Sampling Projects",
     href: "/samples",
     group: "Production",
-    roles: ["super_admin", "admin", "manager", "qc_officer"],
+    roles: ["super_admin", "admin", "manager", "qc_officer", "viewer"],
     icon: (
       <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.691.31a2 2 0 01-1.782 0l-.691-.31a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547V18.5a2 2 0 001.022 1.553l2.387.477a6 6 0 003.86-.517l.691-.31a2 2 0 011.782 0l.691.31a6 6 0 003.86.517l2.387-.477a2 2 0 001.022-1.553V15.428z" />
@@ -64,7 +64,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Bulk Projects",
     href: "/bulk-projects",
     group: "Production",
-    roles: ["super_admin", "admin", "manager", "qc_officer"],
+    roles: ["super_admin", "admin", "manager", "qc_officer", "viewer"],
     icon: (
       <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -87,7 +87,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "QC Reports",
     href: "/qc-reports",
     group: "Quality",
-    roles: ["super_admin", "admin", "manager", "qc_officer"],
+    roles: ["super_admin", "admin", "manager", "qc_officer", "viewer"],
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -98,7 +98,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Approvals",
     href: "/approvals",
     group: "Quality",
-    roles: ["super_admin", "admin", "manager"],
+    roles: ["super_admin", "admin", "manager", "viewer"],
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
@@ -120,7 +120,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Activity Logs",
     href: "/activity-logs",
     group: "Management",
-    roles: ["super_admin", "admin", "manager"],
+    roles: ["super_admin", "admin", "manager", "viewer"],
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -131,7 +131,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Settings",
     href: "/settings",
     group: "Management",
-    roles: ["super_admin", "admin", "manager"],
+    roles: ["super_admin", "admin", "manager", "viewer"],
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />

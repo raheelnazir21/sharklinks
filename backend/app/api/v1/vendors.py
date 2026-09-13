@@ -9,7 +9,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles, get_current_user
-from app.core.access_control import assert_vendor_access, is_admin_user
+from app.core.access_control import assert_vendor_access, is_admin_user, can_view_all_company_data
 from app.models.user import RoleEnum, User
 from app.models.order import Order, OrderStatus
 from app.repositories.order_repo import _id_variants
@@ -20,7 +20,7 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
-VendorReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer])
+VendorReadAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.qc_officer, RoleEnum.viewer])
 ManagerAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager])
 SuperAdminOnly = require_roles([RoleEnum.super_admin])
 
@@ -34,7 +34,7 @@ def list_vendors(
     db: Session = Depends(get_db),
     current_user: User = Depends(VendorReadAccess),
 ):
-    assigned_manager_id = None if is_admin_user(current_user) else str(current_user.id)
+    assigned_manager_id = None if can_view_all_company_data(current_user) else str(current_user.id)
     vendors = VendorService.list_vendors(db, skip=skip, limit=limit, search=search, assigned_manager_id=assigned_manager_id)
     return success_response(data=[
         {

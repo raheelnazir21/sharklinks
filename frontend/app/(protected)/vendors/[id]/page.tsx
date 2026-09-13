@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useHeader } from "@/hooks/useHeader";
+import { useAuth } from "@/hooks/useAuth";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -22,6 +23,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
 export default function VendorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
+  const canManage = user?.role !== "viewer";
   const { setHeaderConfig } = useHeader();
   const [vendor, setVendor] = useState<any>(null);
   const [floors, setFloors] = useState<any[]>([]);
@@ -241,14 +244,16 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
           {/* Add Floor Button */}
           <div className="flex items-center justify-between">
             <h2 className="text-slate-950 font-black text-sm uppercase tracking-widest">Production Floors</h2>
-            <button onClick={() => setShowAddFloor(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg">
-              <Plus className="w-4 h-4" /> Add Floor
-            </button>
+            {canManage && (
+              <button onClick={() => setShowAddFloor(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg">
+                <Plus className="w-4 h-4" /> Add Floor
+              </button>
+            )}
           </div>
 
           {/* Add Floor Form */}
-          {showAddFloor && (
+          {canManage && showAddFloor && (
             <div className="bg-white border border-indigo-200 rounded-[2.5rem] p-8 space-y-4 shadow-sm">
               <h3 className="text-indigo-400 font-black text-xs uppercase tracking-widest">New Floor</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -282,9 +287,11 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
             <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-[3rem] bg-white">
               <Layers className="w-12 h-12 text-slate-700 mx-auto mb-4" />
               <p className="text-slate-600 font-black uppercase tracking-widest text-sm">No floors added yet.</p>
-              <button onClick={() => setShowAddFloor(true)} className="mt-4 text-indigo-400 text-xs font-black hover:underline uppercase tracking-widest">
-                Add your first floor →
-              </button>
+              {canManage && (
+                <button onClick={() => setShowAddFloor(true)} className="mt-4 text-indigo-400 text-xs font-black hover:underline uppercase tracking-widest">
+                  Add your first floor →
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -321,32 +328,34 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
                       </button>
 
                       {/* Floor Actions */}
-                      <div className="flex gap-2">
-                        {editingFloor === floor.id ? (
-                          <>
-                            <button onClick={() => {
-                              const input = document.getElementById(`floor-edit-${floor.id}`) as HTMLInputElement;
-                              handleUpdateFloor(floor.id, { name: input?.value });
-                            }} className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all">
-                              <Save className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setEditingFloor(null)} className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-200 hover:text-slate-950 transition-all">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => { setEditingFloor(floor.id); setExpandedFloor(floor.id); }}
-                              className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 transition-all">
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDeleteFloor(floor.id)}
-                              className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-200 hover:text-red-600 hover:border-red-300 transition-all">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
+                      {canManage && (
+                        <div className="flex gap-2">
+                          {editingFloor === floor.id ? (
+                            <>
+                              <button onClick={() => {
+                                const input = document.getElementById(`floor-edit-${floor.id}`) as HTMLInputElement;
+                                handleUpdateFloor(floor.id, { name: input?.value });
+                              }} className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all">
+                                <Save className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => setEditingFloor(null)} className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-200 hover:text-slate-950 transition-all">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => { setEditingFloor(floor.id); setExpandedFloor(floor.id); }}
+                                className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-200 hover:text-indigo-600 hover:border-indigo-300 transition-all">
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeleteFloor(floor.id)}
+                                className="p-2 bg-slate-50 text-slate-500 rounded-xl border border-slate-200 hover:text-red-600 hover:border-red-300 transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Lines (expandable) */}
@@ -356,14 +365,16 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
                           <h4 className="text-slate-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
                             <GitBranch className="w-4 h-4" /> Production Lines
                           </h4>
-                          <button onClick={() => setShowAddLineFor(floor.id)}
-                            className="flex items-center gap-2 px-5 py-2 bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-                            <Plus className="w-3.5 h-3.5" /> Add Line
-                          </button>
+                          {canManage && (
+                            <button onClick={() => setShowAddLineFor(floor.id)}
+                              className="flex items-center gap-2 px-5 py-2 bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
+                              <Plus className="w-3.5 h-3.5" /> Add Line
+                            </button>
+                          )}
                         </div>
 
                         {/* Add Line Form */}
-                        {showAddLineFor === floor.id && (
+                        {canManage && showAddLineFor === floor.id && (
                           <div className="bg-white border border-purple-200 rounded-2xl p-6 space-y-3 mb-4">
                             <div className="grid grid-cols-3 gap-3">
                               <div>
@@ -426,10 +437,12 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <StatusBadge status={line.status} />
-                                    <button onClick={() => handleDeleteLine(floor.id, line.id)}
-                                      className="p-1.5 text-slate-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    {canManage && (
+                                      <button onClick={() => handleDeleteLine(floor.id, line.id)}
+                                        className="p-1.5 text-slate-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );

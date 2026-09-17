@@ -139,6 +139,12 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE bulk_classes ADD COLUMN vendor_id CHAR(36)"))
             if "parent_id" not in order_cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN parent_id CHAR(36)"))
+            if "delay_reason" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delay_reason TEXT"))
+            if "delay_capa" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delay_capa TEXT"))
+            if "recovery_date" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN recovery_date DATE"))
             
             # --- Chunks schema updates for SQLite ---
             # Check if production_stage_chunks exists
@@ -172,6 +178,8 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN rejection_reason TEXT"))
             if "corrective_action" not in ps_cols:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN corrective_action TEXT"))
+            if "revised_target_date" not in ps_cols:
+                conn.execute(text("ALTER TABLE production_stages ADD COLUMN revised_target_date DATETIME"))
             if "buffer_days" not in ps_cols:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN buffer_days INTEGER DEFAULT 0"))
             if "condition_status" not in ps_cols:
@@ -186,6 +194,19 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN clearance_attachment_url VARCHAR(500)"))
             if "clearance_notes" not in ps_cols:
                 conn.execute(text("ALTER TABLE production_stages ADD COLUMN clearance_notes TEXT"))
+
+            # --- notifications schema updates for SQLite ---
+            table_notif = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'")).scalar()
+            if table_notif:
+                notif_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(notifications)")).fetchall()}
+                if "html_content" not in notif_cols:
+                    conn.execute(text("ALTER TABLE notifications ADD COLUMN html_content TEXT"))
+                if "category" not in notif_cols:
+                    conn.execute(text("ALTER TABLE notifications ADD COLUMN category VARCHAR(50)"))
+                if "class_id" not in notif_cols:
+                    conn.execute(text("ALTER TABLE notifications ADD COLUMN class_id CHAR(36)"))
+                if "extra_data" not in notif_cols:
+                    conn.execute(text("ALTER TABLE notifications ADD COLUMN extra_data JSON"))
 
             # --- inline_qc_reports schema updates ---
             inline_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(inline_qc_reports)")).fetchall()}
@@ -215,6 +236,9 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE order_production_assignments ALTER COLUMN line_id DROP NOT NULL"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS reference_attachments JSONB DEFAULT '[]'::jsonb"))
             conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES orders(id) ON DELETE SET NULL"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delay_reason TEXT"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delay_capa TEXT"))
+            conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS recovery_date DATE"))
             conn.execute(text("ALTER TABLE order_attachments ADD COLUMN IF NOT EXISTS uploaded_by UUID"))
             conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS assigned_manager_id UUID"))
             conn.execute(text("ALTER TABLE sample_classes ADD COLUMN IF NOT EXISTS created_by UUID"))
@@ -224,6 +248,7 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS conditional_action TEXT"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS rejection_reason TEXT"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS corrective_action TEXT"))
+            conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS revised_target_date TIMESTAMP"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS buffer_days INTEGER DEFAULT 0"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS condition_status VARCHAR(50)"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS gated_stage_name VARCHAR(100)"))
@@ -231,6 +256,11 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS condition_cleared_by UUID REFERENCES users(id) ON DELETE SET NULL"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS clearance_attachment_url VARCHAR(500)"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS clearance_notes TEXT"))
+
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS html_content TEXT"))
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50)"))
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS class_id UUID"))
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb"))
             
             # --- Chunks schema updates for Postgres ---
             conn.execute(text("""

@@ -890,6 +890,38 @@ Where factories, their **floors**, **lines** and **sampling departments** are ma
 or line is missing from an order form, add it here first. A vendor must be **active** to be usable,
 and Managers only see vendors assigned to them.
 
+### 16.5 Live Notifications & Operational Delay Alerts (Zone 1 & Zone 2)
+
+![Live Notification Center Dropdown](screenshots/74-notification-center-dropdown.png)
+
+The system features an integrated real-time notification center accessible via the bell icon in the top navigation bar:
+
+#### 1. Visual Design & Layout
+- **Header Actions**: Features a live unread count badge, audio chime alert (`notify.wav`), an in-header **Sound On / Sound Off** toggle pill, and a close button.
+- **Notification Cards**:
+  - **Monogram Avatar**: Dark teal circular avatar matching the reference design.
+  - **Direct Title Link**: Clickable PO / Order or Class title that jumps directly to the entity.
+  - **Blue Time Badge**: Displays relative elapsed time and GMT+5 timestamp (`13 minutes ago at 01:19 AM GMT+5`).
+  - **Structured Body**: Rich HTML formatted message detailing PO number, product name, days overdue, and required actions.
+  - **Green Timestamp**: Formatted date string (`MM/DD/YYYY, hh:mm A GMT+5`).
+  - **Quick Action**: Circular green checkmark button `[ ✓ ]` to mark each notification as read individually.
+- **Footer**: Displays total unread count and a 1-click **Mark All As Read** action.
+
+#### 2. Role-Based Visibility (RBAC)
+- **Super Admin & Admin**: Can view company-wide notifications across all users.
+- **Managers, QC Officers, & Viewers**: Strictly scoped to view only their own notifications.
+
+#### 3. Alert Conditions & Triggers
+- **Ex-Factory Date Passed OR 1 Day Before**:
+  - **ZONE 1 – EX-FACTORY DATE PASSED**: Triggered when active POs pass their committed ex-factory date. Requires documenting *Delay Reason + CAPA + Recovery Date*.
+  - **EX-FACTORY 1 DAY BEFORE / DUE TODAY**: Advance warning triggered when ex-factory date is tomorrow or today.
+- **Stage Days Delay OR 1 Day Before**:
+  - **ZONE 2 – DEVELOPMENT / PROCESS STAGE DELAYED**: Triggered when an active stage is stuck beyond its target completion date (*Development Stage Delayed* for Sampling, *Process Stage Delayed* for Bulk). Requires documenting *Root Cause + CAPA + Revised Stage Completion Date*.
+  - **STAGE 1 DAY BEFORE / DUE TODAY**: Advance warning triggered when a stage target date is tomorrow or today.
+- **Instant Creation Alerts**:
+  - **New Order Created**: Dispatches immediate notification upon creation of single or bulk orders.
+  - **New Class Created**: Dispatches immediate notification upon creation of Sample Classes or Bulk Projects.
+
 ---
 
 ## 17. Error messages explained

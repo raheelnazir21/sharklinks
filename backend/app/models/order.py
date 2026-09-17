@@ -170,6 +170,11 @@ class Order(Base):
     iteration_plan = Column(Text, nullable=True)
     iteration_history = Column(JSON, default=[])
     
+    # Zone 1 CAPA fields (Ex-Factory Date Passed)
+    delay_reason = Column(Text, nullable=True)
+    delay_capa = Column(Text, nullable=True)
+    recovery_date = Column(Date, nullable=True)
+
     created_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -233,6 +238,11 @@ class ProductionStage(Base):
     condition_cleared_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
     clearance_attachment_url = Column(String(500), nullable=True)
     clearance_notes = Column(Text, nullable=True)
+
+    # Zone 2 CAPA tracking (Development / Process Stage Delayed)
+    rejection_reason = Column(Text, nullable=True)  # Root cause
+    corrective_action = Column(Text, nullable=True)  # CAPA
+    revised_target_date = Column(DateTime, nullable=True)  # Revised Stage Completion Date
 
     # Buffer days — separate contingency time, does NOT inflate target_days
     buffer_days = Column(Integer, nullable=True, default=0)

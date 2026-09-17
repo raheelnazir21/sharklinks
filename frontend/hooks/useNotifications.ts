@@ -2,8 +2,9 @@
 
 /**
  * useNotifications.ts
- * React hook — polls unread count every 60 seconds.
- * Exposes notifications list, unread count, mark-read functions, and sound toggle.
+ * React hook — polls unread notifications every 45 seconds.
+ * Exposes notifications list, unread count, mark-read, mark-all-read, sound toggle,
+ * and Zone 1 / Zone 2 CAPA documentation actions.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -12,16 +13,23 @@ import { useAuth } from "@/hooks/useAuth";
 
 export interface AppNotification {
   id: string;
+  user_id?: string;
   title: string;
   message: string;
-  type: "stage_overdue" | "ex_factory_approaching" | "ex_factory_passed" | "stage_completed" | "qc_alert" | string;
+  html_content?: string;
+  category?: "zone_1_ex_factory_passed" | "zone_2_stage_delayed" | "order_created" | "class_created" | "general" | string;
+  type: "stage_overdue" | "ex_factory_approaching" | "ex_factory_passed" | "stage_completed" | "qc_alert" | "order_created" | "class_created" | string;
   order_id: string | null;
   stage_id: string | null;
+  class_id?: string | null;
+  extra_data?: Record<string, any>;
   is_read: boolean;
   created_at: string;
+  formatted_time?: string;
+  formatted_date?: string;
 }
 
-const POLL_INTERVAL = 60_000; // 60 seconds
+const POLL_INTERVAL = 45_000; // 45 seconds
 const SOUND_KEY = "cc_notif_sound_enabled";
 
 export function useNotifications() {
@@ -63,7 +71,7 @@ export function useNotifications() {
     if (!user) return;
     try {
       const [notifRes, countRes] = await Promise.all([
-        api.get("/notifications/", { params: { include_read: false, limit: 50 } }),
+        api.get("/notifications/", { params: { include_read: false, limit: 60 } }),
         api.get("/notifications/unread-count"),
       ]);
       const newNotifs: AppNotification[] = notifRes.data.data || [];
@@ -78,7 +86,7 @@ export function useNotifications() {
       prevCountRef.current = newCount;
       setUnreadCount(newCount);
     } catch {
-      // Silently ignore — user may not be logged in
+      // Silently ignore if unauthenticated or network error
     }
   }, [user, playSound]);
 
@@ -128,3 +136,4 @@ export function useNotifications() {
     refetch: fetchNotifications,
   };
 }
+

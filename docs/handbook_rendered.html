@@ -1349,6 +1349,38 @@ clearances. Visible to Super Admin, Admin, Manager and Viewer.</p>
 <p>Where factories, their <strong>floors</strong>, <strong>lines</strong> and <strong>sampling departments</strong> are maintained. If a floor<br />
 or line is missing from an order form, add it here first. A vendor must be <strong>active</strong> to be usable,<br />
 and Managers only see vendors assigned to them.</p>
+<h3 id="165-live-notifications-operational-delay-alerts-zone-1-zone-2">16.5 Live Notifications &amp; Operational Delay Alerts (Zone 1 &amp; Zone 2)</h3>
+<p><img alt="Live Notification Center Dropdown" src="screenshots/74-notification-center-dropdown.png" /></p>
+<p>The system features an integrated real-time notification center accessible via the bell icon in the top navigation bar:</p>
+<h4 id="1-visual-design-layout">1. Visual Design &amp; Layout</h4>
+<ul>
+<li><strong>Header Actions</strong>: Features a live unread count badge, audio chime alert (<code>notify.wav</code>), an in-header <strong>Sound On / Sound Off</strong> toggle pill, and a close button.</li>
+<li><strong>Notification Cards</strong>:</li>
+<li><strong>Monogram Avatar</strong>: Dark teal circular avatar matching the reference design.</li>
+<li><strong>Direct Title Link</strong>: Clickable PO / Order or Class title that jumps directly to the entity.</li>
+<li><strong>Blue Time Badge</strong>: Displays relative elapsed time and GMT+5 timestamp (<code>13 minutes ago at 01:19 AM GMT+5</code>).</li>
+<li><strong>Structured Body</strong>: Rich HTML formatted message detailing PO number, product name, days overdue, and required actions.</li>
+<li><strong>Green Timestamp</strong>: Formatted date string (<code>MM/DD/YYYY, hh:mm A GMT+5</code>).</li>
+<li><strong>Quick Action</strong>: Circular green checkmark button <code>[ ✓ ]</code> to mark each notification as read individually.</li>
+<li><strong>Footer</strong>: Displays total unread count and a 1-click <strong>Mark All As Read</strong> action.</li>
+</ul>
+<h4 id="2-role-based-visibility-rbac">2. Role-Based Visibility (RBAC)</h4>
+<ul>
+<li><strong>Super Admin &amp; Admin</strong>: Can view company-wide notifications across all users.</li>
+<li><strong>Managers, QC Officers, &amp; Viewers</strong>: Strictly scoped to view only their own notifications.</li>
+</ul>
+<h4 id="3-alert-conditions-triggers">3. Alert Conditions &amp; Triggers</h4>
+<ul>
+<li><strong>Ex-Factory Date Passed OR 1 Day Before</strong>:</li>
+<li><strong>ZONE 1 – EX-FACTORY DATE PASSED</strong>: Triggered when active POs pass their committed ex-factory date. Requires documenting <em>Delay Reason + CAPA + Recovery Date</em>.</li>
+<li><strong>EX-FACTORY 1 DAY BEFORE / DUE TODAY</strong>: Advance warning triggered when ex-factory date is tomorrow or today.</li>
+<li><strong>Stage Days Delay OR 1 Day Before</strong>:</li>
+<li><strong>ZONE 2 – DEVELOPMENT / PROCESS STAGE DELAYED</strong>: Triggered when an active stage is stuck beyond its target completion date (<em>Development Stage Delayed</em> for Sampling, <em>Process Stage Delayed</em> for Bulk). Requires documenting <em>Root Cause + CAPA + Revised Stage Completion Date</em>.</li>
+<li><strong>STAGE 1 DAY BEFORE / DUE TODAY</strong>: Advance warning triggered when a stage target date is tomorrow or today.</li>
+<li><strong>Instant Creation Alerts</strong>:</li>
+<li><strong>New Order Created</strong>: Dispatches immediate notification upon creation of single or bulk orders.</li>
+<li><strong>New Class Created</strong>: Dispatches immediate notification upon creation of Sample Classes or Bulk Projects.</li>
+</ul>
 <hr />
 <h2 id="17-error-messages-explained">17. Error messages explained</h2>
 <table>

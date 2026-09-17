@@ -26,6 +26,7 @@ from app.schemas.order import (
     StageReworkRequest, StageApprovalRequest
 )
 from app.utils.response import success_response
+from app.api.v1.notifications import dispatch_order_created_notification, dispatch_class_created_notification
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -315,6 +316,7 @@ def create_sample_class(
         user=current_user,
         payload={"details": f"Sample project '{sc.name}' was created."},
     )
+    dispatch_class_created_notification(db, sc, is_bulk=False, creator_user=current_user)
     return success_response(data={"id": str(sc.id)}, message="Sample Class created.")
 
 
@@ -646,6 +648,7 @@ def create_bulk_class(
         user=current_user,
         payload={"details": f"Bulk project '{bc.name}' was created."},
     )
+    dispatch_class_created_notification(db, bc, is_bulk=True, creator_user=current_user)
     return success_response(data={"id": str(bc.id), "name": bc.name})
 
 
@@ -758,6 +761,8 @@ def bulk_create_orders(
         user=current_user,
         payload={"details": f"{len(orders)} bulk production batches initialized."},
     )
+    for o in orders:
+        dispatch_order_created_notification(db, o, creator_user=current_user)
     return success_response(
         data={"count": len(orders)},
         message=f"Successfully initialized {len(orders)} production batches."
@@ -838,6 +843,7 @@ def create_order(
         user=current_user,
         payload={"details": f"Order '{order.order_no or order.product_name or order.style_name}' was created."},
     )
+    dispatch_order_created_notification(db, order, creator_user=current_user)
     return success_response(
         data={"id": str(order.id), "order_no": order.order_no},
         message="Order created successfully."

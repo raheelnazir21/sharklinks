@@ -83,17 +83,27 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <span className="hidden xl:inline">Handbook</span>
         </a>
 
-        <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-black uppercase text-emerald-700 transition hover:bg-emerald-100 md:h-10 md:w-10">
-          {user?.full_name?.[0] ?? "U"}
+        {/* User Profile matching Screenshot 2 */}
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-xs transition hover:border-slate-300 md:gap-3 md:px-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e2be9b] text-xs font-black uppercase text-slate-800 ring-2 ring-slate-100 md:h-9 md:w-9">
+            {user?.full_name?.[0] ?? "U"}
+          </div>
+          <div className="hidden sm:flex flex-col text-left leading-tight">
+            <span className="text-xs font-black uppercase text-slate-900 tracking-wide">
+              {user?.full_name || "RAHEEL"}
+            </span>
+            <span className="text-[10px] font-semibold text-slate-500">
+              {user?.role ? `Role: ${String(user.role).replace('_', ' ').toUpperCase()}` : "Role: Manager"}
+            </span>
+          </div>
+          <button
+            onClick={logout}
+            title="Log out"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
-
-        <button
-          onClick={logout}
-          title="Log out"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 md:h-10 md:w-10"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
       </div>
     </header>
   );

@@ -2,83 +2,32 @@
 
 /**
  * NotificationSystem.tsx
- * Two components in one file:
- *   1. NotificationPanel   — dropdown panel from the bell icon
- *   2. NotificationToasts  — bottom-right popup toasts (auto-dismiss 8s)
- * Both are wired to useNotifications hook for shared state.
+ * Lead Manager-styled refined notification center:
+ * - NotificationBell: Dropdown modal with exact styling matching user reference screenshot
+ * - NotificationToasts: Non-intrusive floating toasts
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  Bell, BellOff, CheckCheck, X, AlertTriangle,
-  Calendar, Clock, CheckCircle2, XCircle, Volume2, VolumeX,
+  Bell, Volume2, VolumeX, X, Check,
+  CheckCircle2, AlertTriangle, FileText
 } from "lucide-react";
 import { useNotifications, AppNotification } from "@/hooks/useNotifications";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  const h = Math.floor(diff / 3600000);
-  const d = Math.floor(diff / 86400000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  if (h < 24) return `${h}h ago`;
-  return `${d}d ago`;
-}
-
-function notifStyle(type: string) {
-  switch (type) {
-    case "ex_factory_passed":
-    case "stage_overdue":
-      return {
-        icon: <AlertTriangle className="w-4 h-4" />,
-        color: "text-rose-400",
-        bg: "bg-rose-500/10 border-rose-500/20",
-        dot: "bg-rose-500",
-        toastBorder: "border-rose-500/30 bg-rose-950/80",
-      };
-    case "ex_factory_approaching":
-      return {
-        icon: <Calendar className="w-4 h-4" />,
-        color: "text-amber-400",
-        bg: "bg-amber-500/10 border-amber-500/20",
-        dot: "bg-amber-500",
-        toastBorder: "border-amber-500/30 bg-amber-950/80",
-      };
-    case "stage_completed":
-      return {
-        icon: <CheckCircle2 className="w-4 h-4" />,
-        color: "text-emerald-400",
-        bg: "bg-emerald-500/10 border-emerald-500/20",
-        dot: "bg-emerald-500",
-        toastBorder: "border-emerald-500/30 bg-emerald-950/80",
-      };
-    case "qc_alert":
-      return {
-        icon: <XCircle className="w-4 h-4" />,
-        color: "text-purple-400",
-        bg: "bg-purple-500/10 border-purple-500/20",
-        dot: "bg-purple-500",
-        toastBorder: "border-purple-500/30 bg-purple-950/80",
-      };
-    default:
-      return {
-        icon: <Clock className="w-4 h-4" />,
-        color: "text-blue-400",
-        bg: "bg-blue-500/10 border-blue-500/20",
-        dot: "bg-blue-500",
-        toastBorder: "border-blue-500/30 bg-blue-950/80",
-      };
-  }
-}
-
-// ── NotificationPanel ─────────────────────────────────────────────────────────
+// ── NotificationBell Component ───────────────────────────────────────────────
 
 export function NotificationBell() {
-  const { notifications, unreadCount, soundEnabled, isMounted, markRead, markAllRead, toggleSound } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    soundEnabled,
+    isMounted,
+    markRead,
+    markAllRead,
+    toggleSound,
+  } = useNotifications();
+
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -93,135 +42,157 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // Ensure SSR and initial client hydration match default
   const effectiveSound = isMounted ? soundEnabled : true;
 
   return (
     <div className="relative" ref={panelRef}>
-      {/* Bell button */}
-      <div className="flex items-center gap-1">
-        {/* Sound toggle */}
-        <button
-          onClick={toggleSound}
-          suppressHydrationWarning
-          title={effectiveSound ? "Sound ON — click to mute" : "Sound OFF — click to enable"}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
-        >
-          {effectiveSound
-            ? <Volume2 className="h-3.5 w-3.5" />
-            : <VolumeX className="h-3.5 w-3.5 text-slate-400" />}
-        </button>
+      {/* Bell Button with Badge matching Screenshot */}
+      <button
+        id="notification-bell-trigger"
+        onClick={() => setOpen((v) => !v)}
+        title="Notifications"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-xs transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10"
+      >
+        <Bell className="h-4 w-4 md:h-5 md:w-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold text-white ring-2 ring-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
 
-        {/* Bell */}
-        <button
-          id="notification-bell"
-          onClick={() => setOpen((v) => !v)}
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10"
-        >
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Panel */}
+      {/* Dropdown Modal matching Screenshot 2 */}
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[380px] rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/10 overflow-hidden">
+        <div className="absolute right-0 top-12 z-50 w-[380px] sm:w-[420px] md:w-[460px] rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden transition-all animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 bg-white">
+            <h3 className="text-base md:text-lg font-bold text-slate-800 tracking-tight">
+              Notifications
+            </h3>
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-slate-700" />
-              <span className="text-sm font-black text-slate-900">Notifications</span>
-              {unreadCount > 0 && (
-                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-600">
-                  {unreadCount} new
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-[10px] font-black text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
-                >
-                  <CheckCheck className="w-3 h-3" /> All read
-                </button>
-              )}
+              {/* Sound Toggle Pill Button */}
               <button
+                type="button"
+                onClick={toggleSound}
+                suppressHydrationWarning
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+              >
+                {effectiveSound ? (
+                  <>
+                    <Volume2 className="h-3.5 w-3.5 text-slate-600" />
+                    <span>Sound On</span>
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Sound Off</span>
+                  </>
+                )}
+              </button>
+
+              {/* Close Button */}
+              <button
+                type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Notification list */}
-          <div className="max-h-[420px] overflow-y-auto">
+          {/* Notification Items List */}
+          <div className="max-h-[460px] overflow-y-auto divide-y divide-slate-100 bg-white">
             {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-12">
-                <CheckCircle2 className="w-10 h-10 text-emerald-200" />
-                <p className="text-sm font-black text-slate-400">All caught up!</p>
-                <p className="text-xs font-semibold text-slate-400">No unread notifications.</p>
+              <div className="flex flex-col items-center justify-center gap-3 py-12 px-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-slate-700">All caught up!</p>
+                <p className="text-xs text-slate-400">No unread notifications at this time.</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {notifications.map((n) => {
-                  const style = notifStyle(n.type);
-                  return (
-                    <div
-                      key={n.id}
-                      className="group relative flex gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer"
-                      onClick={() => markRead(n.id)}
-                    >
-                      {/* Unread dot */}
-                      <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full ${style.dot}`} />
+              notifications.map((n) => {
+                const targetUrl = n.order_id
+                  ? `/orders/${n.order_id}`
+                  : n.class_id
+                  ? (n.category === "class_created" && n.extra_data?.is_bulk ? "/bulk-projects" : "/samples")
+                  : "/orders";
 
-                      {/* Icon */}
-                      <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-full border ${style.bg} ${style.color}`}>
-                        {style.icon}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-slate-900 leading-tight">{n.title}</p>
-                        <p className="text-[11px] font-semibold text-slate-500 mt-0.5 leading-snug">{n.message}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{timeAgo(n.created_at)}</span>
-                          {n.order_id && (
-                            <Link
-                              href={`/orders/${n.order_id}`}
-                              onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
-                              className="text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700"
-                            >
-                              View Order →
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Close */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
-                        className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-lg text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-200 hover:text-slate-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                return (
+                  <div
+                    key={n.id}
+                    className="flex items-start gap-3.5 px-5 py-4 transition hover:bg-slate-50/70"
+                  >
+                    {/* Left Monogram / Logo Avatar matching Lead Manager */}
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0a454d] text-white shadow-xs font-bold text-sm select-none">
+                      <span className="font-extrabold text-base tracking-tighter">a</span>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Middle Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Top Row: Title + Relative Time Badge */}
+                      <div className="flex flex-wrap items-baseline gap-1.5 leading-snug">
+                        <Link
+                          href={targetUrl}
+                          onClick={() => setOpen(false)}
+                          className="font-bold text-slate-900 hover:text-blue-600 text-[13px] md:text-sm underline-offset-2 hover:underline line-clamp-1"
+                        >
+                          {n.title}
+                        </Link>
+                        {n.formatted_time && (
+                          <span className="inline-flex items-center rounded-full bg-[#258bd2] px-2.5 py-0.5 text-[10px] md:text-[11px] font-semibold text-white shadow-xs whitespace-nowrap">
+                            {n.formatted_time}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Middle Row: HTML Structured Body */}
+                      <div
+                        className="text-slate-600 text-xs mt-1.5 leading-relaxed [&_b]:font-bold [&_b]:text-slate-900 [&_i]:italic [&_span]:inline"
+                        dangerouslySetInnerHTML={{ __html: n.html_content || n.message }}
+                      />
+
+                      {/* Bottom Row: Green Timestamp */}
+                      {n.formatted_date && (
+                        <div className="text-[#16a34a] font-semibold text-xs mt-1.5">
+                          {n.formatted_date}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Far Right: Circular Green Checkmark Action Button */}
+                    <button
+                      type="button"
+                      onClick={() => markRead(n.id)}
+                      title="Mark as read"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#22c55e] bg-[#f0fdf4] text-[#22c55e] transition hover:bg-[#dcfce7] active:scale-90 shadow-xs"
+                    >
+                      <Check className="w-4 h-4 stroke-[2.5]" />
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-slate-100 px-5 py-3 text-center">
-            <p suppressHydrationWarning className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-              {effectiveSound ? "🔔 Sound ON" : "🔕 Sound OFF"} · Auto-refreshes every 60s
-            </p>
+          {/* Footer matching Screenshot 2 */}
+          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3.5 bg-white">
+            <span
+              className="text-xs md:text-sm font-bold text-[#1d4ed8] hover:underline cursor-pointer"
+            >
+              You have {unreadCount} notification{unreadCount !== 1 ? "s" : ""}
+            </span>
+
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={markAllRead}
+                className="text-xs md:text-sm font-bold text-[#1d4ed8] hover:underline transition"
+              >
+                Mark All As Read
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -229,83 +200,12 @@ export function NotificationBell() {
   );
 }
 
-
 // ── NotificationToasts ────────────────────────────────────────────────────────
 
-const TOAST_DURATION = 8000; // 8 seconds auto-dismiss
+const TOAST_DURATION = 8000;
 
 interface ToastItem extends AppNotification {
   visible: boolean;
-}
-
-function ToastCard({
-  toast,
-  onDismiss,
-}: {
-  toast: ToastItem;
-  onDismiss: (id: string) => void;
-}) {
-  useEffect(() => {
-    if (!toast.visible) return;
-    const t = setTimeout(() => onDismiss(toast.id), TOAST_DURATION);
-    return () => clearTimeout(t);
-  }, [toast.id, toast.visible, onDismiss]);
-
-  const style = notifStyle(toast.type);
-
-  return (
-    <div
-      className={`pointer-events-auto w-[360px] rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-400 ${style.toastBorder} ${
-        toast.visible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-      }`}
-    >
-      {/* Progress bar */}
-      <div className="h-0.5 w-full rounded-t-2xl overflow-hidden bg-white/10">
-        <div
-          className={`h-full ${style.dot} rounded-full`}
-          style={{
-            animation: `shrink ${TOAST_DURATION}ms linear forwards`,
-          }}
-        />
-      </div>
-
-      <div className="flex gap-3 p-4">
-        <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-full border ${style.bg} ${style.color}`}>
-          {style.icon}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-white leading-tight">{toast.title}</p>
-          <p className="text-[11px] font-semibold text-white/70 mt-0.5 leading-snug line-clamp-2">{toast.message}</p>
-
-          <div className="flex items-center gap-3 mt-3">
-            {toast.order_id && (
-              <Link
-                href={`/orders/${toast.order_id}`}
-                onClick={() => onDismiss(toast.id)}
-                className="text-[10px] font-black uppercase tracking-widest text-white/80 hover:text-white border border-white/20 rounded-lg px-2.5 py-1 hover:border-white/40 transition"
-              >
-                View Order
-              </Link>
-            )}
-            <button
-              onClick={() => onDismiss(toast.id)}
-              className="text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white/80 transition"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-
-        <button
-          onClick={() => onDismiss(toast.id)}
-          className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-lg text-white/30 hover:text-white/70 hover:bg-white/10 transition"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 export function NotificationToasts() {
@@ -313,7 +213,6 @@ export function NotificationToasts() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const shownIds = useRef<Set<string>>(new Set());
 
-  // When notifications list updates, push new ones as toasts
   useEffect(() => {
     const newOnes = notifications.filter((n) => !shownIds.current.has(n.id)).slice(0, 3);
     if (newOnes.length === 0) return;
@@ -322,12 +221,12 @@ export function NotificationToasts() {
     setToasts((prev) => [
       ...newOnes.map((n) => ({ ...n, visible: true })),
       ...prev,
-    ].slice(0, 3)); // max 3 visible at once
+    ].slice(0, 3));
   }, [notifications]);
 
   const dismiss = useCallback((id: string) => {
-    setToasts((prev) => prev.map((t) => t.id === id ? { ...t, visible: false } : t));
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 400);
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, visible: false } : t)));
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 300);
     markRead(id);
   }, [markRead]);
 
@@ -336,15 +235,51 @@ export function NotificationToasts() {
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 items-end pointer-events-none">
       {toasts.map((toast) => (
-        <ToastCard key={toast.id} toast={toast} onDismiss={dismiss} />
+        <div
+          key={toast.id}
+          className={`pointer-events-auto w-[360px] rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-2xl transition-all duration-300 ${
+            toast.visible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0a454d] text-white font-bold text-xs">
+              a
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-900 line-clamp-1">{toast.title}</p>
+              <div
+                className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: toast.html_content || toast.message }}
+              />
+              <div className="flex items-center gap-2 mt-2">
+                {toast.order_id && (
+                  <Link
+                    href={`/orders/${toast.order_id}`}
+                    onClick={() => dismiss(toast.id)}
+                    className="text-[10px] font-bold text-blue-600 hover:underline"
+                  >
+                    View Order →
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={() => dismiss(toast.id)}
+                  className="text-[10px] font-semibold text-slate-400 hover:text-slate-600"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => dismiss(toast.id)}
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       ))}
-
-      <style>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
     </div>
   );
 }

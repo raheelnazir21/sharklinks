@@ -123,6 +123,22 @@ We separated work into two lanes:
 
 ---
 
+### Phase 7: Ex-Factory Guard, Manager Role Delete & CSV Export
+> Priority: HIGH | Status: ✅ COMPLETED
+
+- [x] **Ex-Factory Date Guard**:
+  - Backend validation in `order_service.py` (`create_order`, `update_order`, `add_stage`, `update_stage`) blocking stages that exceed the order's Ex-Factory date.
+  - Frontend real-time notification alert triggering when assigned days exceed the Ex-Factory date: *"You exceed X day(s) to Ex-Factory date!"*.
+  - Track launch button locked and submission blocked client-side when Ex-Factory date is exceeded.
+- [x] **Manager Role Delete & Edit**:
+  - Sample Classes and Bulk Projects cards now show edit pencil and delete bin icons for Managers (`user.role === 'manager'`) as well as Super Admins.
+- [x] **CSV Export for Sample & Bulk Projects**:
+  - Backend endpoints (`GET /orders/sample-classes/export/csv` and `GET /orders/bulk-classes/export/csv`) streaming full CSV exports.
+  - Includes Product Info, Customer, Vendors, Status, Orders Count, Stage Progress, and Latest Stage Update info (stage name, status, and timestamp).
+  - "Export CSV" buttons integrated into Sample and Bulk toolbar components.
+
+---
+
 ## 🗺️ BUTTON & FEATURE GLOSSARY
 > *For the team — what every button does, in plain English.*
 

@@ -18,6 +18,18 @@ from app.models.order import Order, ProductionStage, OrderStatus, StageStatus, O
 
 
 
+def _assert_target_date_within_ex_factory(target_date, ex_factory_date, stage_name="Stage"):
+    if ex_factory_date and target_date:
+        td = target_date.date() if hasattr(target_date, "date") else target_date
+        ex = ex_factory_date.date() if hasattr(ex_factory_date, "date") else ex_factory_date
+        if td > ex:
+            diff_days = (td - ex).days
+            raise HTTPException(
+                status_code=400,
+                detail=f"Stage '{stage_name}' target date ({td}) exceeds the order's Ex-Factory date ({ex}) by {diff_days} day(s). You exceed {diff_days} day(s) to ex-factory date."
+            )
+
+
 class OrderService:
 
     @staticmethod
@@ -111,7 +123,8 @@ class OrderService:
                 chunk = ProductionStageChunk(
                     order_id=order.id,
                     name=c_in.name,
-                    target_days=c_in.target_days
+                    target_days=c_in.target_days,
+                    buffer_days=getattr(c_in, 'buffer_days', 0) or 0
                 )
                 db.add(chunk)
                 db.flush()
@@ -135,6 +148,9 @@ class OrderService:
                     target_days = s_in.target_days or 0
                     current_target_dt += timedelta(days=target_days)
                     stage_target_dt = current_target_dt
+
+                if order.ex_factory_date and stage_target_dt:
+                    _assert_target_date_within_ex_factory(stage_target_dt, order.ex_factory_date, s_name_str)
 
                 StageRepository.create(db, {
                     "order_id": order.id,
@@ -163,6 +179,9 @@ class OrderService:
                     current_target_dt = stage_chunk.target_date
                 else:
                     stage_target_dt = None
+
+                if order.ex_factory_date and stage_target_dt:
+                    _assert_target_date_within_ex_factory(stage_target_dt, order.ex_factory_date, s_name_str)
 
                 StageRepository.create(db, {
                     "order_id": order.id,
@@ -264,6 +283,15 @@ class OrderService:
         order = OrderRepository.get_by_id(db, order_id)
         if not order:
             raise HTTPException(status_code=404, detail="Order not found.")
+
+        if payload.ex_factory_date:
+            for st in order.stages:
+                if st.target_date:
+                    _assert_target_date_within_ex_factory(
+                        st.target_date,
+                        payload.ex_factory_date,
+                        st.stage_name.value if hasattr(st.stage_name, "value") else str(st.stage_name)
+                    )
 
         old_status = order.status.value if order.status else None
         old_value = {
@@ -696,6 +724,9 @@ class StageService:
         order = OrderRepository.get_by_id(db, order_id)
         if not order:
             raise HTTPException(status_code=404, detail="Order not found.")
+        stage_name_str = payload.stage_name.value if hasattr(payload.stage_name, "value") else str(payload.stage_name)
+        if order.ex_factory_date and payload.target_date:
+            _assert_target_date_within_ex_factory(payload.target_date, order.ex_factory_date, stage_name_str)
         data = payload.model_dump()
         data["order_id"] = order_id
         return StageRepository.create(db, data)
@@ -712,6 +743,10 @@ class StageService:
         order = OrderRepository.get_by_id(db, str(stage.order_id))
         if not order:
             raise HTTPException(404, "Associated order not found.")
+
+        stage_name_str = stage.stage_name.value if hasattr(stage.stage_name, "value") else str(stage.stage_name)
+        if order.ex_factory_date and payload.target_date:
+            _assert_target_date_within_ex_factory(payload.target_date, order.ex_factory_date, stage_name_str)
 
         # ─── 1. Validation Rules ───────────────────────────────────────────────
         if payload.status in [StageStatus.in_progress, StageStatus.completed]:
@@ -744,12 +779,15 @@ class StageService:
                     # 1. Fabric shade / resubmission before bulk fabric dying -> blocks dyeing stages
                     if gated == "bulk_dying" or "dying" in c_action or "shade" in c_action:
                         is_blocked = "dying" in current_st_name
-                    # 2. Washing execution -> blocks washing, cutting, or fabrication
-                    elif gated == "washing_fabrication" or "washing" in c_action:
-                        is_blocked = "washing" in current_st_name or "fabric_cutting" in current_st_name or "fabrication" in current_st_name
+                    # 2. If size specs are incorrect then need to submit fit sample -> blocks bulk cutting
+                    elif gated == "bulk_cutting" or "size" in c_action or "spec" in c_action or "fit" in c_action or "cutting" in c_action:
+                        is_blocked = "cutting" in current_st_name or "bulk_fabric_cutting" in current_st_name
                     # 3. Embellishment / printing / embroidery strike off -> blocks embellishment
                     elif gated == "embellishment" or "strike" in c_action or "embellish" in c_action or "printing" in c_action:
                         is_blocked = "embellish" in current_st_name or "printing" in current_st_name
+                    # Fallback for legacy washing execution
+                    elif gated == "washing_fabrication" or "washing" in c_action:
+                        is_blocked = "washing" in current_st_name or "fabric_cutting" in current_st_name or "fabrication" in current_st_name
 
                     if is_blocked:
                         raise HTTPException(
@@ -942,10 +980,12 @@ class StageService:
                 c_lower = note_text.lower()
                 if "shade" in c_lower or "dying" in c_lower:
                     gated_category = "bulk_dying"
-                elif "washing" in c_lower or "fabric" in c_lower:
-                    gated_category = "washing_fabrication"
+                elif "size" in c_lower or "spec" in c_lower or "fit" in c_lower or "cutting" in c_lower:
+                    gated_category = "bulk_cutting"
                 elif "embellish" in c_lower or "print" in c_lower or "embroidery" in c_lower or "strike" in c_lower:
                     gated_category = "embellishment"
+                elif "washing" in c_lower:
+                    gated_category = "washing_fabrication"
                 else:
                     gated_category = "custom"
                 condition_status = "pending"

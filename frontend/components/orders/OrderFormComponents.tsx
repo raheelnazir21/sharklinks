@@ -51,6 +51,7 @@ export interface StageChunk {
   id: string;
   name: string;
   target_days: number;
+  buffer_days?: number;
   stage_names: string[];
 }
 
@@ -88,6 +89,7 @@ export function StageMergingComponent(props: any) {
 
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [chunkDaysInput, setChunkDaysInput] = useState<number>(3);
+  const [chunkBufferInput, setChunkBufferInput] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // helper to check if a stage is chunked
@@ -120,7 +122,10 @@ export function StageMergingComponent(props: any) {
 
   const handleMergeClick = () => {
     if (selectedMergeStages.length < 2) return;
-    setChunkDaysInput(3);
+    const sumDays = selectedMergeStages.reduce((acc: number, name: string) => acc + (stageDays[name] ?? 0), 0);
+    const sumBuffers = selectedMergeStages.reduce((acc: number, name: string) => acc + (stageBuffers[name] ?? 0), 0);
+    setChunkDaysInput(sumDays > 0 ? sumDays : 3);
+    setChunkBufferInput(sumBuffers > 0 ? sumBuffers : 0);
     setShowMergeModal(true);
   };
 
@@ -156,18 +161,32 @@ export function StageMergingComponent(props: any) {
                 </button>
               </div>
               
-              <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl px-6 py-4 mb-4">
-                <span className="text-xs font-black uppercase tracking-wider text-indigo-400">Total Chunk SLA Days</span>
-                <input 
-                  type="number" min="1"
-                  required
-                  className="w-16 bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs font-black text-indigo-400 text-center focus:outline-none"
-                  value={chunk.target_days}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 1;
-                    setChunks(chunks.map((c: any) => c.id === chunk.id ? { ...c, target_days: val } : c));
-                  }}
-                />
+              <div className="grid grid-cols-2 gap-3 bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-indigo-400">Total Chunk SLA Days</span>
+                  <input 
+                    type="number" min="1"
+                    required
+                    className="w-16 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-indigo-400 text-center focus:outline-none focus:border-indigo-500"
+                    value={chunk.target_days}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1;
+                      setChunks(chunks.map((c: any) => c.id === chunk.id ? { ...c, target_days: val } : c));
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between border-l border-slate-800 pl-4">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400">+Buffer Days</span>
+                  <input 
+                    type="number" min="0"
+                    className="w-16 bg-slate-950 border border-amber-500/20 rounded-xl px-3 py-2 text-xs font-black text-amber-400 text-center focus:outline-none focus:border-amber-500/50"
+                    value={chunk.buffer_days ?? 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setChunks(chunks.map((c: any) => c.id === chunk.id ? { ...c, buffer_days: val } : c));
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-900">
@@ -315,17 +334,31 @@ export function StageMergingComponent(props: any) {
             />
           </div>
 
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 italic">
-              Target Days for Whole Group
-            </label>
-            <input 
-              type="number"
-              min="1"
-              value={chunkDaysInput}
-              onChange={(e) => setChunkDaysInput(parseInt(e.target.value) || 1)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 italic">
+                Target Days for Whole Group
+              </label>
+              <input 
+                type="number"
+                min="1"
+                value={chunkDaysInput}
+                onChange={(e) => setChunkDaysInput(parseInt(e.target.value) || 1)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-black text-amber-500 uppercase tracking-widest mb-2 italic">
+                +Buffer Days (Contingency)
+              </label>
+              <input 
+                type="number"
+                min="0"
+                value={chunkBufferInput}
+                onChange={(e) => setChunkBufferInput(parseInt(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-amber-500/30 rounded-2xl px-5 py-3 text-xs font-bold text-amber-400 focus:outline-none focus:border-amber-500"
+              />
+            </div>
           </div>
 
           <div>
@@ -358,6 +391,7 @@ export function StageMergingComponent(props: any) {
                   id: Math.random().toString(36).substring(7),
                   name: nameInput,
                   target_days: chunkDaysInput,
+                  buffer_days: chunkBufferInput,
                   stage_names: [...selectedMergeStages]
                 };
                 setChunks([...chunks, newChunk]);

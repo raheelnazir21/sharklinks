@@ -44,3 +44,8 @@ logs/
 # Docker
 *.env.staging
 *.env.production
+
+# Temporary preview / dummy test files
+dummy_*
+*.csv
+*.xlsx

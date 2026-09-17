@@ -16,7 +16,7 @@ import {
   StatusBadge,
   formControlClass,
 } from "@/components/ui/PagePrimitives";
-import { Activity, ArrowRight, Building2, Calendar, Edit3, Filter, Package, Plus, Search, Trash2 } from "lucide-react";
+import { Activity, ArrowRight, Building2, Calendar, Download, Edit3, FileSpreadsheet, Filter, Package, Plus, Search, Trash2 } from "lucide-react";
 
 type ApiError = {
   response?: {
@@ -42,6 +42,7 @@ export default function SamplesPage() {
   const { user } = useAuth();
   const isViewer = user?.role === "viewer";
   const isSuperAdmin = user?.role === "super_admin";
+  const isManager = user?.role === "manager";
   const canManage = !isViewer;
   const [samples, setSamples] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -50,6 +51,8 @@ export default function SamplesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [editingSample, setEditingSample] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; title: string; message: string } | null>(null);
@@ -73,6 +76,54 @@ export default function SamplesPage() {
       console.warn(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const res = await api.get("/orders/sample-classes/export/excel", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `sample-classes-wip-${new Date().toISOString().split("T")[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        title: "Export Failed",
+        message: getApiError(err, "Failed to download sample classes Excel workbook."),
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const handleExportCsv = async (view: "table" | "matrix" = "table") => {
+    setIsExporting(true);
+    try {
+      const res = await api.get(`/orders/sample-classes/export/csv?view=${view}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `sample-classes-${view}-${new Date().toISOString().split("T")[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        title: "Export Failed",
+        message: getApiError(err, "Failed to download sample classes CSV."),
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -155,7 +206,7 @@ export default function SamplesPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageToolbar>
-        <div className="grid gap-3 lg:grid-cols-[1fr_180px_auto]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_180px_auto_auto]">
           <SearchInput
             icon={<Search className="h-4 w-4" />}
             value={searchTerm}
@@ -177,6 +228,30 @@ export default function SamplesPage() {
               ))}
             </select>
           </div>
+          {!isViewer && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                disabled={isExportingExcel}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 active:scale-95 disabled:opacity-50"
+                title="Download Multi-Sheet Excel Workbook with individual tabs per class"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                {isExportingExcel ? "Exporting..." : "Export Excel (.xlsx)"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportCsv("table")}
+                disabled={isExporting}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                title="Download WIP Product Master Table (CSV)"
+              >
+                <Download className="h-4 w-4 text-cyan-600" />
+                {isExporting ? "Exporting..." : "Export CSV"}
+              </button>
+            </div>
+          )}
           {canManage && (
             <PrimaryButton onClick={openCreate}>
               <Plus className="h-4 w-4" /> New Sample
@@ -201,8 +276,8 @@ export default function SamplesPage() {
               sample={sample}
               onEdit={openEdit}
               onDelete={setDeleteTarget}
-              canEdit={!isViewer && isSuperAdmin}
-              canDelete={!isViewer && isSuperAdmin}
+              canEdit={!isViewer && (isSuperAdmin || isManager)}
+              canDelete={!isViewer && (isSuperAdmin || isManager)}
             />
           ))}
           {filtered.length === 0 && (

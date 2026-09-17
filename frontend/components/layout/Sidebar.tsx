@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types/auth";
 import api from "@/services/api";
 import { formatRelativeTime } from "@/services/dateUtils";
+import { BookOpen } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -379,6 +380,21 @@ export default function Sidebar() {
 
       {/* User footer */}
       <div className="border-t border-slate-200 px-3 py-4">
+        {/* Handbook Download Button */}
+        <a
+          href="/Sample-and-Bulk-Order-Handbook.pdf"
+          download="Sample-and-Bulk-Order-Handbook.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Download Official Operating Handbook (PDF)"
+          className={`mb-3 flex w-full items-center gap-2.5 rounded-xl border border-teal-200/80 bg-teal-50/70 px-3 py-2 text-xs font-black uppercase tracking-wider text-teal-700 transition-all hover:bg-teal-100 hover:border-teal-300 active:scale-95 ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          <BookOpen className="h-4 w-4 text-teal-600 shrink-0" />
+          {!collapsed && <span>Handbook (PDF)</span>}
+        </a>
+
         <div className={`mb-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm ${collapsed ? "justify-center" : ""}`}>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black uppercase text-emerald-700 ring-1 ring-slate-200">
             {user?.full_name?.[0] ?? "U"}

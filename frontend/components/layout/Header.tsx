@@ -9,7 +9,7 @@
  */
 "use client";
 
-import { LogOut, Menu } from "lucide-react";
+import { BookOpen, LogOut, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -69,6 +69,19 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
         {/* Live Notification Bell — dropdown panel + sound toggle */}
         <NotificationBell />
+
+        {/* Operating Handbook (PDF) Download */}
+        <a
+          href="/Sample-and-Bulk-Order-Handbook.pdf"
+          download="Sample-and-Bulk-Order-Handbook.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Download Official Operating Handbook (PDF)"
+          className="flex h-9 items-center gap-2 rounded-xl border border-teal-200 bg-teal-50/80 px-3 text-xs font-black uppercase tracking-wider text-teal-700 transition hover:bg-teal-100 hover:border-teal-300 active:scale-95 md:h-10 shrink-0"
+        >
+          <BookOpen className="h-4 w-4 text-teal-600 shrink-0" />
+          <span className="hidden xl:inline">Handbook</span>
+        </a>
 
         <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-black uppercase text-emerald-700 transition hover:bg-emerald-100 md:h-10 md:w-10">
           {user?.full_name?.[0] ?? "U"}

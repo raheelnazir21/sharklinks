@@ -60,10 +60,20 @@ This system is a digital management tool for a textile factory to track orders, 
 
 ---
 
+## ✅ STEP 6: Ex-Factory Date Guard, Manager Delete & CSV Exports (COMPLETED)
+| # | Feature | Status | Simple Explanation |
+|---|---|---|---|
+| 6.1 | **Ex-Factory Date Guard** | ✅ Done | Prevents stage target dates from exceeding the order's Ex-Factory date with live warning notifications. |
+| 6.2 | **Manager-Level Deletion** | ✅ Done | Managers can now delete/deactivate Product Classes in both Samples and Bulk. |
+| 6.3 | **CSV Data Exports** | ✅ Done | Download complete CSV spreadsheets with latest stage update details for Samples & Bulk Projects. |
+
+---
+
 ## 🔒 SECURITY & RELIABILITY
 - **Data Backups**: Automated nightly backups of all factory data.
-- **Role Control**: QC Officers cannot delete orders; Viewers cannot change data.
+- **Role Control**: QC Officers cannot delete orders; Viewers cannot change data; Managers can delete product classes.
 - **Audit Logs**: Every approval and rejection is recorded with a time-stamp.
 
 ---
-*Updated: May 2026 | Textile QC Management System*
+*Updated: September 2026 | Textile QC Management System*
+

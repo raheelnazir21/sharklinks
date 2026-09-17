@@ -134,6 +134,7 @@ class ReferenceAttachment(BaseModel):
 class StageChunkCreate(BaseModel):
     name: str
     target_days: int
+    buffer_days: Optional[int] = 0
     stage_names: List[StageName]
 
 class OrderCreate(BaseModel):
@@ -298,6 +299,7 @@ class StageChunkOut(BaseModel):
     order_id: str
     name: str
     target_days: int
+    buffer_days: Optional[int] = 0
     start_date: Optional[datetime] = None
     target_date: Optional[datetime] = None
     completion_date: Optional[datetime] = None

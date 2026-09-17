@@ -196,6 +196,7 @@ class ProductionStageChunk(Base):
     order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False)
     name = Column(String(200), nullable=False)
     target_days = Column(Integer, nullable=False, default=1)
+    buffer_days = Column(Integer, nullable=True, default=0)
     
     start_date = Column(DateTime, nullable=True)
     target_date = Column(DateTime, nullable=True)

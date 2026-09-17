@@ -16,7 +16,7 @@ import {
   StatusBadge,
   formControlClass,
 } from "@/components/ui/PagePrimitives";
-import { Activity, ArrowRight, Building2, Calendar, Edit3, Layers, Plus, Search, Timer, Trash2 } from "lucide-react";
+import { Activity, ArrowRight, Building2, Calendar, Download, Edit3, FileSpreadsheet, Layers, Plus, Search, Timer, Trash2 } from "lucide-react";
 
 type ApiError = {
   response?: {
@@ -42,6 +42,7 @@ export default function BulkProjectsPage() {
   const { user } = useAuth();
   const isViewer = user?.role === "viewer";
   const isSuperAdmin = user?.role === "super_admin";
+  const isManager = user?.role === "manager";
   const canManage = !isViewer;
   const [projects, setProjects] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -49,6 +50,8 @@ export default function BulkProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [editingProject, setEditingProject] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; title: string; message: string } | null>(null);
@@ -72,6 +75,54 @@ export default function BulkProjectsPage() {
       console.warn(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const res = await api.get("/orders/bulk-classes/export/excel", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `bulk-projects-wip-${new Date().toISOString().split("T")[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        title: "Export Failed",
+        message: getApiError(err, "Failed to download bulk projects Excel workbook."),
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const handleExportCsv = async (view: "table" | "matrix" = "table") => {
+    setIsExporting(true);
+    try {
+      const res = await api.get(`/orders/bulk-classes/export/csv?view=${view}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `bulk-projects-${view}-${new Date().toISOString().split("T")[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        title: "Export Failed",
+        message: getApiError(err, "Failed to download bulk projects CSV."),
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -150,13 +201,37 @@ export default function BulkProjectsPage() {
   return (
     <div className="space-y-6 pb-12">
       <PageToolbar>
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
           <SearchInput
             icon={<Search className="h-4 w-4" />}
             value={searchTerm}
             onChange={setSearchTerm}
             placeholder="Search bulk project, customer, project number..."
           />
+          {!isViewer && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                disabled={isExportingExcel}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 active:scale-95 disabled:opacity-50"
+                title="Download Multi-Sheet Excel Workbook with individual tabs per project"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                {isExportingExcel ? "Exporting..." : "Export Excel (.xlsx)"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExportCsv("table")}
+                disabled={isExporting}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                title="Download WIP Product Master Table (CSV)"
+              >
+                <Download className="h-4 w-4 text-emerald-600" />
+                {isExporting ? "Exporting..." : "Export CSV"}
+              </button>
+            </div>
+          )}
           {canManage && (
             <PrimaryButton onClick={openCreate}>
               <Plus className="h-4 w-4" /> New Bulk Project
@@ -182,8 +257,8 @@ export default function BulkProjectsPage() {
               project={project}
               onEdit={openEdit}
               onDelete={setDeleteTarget}
-              canEdit={!isViewer && isSuperAdmin}
-              canDelete={!isViewer && isSuperAdmin}
+              canEdit={!isViewer && (isSuperAdmin || isManager)}
+              canDelete={!isViewer && (isSuperAdmin || isManager)}
             />
           ))}
           {filtered.length === 0 && (

@@ -2,11 +2,13 @@
 Orders & Production Stages API.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 from typing import Optional
 import shutil, os, uuid
-import json
+import json, csv, io
+from datetime import datetime, date
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles, get_current_user
@@ -17,6 +19,7 @@ from app.models.order import Attachment, TrackType, OrderHistory, Order, OrderSt
 from app.services.order_service import OrderService, StageService
 from app.services.activity_log_service import ActivityLogService
 from app.repositories.order_repo import SampleClassRepository, BulkClassRepository, _id_variants
+from app.services.excel_exporter import generate_classes_workbook, _get_order_stage_details
 from app.schemas.order import (
     OrderCreate, OrderUpdate, StageCreate, StageUpdate, 
     SampleClassCreate, SampleClassUpdate, BulkClassCreate, BulkClassUpdate, BulkOrderCreate,
@@ -101,6 +104,196 @@ def list_sample_classes(
             "progress": progress,
         })
     return success_response(data=result)
+
+
+@router.get("/sample-classes/export/excel", summary="Export Sample Classes Excel Workbook")
+@router.get("/sample-classes/export.xlsx", summary="Export Sample Classes Excel Workbook")
+def export_sample_classes_excel(
+    vendor_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(OrderReadAccess),
+):
+    if vendor_id:
+        assert_vendor_access(db, vendor_id, current_user)
+    scs = SampleClassRepository.get_all(db, vendor_id, allowed_vendor_ids=_allowed_vendor_ids(db, current_user))
+    xlsx_stream = generate_classes_workbook(scs, track_title="Sample Classes", accent_color="0F766E")
+    filename = f"sample-classes-wip-{datetime.utcnow().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        xlsx_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@router.get("/sample-classes/export/csv", summary="Export Sample Classes CSV")
+@router.get("/sample-classes/export.csv", summary="Export Sample Classes CSV")
+def export_sample_classes_csv(
+    view: str = Query("table"),
+    vendor_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(OrderReadAccess),
+):
+    if vendor_id:
+        assert_vendor_access(db, vendor_id, current_user)
+    scs = SampleClassRepository.get_all(db, vendor_id, allowed_vendor_ids=_allowed_vendor_ids(db, current_user))
+    
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    
+    if view == "matrix":
+        headers = ["Class Info / Product Index"] + [f"[{s.serial_number or 'NO-SN'}] {s.name}" for s in scs]
+        writer.writerow(headers)
+        writer.writerow(["Customer"] + [s.customer or "—" for s in scs])
+        writer.writerow(["Vendor"] + [(s.vendor.name if s.vendor else "—") for s in scs])
+        writer.writerow(["Status"] + [s.status or "active" for s in scs])
+        
+        progress_strs = []
+        for s in scs:
+            active_orders = [o for o in s.orders if o.is_active]
+            total_st = sum(len(o.stages) for o in active_orders)
+            comp_st = sum(sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed") for o in active_orders)
+            pct = round((comp_st / total_st) * 100) if total_st > 0 else (100 if s.status == "completed" else 0)
+            progress_strs.append(f"{pct}% ({comp_st}/{total_st} stages)")
+        writer.writerow(["Overall Progress"] + progress_strs)
+        writer.writerow(["Total Products"] + [str(len([o for o in s.orders if o.is_active])) for s in scs])
+        writer.writerow(["--------------------"] * len(headers))
+        
+        max_products = max([len([o for o in s.orders if o.is_active]) for s in scs] or [0])
+        for p_idx in range(max_products):
+            row = [f"Product #{p_idx + 1}"]
+            for s in scs:
+                active_orders = [o for o in s.orders if o.is_active]
+                if p_idx < len(active_orders):
+                    o = active_orders[p_idx]
+                    dtl = _get_order_stage_details(o)
+                    prod_str = f"{o.product_name or 'Product'} [{o.style_name or 'No Style'}] -> Stage: {dtl['stage_title']} ({dtl['stage_status']})"
+                    if dtl["ex_fac_str"]:
+                        prod_str += f" | Ex-Fac: {dtl['ex_fac_str']}"
+                    prod_str += f" | Progress: {dtl['progress_pct']}%"
+                    row.append(prod_str)
+                else:
+                    row.append("—")
+            writer.writerow(row)
+        filename = f"sample-classes-matrix-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+
+    elif view == "summary":
+        writer.writerow([
+            "Serial Number",
+            "Sample Name",
+            "Customer",
+            "Vendor",
+            "Status",
+            "Total Orders",
+            "Total Stages",
+            "Completed Stages",
+            "Progress %",
+            "Latest Stage",
+            "Latest Update",
+            "Created At",
+            "Remarks"
+        ])
+        for s in scs:
+            active_orders = [o for o in s.orders if o.is_active]
+            total_stages = sum(len(o.stages) for o in active_orders)
+            completed_stages = sum(
+                sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed")
+                for o in active_orders
+            )
+            if total_stages > 0:
+                progress = round((completed_stages / total_stages) * 100)
+            elif s.status == "completed":
+                progress = 100
+            else:
+                progress = 0
+
+            all_stages = [st for o in active_orders for st in o.stages]
+            latest_stage_info = ""
+            latest_update_dt = None
+            if all_stages:
+                stages_with_time = [st for st in all_stages if st.updated_at]
+                if stages_with_time:
+                    latest_st = max(stages_with_time, key=lambda x: x.updated_at)
+                    st_name = latest_st.stage_name.value if hasattr(latest_st.stage_name, "value") else str(latest_st.stage_name)
+                    st_status = latest_st.status.value if hasattr(latest_st.status, "value") else str(latest_st.status)
+                    latest_stage_info = f"{st_name} ({st_status})"
+                    latest_update_dt = latest_st.updated_at
+            
+            if not latest_update_dt:
+                order_dates = [o.updated_at for o in active_orders if o.updated_at]
+                if order_dates:
+                    latest_update_dt = max(order_dates)
+                else:
+                    latest_update_dt = getattr(s, "updated_at", None) or s.created_at
+
+            writer.writerow([
+                s.serial_number or "",
+                s.name or "",
+                s.customer or "",
+                s.vendor.name if s.vendor else "",
+                s.status or "",
+                len(active_orders),
+                total_stages,
+                completed_stages,
+                f"{progress}%",
+                latest_stage_info,
+                latest_update_dt.strftime("%Y-%m-%d %H:%M") if latest_update_dt else "",
+                s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "",
+                s.remarks or ""
+            ])
+        filename = f"sample-classes-summary-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+
+    else:
+        # Default view: WIP Product Master Table (one row per product)
+        writer.writerow([
+            "Class Serial",
+            "Class Name",
+            "Customer",
+            "Vendor",
+            "Product Name",
+            "Style Code",
+            "Order / PO #",
+            "Quantity",
+            "Current Stage",
+            "Stage Status",
+            "Stage Target Date",
+            "Completed Stages",
+            "Total Stages",
+            "Progress %",
+            "Ex-Factory Date",
+            "Delivery Status",
+            "Latest Stage Notes"
+        ])
+        for s in scs:
+            active_orders = [o for o in s.orders if o.is_active]
+            for order in active_orders:
+                dtl = _get_order_stage_details(order)
+                writer.writerow([
+                    s.serial_number or "—",
+                    s.name or "—",
+                    s.customer or "—",
+                    s.vendor.name if s.vendor else "—",
+                    order.product_name or "—",
+                    order.style_name or "—",
+                    order.order_no or "—",
+                    order.quantity or 0,
+                    dtl["stage_title"],
+                    dtl["stage_status"],
+                    dtl["stage_target"],
+                    dtl["completed_stages"],
+                    dtl["total_stages"],
+                    f"{dtl['progress_pct']}%",
+                    dtl["ex_fac_str"] or "—",
+                    dtl["deliv_status"],
+                    dtl["stage_remarks"] or "—"
+                ])
+        filename = f"sample-classes-wip-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+
+    buffer.seek(0)
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 @router.post("/sample-classes", summary="Create Sample Class")
@@ -234,6 +427,207 @@ def list_bulk_classes(
             "progress": progress,
         })
     return success_response(data=result)
+
+
+@router.get("/bulk-classes/export/excel", summary="Export Bulk Projects Excel Workbook")
+@router.get("/bulk-classes/export.xlsx", summary="Export Bulk Projects Excel Workbook")
+def export_bulk_classes_excel(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(OrderReadAccess),
+):
+    allowed_vendor_ids = _allowed_vendor_ids(db, current_user)
+    classes = OrderService.list_bulk_classes(
+        db,
+        created_by=None if can_view_all_company_data(current_user) else str(current_user.id),
+        allowed_vendor_ids=allowed_vendor_ids,
+    )
+    xlsx_stream = generate_classes_workbook(classes, track_title="Bulk Projects", accent_color="1E3A8A")
+    filename = f"bulk-projects-wip-{datetime.utcnow().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        xlsx_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@router.get("/bulk-classes/export/csv", summary="Export Bulk Projects CSV")
+@router.get("/bulk-classes/export.csv", summary="Export Bulk Projects CSV")
+def export_bulk_classes_csv(
+    view: str = Query("table"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(OrderReadAccess),
+):
+    allowed_vendor_ids = _allowed_vendor_ids(db, current_user)
+    classes = OrderService.list_bulk_classes(
+        db,
+        created_by=None if can_view_all_company_data(current_user) else str(current_user.id),
+        allowed_vendor_ids=allowed_vendor_ids,
+    )
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+
+    if view == "matrix":
+        headers = ["Project Info / Product Index"] + [f"[{bc.serial_number or 'NO-SN'}] {bc.name}" for bc in classes]
+        writer.writerow(headers)
+        writer.writerow(["Customer"] + [bc.customer or "—" for bc in classes])
+        
+        vendors_row = []
+        for bc in classes:
+            active_orders = [o for o in bc.orders if o.is_active]
+            v_names = sorted({o.vendor.name for o in active_orders if o.vendor})
+            vendors_row.append(", ".join(v_names) if v_names else (bc.vendor.name if bc.vendor else "—"))
+        writer.writerow(["Vendors"] + vendors_row)
+        writer.writerow(["Status"] + [bc.status or "active" for bc in classes])
+
+        progress_strs = []
+        for bc in classes:
+            active_orders = [o for o in bc.orders if o.is_active]
+            total_st = sum(len(o.stages) for o in active_orders)
+            comp_st = sum(sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed") for o in active_orders)
+            pct = round((comp_st / total_st) * 100) if total_st > 0 else (100 if bc.status == "completed" else 0)
+            progress_strs.append(f"{pct}% ({comp_st}/{total_st} stages)")
+        writer.writerow(["Overall Progress"] + progress_strs)
+        writer.writerow(["Total Products"] + [str(len([o for o in bc.orders if o.is_active])) for bc in classes])
+        writer.writerow(["--------------------"] * len(headers))
+
+        max_products = max([len([o for o in bc.orders if o.is_active]) for bc in classes] or [0])
+        for p_idx in range(max_products):
+            row = [f"Product #{p_idx + 1}"]
+            for bc in classes:
+                active_orders = [o for o in bc.orders if o.is_active]
+                if p_idx < len(active_orders):
+                    o = active_orders[p_idx]
+                    dtl = _get_order_stage_details(o)
+                    prod_str = f"{o.product_name or 'Product'} [{o.style_name or 'No Style'}] -> Stage: {dtl['stage_title']} ({dtl['stage_status']})"
+                    if dtl["ex_fac_str"]:
+                        prod_str += f" | Ex-Fac: {dtl['ex_fac_str']}"
+                    prod_str += f" | Progress: {dtl['progress_pct']}%"
+                    row.append(prod_str)
+                else:
+                    row.append("—")
+            writer.writerow(row)
+        filename = f"bulk-projects-matrix-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+
+    elif view == "summary":
+        writer.writerow([
+            "Project Number",
+            "Project Name",
+            "Customer",
+            "Vendors",
+            "Status",
+            "Total Orders",
+            "Total Stages",
+            "Completed Stages",
+            "Progress %",
+            "Latest Stage",
+            "Latest Update",
+            "Created At"
+        ])
+        for bc in classes:
+            active_orders = [o for o in bc.orders if o.is_active]
+            total_stages = sum(len(o.stages) for o in active_orders)
+            completed_stages = sum(
+                sum(1 for st in o.stages if (st.status.value if hasattr(st.status, "value") else str(st.status)) == "completed")
+                for o in active_orders
+            )
+            if total_stages > 0:
+                progress = round((completed_stages / total_stages) * 100)
+            elif bc.status == "completed":
+                progress = 100
+            else:
+                progress = 0
+
+            vendor_names = sorted({order.vendor.name for order in active_orders if order.vendor})
+            vendors_str = ", ".join(vendor_names) if vendor_names else (bc.vendor.name if bc.vendor else "")
+
+            all_stages = [st for o in active_orders for st in o.stages]
+            latest_stage_info = ""
+            latest_update_dt = None
+            if all_stages:
+                stages_with_time = [st for st in all_stages if st.updated_at]
+                if stages_with_time:
+                    latest_st = max(stages_with_time, key=lambda x: x.updated_at)
+                    st_name = latest_st.stage_name.value if hasattr(latest_st.stage_name, "value") else str(latest_st.stage_name)
+                    st_status = latest_st.status.value if hasattr(latest_st.status, "value") else str(latest_st.status)
+                    latest_stage_info = f"{st_name} ({st_status})"
+                    latest_update_dt = latest_st.updated_at
+            
+            if not latest_update_dt:
+                order_dates = [o.updated_at for o in active_orders if o.updated_at]
+                if order_dates:
+                    latest_update_dt = max(order_dates)
+                else:
+                    latest_update_dt = getattr(bc, "updated_at", None) or bc.created_at
+
+            writer.writerow([
+                bc.serial_number or "",
+                bc.name or "",
+                bc.customer or "",
+                vendors_str,
+                bc.status or "",
+                len(active_orders),
+                total_stages,
+                completed_stages,
+                f"{progress}%",
+                latest_stage_info,
+                latest_update_dt.strftime("%Y-%m-%d %H:%M") if latest_update_dt else "",
+                bc.created_at.strftime("%Y-%m-%d %H:%M") if bc.created_at else "",
+            ])
+        filename = f"bulk-projects-summary-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+
+    else:
+        # Default: WIP Product Master Table
+        writer.writerow([
+            "Project Serial",
+            "Project Name",
+            "Customer",
+            "Vendor",
+            "Product Name",
+            "Style Code",
+            "Order / PO #",
+            "Quantity",
+            "Current Stage",
+            "Stage Status",
+            "Stage Target Date",
+            "Completed Stages",
+            "Total Stages",
+            "Progress %",
+            "Ex-Factory Date",
+            "Delivery Status",
+            "Latest Stage Notes"
+        ])
+        for bc in classes:
+            active_orders = [o for o in bc.orders if o.is_active]
+            for order in active_orders:
+                dtl = _get_order_stage_details(order)
+                v_name = order.vendor.name if order.vendor else (bc.vendor.name if bc.vendor else "—")
+                writer.writerow([
+                    bc.serial_number or "—",
+                    bc.name or "—",
+                    bc.customer or "—",
+                    v_name,
+                    order.product_name or "—",
+                    order.style_name or "—",
+                    order.order_no or "—",
+                    order.quantity or 0,
+                    dtl["stage_title"],
+                    dtl["stage_status"],
+                    dtl["stage_target"],
+                    dtl["completed_stages"],
+                    dtl["total_stages"],
+                    f"{dtl['progress_pct']}%",
+                    dtl["ex_fac_str"] or "—",
+                    dtl["deliv_status"],
+                    dtl["stage_remarks"] or "—"
+                ])
+        filename = f"bulk-projects-wip-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+
+    buffer.seek(0)
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 @router.post("/bulk-classes", response_model=dict, summary="Create Bulk Project")
@@ -537,6 +931,7 @@ def get_order(
         "product_name": order.product_name,
         "product_type": order.product_type,
         "fabric": order.fabric,
+        "tech_pack_no": order.tech_pack_no,
         "quantity": order.quantity,
         "ex_factory_date": str(order.ex_factory_date) if order.ex_factory_date else None,
         "status": order.status.value, 
@@ -555,6 +950,8 @@ def get_order(
         "delay_days": order.delay_days,
         "sample_class_id": str(order.sample_class_id) if order.sample_class_id else None,
         "sample_class_name": order.sample_class.name if order.sample_class else None,
+        "bulk_class_id": str(order.bulk_class_id) if order.bulk_class_id else None,
+        "bulk_class_name": order.bulk_class.name if order.bulk_class else None,
         "order_placement_date": str(order.order_placement_date) if getattr(order, 'order_placement_date', None) else None,
         "attachments": [
             {

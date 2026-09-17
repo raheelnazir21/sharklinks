@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sample & Bulk Order Handbook — CC Production & QMS</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18mm 14mm 18mm 14mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+    
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 11.5pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .cover-header {
+      border-bottom: 3px solid #0d9488;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.03em;
+      margin: 0 0 6px 0;
+      text-transform: uppercase;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #0d9488;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 0 0 14px 0;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: #f0fdfa;
+      color: #0f766e;
+      border: 1px solid #99f6e4;
+      border-radius: 9999px;
+      padding: 4px 14px;
+      font-size: 8.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    h1, h2, h3, h4 {
+      color: #0f172a;
+      font-weight: 800;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    h1 {
+      font-size: 20pt;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-top: 36px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 16pt;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      border-left: 4px solid #0d9488;
+      padding-left: 10px;
+    }
+
+    h3 {
+      font-size: 13pt;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      color: #334155;
+    }
+
+    p {
+      margin: 0 0 12px 0;
+    }
+
+    a {
+      color: #0d9488;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 8.5pt;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    /* Callouts / Warnings */
+    .callout {
+      background-color: #f8fafc;
+      border-left: 4px solid #0d9488;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 10pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .callout-warning, blockquote:has(strong:contains("Ex-Factory")) {
+      background-color: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+
+    blockquote {
+      background-color: #f0fdfa;
+      border-left: 4px solid #0d9488;
+      margin: 14px 0;
+      padding: 10px 16px;
+      border-radius: 4px;
+      font-size: 10pt;
+      color: #134e4a;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Screenshots & Images */
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 14px auto 18px auto;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Horizontal rules */
+    hr {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 28px 0;
+    }
+
+    code {
+      background-color: #f1f5f9;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 9pt;
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #cbd5e1;
+      font-size: 8.5pt;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <h1 id="sample-bulk-order-handbook">Sample &amp; Bulk Order Handbook</h1>
+<h3 id="cc-production-qms-cotton-to-customer">CC Production &amp; QMS — Cotton to Customer</h3>
+<p>This handbook covers <strong>everything</strong> involved in creating and running orders: from opening the<br />
+login screen, to creating a Sample Class or Bulk Project, to registering orders under it, to<br />
+driving every production stage through QC approval, rejection, defect gating, completion,<br />
+promotion to bulk, and reordering.</p>
+<p>Every step below has a screenshot taken from the live system, followed by a short explanation of<br />
+what you are looking at and exactly what to click.</p>
+<hr />
+<h2 id="contents">Contents</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="#1-how-the-system-is-organised">How the system is organised</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="#2-who-can-do-what-roles">Who can do what (roles)</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="#3-logging-in">Logging in</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="#4-step-1--create-a-sample-class">Step 1 — Create a Sample Class</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="#5-step-2--create-a-sample-order-prototype">Step 2 — Create a Sample Order (prototype)</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="#6-step-3--run-the-sample-stages">Step 3 — Run the sample stages</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td><a href="#7-step-4--the-pps-qc-check-decision">Step 4 — The PPS QC Check decision</a></td>
+</tr>
+<tr>
+<td>8</td>
+<td><a href="#8-step-5--rejection-iterations-ca--pa">Step 5 — Rejection, iterations, CA &amp; PA</a></td>
+</tr>
+<tr>
+<td>9</td>
+<td><a href="#9-step-6--sample-completed--move-to-bulk">Step 6 — Sample completed → Move to Bulk</a></td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="#10-step-7--create-a-bulk-project">Step 7 — Create a Bulk Project</a></td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="#11-step-8--register-style-pos-bulk-orders">Step 8 — Register Style POs (bulk orders)</a></td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="#12-step-9--run-the-15-bulk-stages">Step 9 — Run the 15 bulk stages</a></td>
+</tr>
+<tr>
+<td>13</td>
+<td><a href="#13-step-10--conditional-approval--defect-gating">Step 10 — Conditional approval &amp; defect gating</a></td>
+</tr>
+<tr>
+<td>14</td>
+<td><a href="#14-step-11--inspection-stages-completion--reorder">Step 11 — Inspection stages, completion &amp; Reorder</a></td>
+</tr>
+<tr>
+<td>15</td>
+<td><a href="#15-everyday-order-actions">Everyday order actions</a></td>
+</tr>
+<tr>
+<td>16</td>
+<td><a href="#16-supporting-screens">Supporting screens</a></td>
+</tr>
+<tr>
+<td>17</td>
+<td><a href="#17-error-messages-explained">Error messages explained</a></td>
+</tr>
+<tr>
+<td>18</td>
+<td><a href="#18-quick-reference">Quick reference</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-how-the-system-is-organised">1. How the system is organised</h2>
+<p>Everything in the system sits in four levels. You always work top-down.</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>What it is</th>
+<th>Where you manage it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Vendor</strong></td>
+<td>The factory that will make the goods. Holds floors, lines and a sampling department.</td>
+<td><strong>Vendors</strong></td>
+</tr>
+<tr>
+<td><strong>2. Project class</strong></td>
+<td>The folder that groups orders for one customer programme. Called a <strong>Sample Class</strong> on the sampling side and a <strong>Bulk Project</strong> on the bulk side.</td>
+<td><strong>Sampling Projects</strong> / <strong>Bulk Projects</strong></td>
+</tr>
+<tr>
+<td><strong>3. Order</strong></td>
+<td>One actual job — a prototype, or a PO for a quantity of a style.</td>
+<td>Inside the class, via <strong>View Orders</strong> / <strong>View Batch Items</strong></td>
+</tr>
+<tr>
+<td><strong>4. Stages</strong></td>
+<td>The sequential production steps of that order, each with its own target date, buffer, comments, attachments and approvals.</td>
+<td>Inside the order detail page</td>
+</tr>
+</tbody>
+</table>
+<div class="callout"><strong>You cannot create an order without a class, and you cannot create a class without a vendor.</strong><br />
+If the vendor dropdown is empty, the vendor has to be created (or assigned to you) first.</div>
+<h3 id="the-two-tracks">The two tracks</h3>
+<p>The system runs two separate pipelines. They look similar but behave differently.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Sampling track</strong></th>
+<th><strong>Bulk track</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Menu</td>
+<td>Sampling Projects</td>
+<td>Bulk Projects</td>
+</tr>
+<tr>
+<td>Container</td>
+<td>Sample Class</td>
+<td>Bulk Project</td>
+</tr>
+<tr>
+<td>Create button</td>
+<td><strong>Initiate Prototype</strong></td>
+<td><strong>Register Style PO</strong></td>
+</tr>
+<tr>
+<td>Orders per submit</td>
+<td>One order</td>
+<td>Many orders (batches) at once</td>
+</tr>
+<tr>
+<td>Default stages</td>
+<td>10</td>
+<td>15</td>
+</tr>
+<tr>
+<td>Where goods are placed</td>
+<td>Vendor <strong>sampling department</strong> (no floor/line needed)</td>
+<td>Vendor <strong>floors and lines</strong></td>
+</tr>
+<tr>
+<td>Stage that decides quality</td>
+<td><strong>PPS QC Check</strong> (3 options)</td>
+<td><strong>PP Sample Development</strong> (3 options) + 3 inspection stages (Accept/Reject)</td>
+</tr>
+<tr>
+<td>Rejection can restart from</td>
+<td><strong>Any earlier stage</strong></td>
+<td><strong>Only the same stage</strong> (that stage repeats)</td>
+</tr>
+<tr>
+<td>When finished</td>
+<td>Can be <strong>promoted to Bulk</strong></td>
+<td>Can be <strong>reordered</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-who-can-do-what-roles">2. Who can do what (roles)</h2>
+<p>The menu and the buttons you see change with your role. If a button in this handbook is missing<br />
+on your screen, check this table first.</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Super Admin</th>
+<th>Admin</th>
+<th>Manager</th>
+<th>QC Officer</th>
+<th>Viewer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See all company data</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Only own vendors</td>
+<td>Only own vendors</td>
+<td>Yes (read-only)</td>
+</tr>
+<tr>
+<td>Create Sample Class / Bulk Project</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Edit / delete</strong> a class card</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Deactivate a class</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Create orders</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Edit an order</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Update stages, approve, reject, clear defects</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Cancel an order</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Promote to bulk / Reorder</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Move an order to another class</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Users menu</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Two rules that surprise people:</p>
+<ul>
+<li><strong>Super Admins and Managers see the pencil and bin icons on a Sample Class or Bulk Project card.</strong> Other<br />
+  roles can still view or work inside them.</li>
+<li><strong>Managers and QC officers only see vendors they are the assigned manager for.</strong> If an order or<br />
+  vendor is "missing", it usually belongs to another manager. Ask an admin to assign the vendor to you.</li>
+<li><strong>Viewers see everything but can change nothing.</strong> A blue <em>Viewer Mode</em> banner appears at the top of<br />
+  order pages and all action buttons are hidden.</li>
+</ul>
+<hr />
+<h2 id="3-logging-in">3. Logging in</h2>
+<p>Open the system in your browser. You land on the sign-in screen.</p>
+<p><img alt="Login screen" src="screenshots/01-login-page.png" /></p>
+<p>The left panel is only branding. Everything you need is the white card on the right.</p>
+<p><strong>Steps</strong></p>
+<ol>
+<li>Type your work email in <strong>Email Address</strong>.</li>
+<li>Type your password in <strong>Password</strong>. The eye icon reveals it if you need to check a typo.</li>
+<li>Tick <strong>Remember me</strong> if this is your own device.</li>
+<li>Click <strong>Sign In</strong>.</li>
+</ol>
+<p><img alt="Login form filled in" src="screenshots/02-login-filled.png" /></p>
+<p><strong>Other options on this screen</strong></p>
+<table>
+<thead>
+<tr>
+<th>Link / button</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Forgot password?</strong></td>
+<td>Sends a reset <em>request</em> to the admin queue. An administrator must approve it before you get a reset link — it is not an automatic email.</td>
+</tr>
+<tr>
+<td><strong>Google</strong></td>
+<td>Signs in with a linked Google account, if your installation has it configured.</td>
+</tr>
+<tr>
+<td><strong>Create an account</strong></td>
+<td>Public sign-up. New accounts are created as <strong>Viewer</strong> (read-only). An admin must promote you to Manager or QC Officer before you can create anything.</td>
+</tr>
+</tbody>
+</table>
+<p>If the credentials are wrong you get a red banner reading <em>Invalid email or password.</em> Nothing is<br />
+locked — just retry.</p>
+<h3 id="after-sign-in-the-dashboard">After sign-in: the Dashboard</h3>
+<p><img alt="Production dashboard after login" src="screenshots/03-dashboard-after-login.png" /></p>
+<p>You arrive at the <strong>Production Dashboard</strong>. Read it left to right:</p>
+<ul>
+<li><strong>Left sidebar</strong> — your navigation, grouped into Overview, Production, Quality and Management.<br />
+  The items you see depend on your role. The <strong>‹</strong> button collapses it to icons.</li>
+<li><strong>Today's Factory Pulse</strong> (green panel) — live counts of orders in flow, delayed orders, FPY rate<br />
+  and DHU risk.</li>
+<li><strong>Quick tiles</strong> — <em>Bulk Order</em>, <em>QC Entry</em>, <em>Sample Order</em> and <em>Alerts</em> jump straight into those areas.</li>
+<li><strong>Historian</strong> (bottom of the sidebar) — the last few factory events; visible to Super Admin, Admin<br />
+  and Manager only.</li>
+<li><strong>Top-right icons</strong> — global search, notifications, your profile initial, and sign-out.</li>
+</ul>
+<p>For order work you will use only two sidebar links: <strong>Sampling Projects</strong> and <strong>Bulk Projects</strong>.</p>
+<hr />
+<h2 id="4-step-1-create-a-sample-class">4. Step 1 — Create a Sample Class</h2>
+<p>A <strong>Sample Class</strong> is the folder that holds all prototype orders for one customer style programme.<br />
+Create it before any sample order.</p>
+<p>Click <strong>Sampling Projects</strong> in the sidebar.</p>
+<p><img alt="Sampling projects list" src="screenshots/05-sampling-projects-list.png" /></p>
+<p>What is on this screen:</p>
+<ul>
+<li><strong>Search box</strong> — searches sample name, customer and serial number.</li>
+<li><strong>All Status</strong> filter — narrows by class status (active, completed, inactive).</li>
+<li><strong>New Sample</strong> button — creates a class (hidden for Viewers).</li>
+<li><strong>Three summary cards</strong> — total classes, how many have a vendor assigned, and how many match your<br />
+  current filters.</li>
+<li><strong>One card per class</strong> showing serial number, name, customer, vendor, created date and a<br />
+<strong>Stage Progress</strong> bar. The bar is the average completion of all stages of all active orders in<br />
+  that class, so a brand-new class reads 0%.</li>
+<li><strong>View Orders</strong> at the bottom of each card opens the orders inside that class.</li>
+</ul>
+<p>Click <strong>New Sample</strong>. The create dialog opens empty:</p>
+<p><img alt="Create Sample Class dialog, empty" src="screenshots/06-sample-class-modal-blank.png" /></p>
+<p>Fill it in:</p>
+<p><img alt="Create Sample Class dialog, filled in" src="screenshots/07-sample-class-modal-filled.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>What to enter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Serial Number</strong></td>
+<td>Yes</td>
+<td>Your internal reference for the class, e.g. <code>SC-2026-001</code>. Searchable.</td>
+</tr>
+<tr>
+<td><strong>Customer</strong></td>
+<td>Yes</td>
+<td>The buyer, e.g. <code>Nike</code>. Searchable.</td>
+</tr>
+<tr>
+<td><strong>Manufacturing Vendor</strong></td>
+<td>Yes</td>
+<td>The factory. Only vendors you are allowed to use appear here.</td>
+</tr>
+<tr>
+<td><strong>Sample Class Name</strong></td>
+<td>Yes</td>
+<td>A human name for the programme, e.g. <code>Summer performance tee</code>. Searchable.</td>
+</tr>
+<tr>
+<td><strong>Remarks</strong></td>
+<td>No</td>
+<td>Free notes — tech pack references, design guidance, anything the team should see.</td>
+</tr>
+</tbody>
+</table>
+<p>Click <strong>Create Class</strong>. A green <em>Mission Successful</em> confirmation appears and closes itself after a<br />
+couple of seconds.</p>
+<p><img alt="Sample class created confirmation" src="screenshots/08-sample-class-created-toast.png" /></p>
+<p>The new class now appears as a card in the grid:</p>
+<p><img alt="Sampling projects list with the new card" src="screenshots/09-sampling-projects-with-new-card.png" /></p>
+<div class="callout"><strong>Editing / deleting a class later:</strong> <strong>Super Admins and Managers</strong> see the pencil (edit) and bin (deactivate) icons on the card. Deactivating a class sets it to <em>inactive</em> <strong>and cancels every active order inside it</strong> — the history stays readable, but the orders stop.</p>
+<p><strong>Export CSV:</strong> Click the <strong>Export CSV</strong> button in the top toolbar to instantly download a comprehensive CSV spreadsheet with product info, customer, vendor, stage progress, and latest stage update details.</div>
+<hr />
+<h2 id="5-step-2-create-a-sample-order-prototype">5. Step 2 — Create a Sample Order (prototype)</h2>
+<p>Open the class you just created with <strong>View Orders</strong>. This is the order list for that class — empty<br />
+for a new class.</p>
+<p><img alt="Empty sample order list" src="screenshots/10-sample-orders-empty.png" /></p>
+<ul>
+<li><strong>Back to Samples</strong> returns to the class grid.</li>
+<li><strong>Initiate Prototype</strong> creates a sample order <em>inside this class</em>.</li>
+<li><strong>Search products…</strong> filters the cards by PO, style or product name.</li>
+</ul>
+<p>Click <strong>Initiate Prototype</strong>.</p>
+<p><img alt="Initialize Prototype form, top section" src="screenshots/11-sample-order-form-top.png" /></p>
+<h3 id="51-product-and-schedule-fields">5.1 Product and schedule fields</h3>
+<p><img alt="Sample order form filled in" src="screenshots/12-sample-order-form-filled.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prototype Name</strong></td>
+<td>Yes</td>
+<td>The product, e.g. <code>Summer T-Shirt Sample</code>. This is the title shown on the order card and order page for sampling.</td>
+</tr>
+<tr>
+<td><strong>Style Name</strong></td>
+<td>Yes</td>
+<td>Style reference, e.g. <code>Style #ST-99</code>.</td>
+</tr>
+<tr>
+<td><strong>Internal Code (Tech Pack #)</strong></td>
+<td>No</td>
+<td>Your tech pack or internal code.</td>
+</tr>
+<tr>
+<td><strong>Quantity</strong></td>
+<td>Yes</td>
+<td>Number of sample pieces.</td>
+</tr>
+<tr>
+<td><strong>Date Sent</strong></td>
+<td>No</td>
+<td>The day the job starts. <strong>This is the date all stage target dates are calculated from.</strong> Leave it blank and the system counts from today.</td>
+</tr>
+<tr>
+<td><strong>Ex-Factory Date</strong></td>
+<td>No</td>
+<td>The promised delivery date. Once this date passes and the order is not complete, the order is flagged <strong>delayed</strong> and every unfinished stage turns red.</td>
+</tr>
+<tr>
+<td><strong>Assigned Vendor</strong></td>
+<td>Yes</td>
+<td>The factory making the sample. Changing it resets the department choice.</td>
+</tr>
+<tr>
+<td><strong>Sampling Department</strong></td>
+<td>Yes</td>
+<td>Pick the vendor's sampling department. Sample orders go to a department, <strong>not</strong> to a floor or line. If the vendor has none, the system creates a default "Sampling Department" automatically.</td>
+</tr>
+<tr>
+<td><strong>Requirements</strong></td>
+<td>No</td>
+<td>Written specification — Pantone, GSM, stitching notes, tolerances. Visible to everyone on the order.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-reference-pictures">5.2 Reference pictures</h3>
+<p>Click <strong>Add Picture</strong> in the <em>Reference Pictures</em> box and choose one or more <strong>image</strong> files<br />
+(JPG, PNG, WebP — PDFs are rejected here).</p>
+<p><img alt="Reference picture attached with its requirement" src="screenshots/13-sample-order-reference-picture.png" /></p>
+<p>Each picture gets its own <strong>requirement</strong> text box. Use it to say what the picture proves —<br />
+"front print placement 30mm below collar seam". The first picture also becomes the order's main<br />
+reference image. The <strong>×</strong> removes a picture.</p>
+<h3 id="53-predicted-stage-days-how-the-schedule-is-built">5.3 Predicted Stage Days — how the schedule is built</h3>
+<p>This panel is the most important part of the form. It decides <strong>which stages exist</strong> and <strong>when each<br />
+one is due</strong>.</p>
+<p><img alt="Predicted Stage Days panel" src="screenshots/14-sample-stage-days-panel.png" /></p>
+<p>The ten sampling stages are listed in order. Each row has:</p>
+<ul>
+<li>a <strong>checkbox</strong> (used only for merging, see below),</li>
+<li><strong>Target</strong> — how many days that stage should take,</li>
+<li><strong>Buffer</strong> — extra contingency days,</li>
+<li><strong>Quick fill</strong> buttons (3d / 7d / 14d / 21d) as shortcuts.</li>
+</ul>
+<p>Two rules you must know:</p>
+<ol>
+<li><strong>A stage with Target = 0 is not created at all.</strong> Only stages with days (or stages inside a merged<br />
+   chunk) become part of the order. If you leave everything at 0 the form refuses to submit with<br />
+<em>"Add predicted days for at least one sample stage."</em></li>
+<li><strong>Target days are cumulative.</strong> The system starts at <em>Date Sent</em> and adds each stage's target days<br />
+   in sequence, so stage 1's target date is Date Sent + its days, stage 2's is that date plus its own<br />
+   days, and so on. <strong>Buffer days are recorded separately and do not move the target dates</strong> — they<br />
+   are visible contingency, shown as <code>+2d buf</code>, not extra schedule.</li>
+</ol>
+<p>Fill in days for every stage you want:</p>
+<p><img alt="Stage days filled in" src="screenshots/15-sample-stage-days-filled.png" /></p>
+<p><strong>Merging stages into one SLA chunk</strong> (optional): tick two or more stages, click<br />
+<strong>Merge Selected (n)</strong>, enter the total days for the group and confirm. The group then shares one<br />
+deadline instead of each stage having its own, and the rows show <em>SLA Managed by Parent Chunk</em>.<br />
+<strong>Unmerge</strong> dissolves it. This is shown in detail in the bulk section<br />
+(<a href="#113-stage-days-and-sla-chunks">§11.3</a>) — it works identically on both tracks.</p>
+<div class="callout"><strong>⚠️ Ex-Factory Date Guard:</strong> The cumulative duration of all stages (including individual days and merged SLA chunks) cannot exceed the order's Ex-Factory Date. If assigned days exceed the time available before the Ex-Factory date, a red alert notification triggers:<br />
+<em>"⚠️ You exceed X day(s) to Ex-Factory date!"</em><br />
+The system locks the submit button with <code>Exceeds Ex-Factory Date by Xd</code> until stage days or the Ex-Factory date are adjusted.</div>
+<h3 id="54-submit">5.4 Submit</h3>
+<p>Click <strong>Launch Track</strong> at the bottom. The sample order is created and you are taken straight to its<br />
+detail page.</p>
+<p><img alt="New sample order detail page" src="screenshots/17-sample-order-detail-fresh.png" /></p>
+<p>Read this page as three columns:</p>
+<ul>
+<li><strong>Top bar</strong> — back button, the track (<code>sampling</code>), the order status (<code>pending</code>), a <strong>History</strong><br />
+  button, and on the right the <strong>Production Start</strong> and <strong>Target Ex-Factory</strong> dates.</li>
+<li><strong>Production Timeline</strong> (left) — every stage as a pill, numbered, with its target date.<br />
+  Stage 1 is open and selected; every later stage shows a <strong>padlock</strong>.</li>
+<li><strong>Stage panel</strong> (right) — the selected stage, its schedule, status, and the action buttons.</li>
+</ul>
+<hr />
+<h2 id="6-step-3-run-the-sample-stages">6. Step 3 — Run the sample stages</h2>
+<p>Stages run <strong>strictly in order</strong>. You cannot touch stage 3 until stage 2 is completed. Each stage<br />
+moves through three states: <strong>pending → in_progress → completed</strong>.</p>
+<h3 id="61-start-a-stage">6.1 Start a stage</h3>
+<p>Select the stage in the timeline (only unlocked stages can be selected) and click <strong>Start Phase</strong>.<br />
+A confirmation appears:</p>
+<p><img alt="Start phase confirmation" src="screenshots/18-start-phase-confirm.png" /></p>
+<p>Click <strong>Yes, Update Stage</strong>. Every stage action is deliberately confirmed like this, because each one<br />
+is written to activity logs and order history.</p>
+<p>The stage is now <strong>in_progress</strong>: its start timestamp is recorded and the button changes to<br />
+<strong>Confirm Completion</strong>.</p>
+<p><img alt="Stage in progress" src="screenshots/19-stage-in-progress.png" /></p>
+<h3 id="62-log-what-happened-production-comments">6.2 Log what happened — production comments</h3>
+<p>Every stage has its own <strong>Production Comments</strong> thread. Use it for the running record: what was<br />
+received, what went wrong, who was told.</p>
+<p><img alt="Comment posted on a stage" src="screenshots/20-stage-comment-posted.png" /></p>
+<p>Type in the box and press <strong>Ctrl+Enter</strong> (or click the send arrow). Comments are per stage, stamped<br />
+with your name and time. They are the cheapest way to make a job auditable — use them generously.</p>
+<h3 id="63-complete-a-stage">6.3 Complete a stage</h3>
+<p>Click <strong>Confirm Completion</strong> and confirm. The completion date is stamped, the pill turns green with a<br />
+tick, and the system <strong>automatically selects the next stage</strong> for you.</p>
+<p><img alt="Stage completed, next stage selected" src="screenshots/21-stage-completed-next-selected.png" /></p>
+<p>Work down the timeline this way. As stages complete, the timeline fills with green:</p>
+<p><img alt="Timeline part-way through" src="screenshots/22-timeline-progress-midway.png" /></p>
+<h3 id="64-reading-the-timeline-colours">6.4 Reading the timeline colours</h3>
+<table>
+<thead>
+<tr>
+<th>Appearance</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Grey with a padlock</strong></td>
+<td>Locked — an earlier stage is not complete yet. Cannot be selected.</td>
+</tr>
+<tr>
+<td><strong>Blue / green filled (selected)</strong></td>
+<td>The stage you are currently looking at.</td>
+</tr>
+<tr>
+<td><strong>Green with a tick</strong></td>
+<td>Completed. Shows <code>COMP: &lt;date&gt;</code>.</td>
+</tr>
+<tr>
+<td><strong>Red with a warning icon</strong></td>
+<td>Past its target date and not complete, or the order's ex-factory date has passed.</td>
+</tr>
+<tr>
+<td><strong>Amber with a padlock + GATED</strong></td>
+<td>Blocked by an unresolved conditional defect (bulk only — see <a href="#13-step-10--conditional-approval--defect-gating">§13</a>).</td>
+</tr>
+<tr>
+<td><code>+2d buf</code></td>
+<td>That stage has buffer days recorded on top of its target.</td>
+</tr>
+</tbody>
+</table>
+<p>If you select a stage whose predecessor is unfinished, the panel shows<br />
+<em>"Stage Locked: Previous phase must be marked as COMPLETED first."</em> — that is expected, not an error.</p>
+<p>Other things on the stage panel:</p>
+<ul>
+<li><strong>Phase Schedule</strong> — target date, start timestamp, and buffer if any.</li>
+<li><strong>Phase Status</strong> — Active Phase or Completed.</li>
+<li><strong>Iteration n • Sequential Stage n</strong> — which rework round you are in and the stage's position.</li>
+<li><strong>Phase Documents</strong> (bottom of the page) — <strong>Add Phase Data</strong> uploads a PDF or image against the<br />
+  whole order (test reports, measurement sheets). Only PDF, JPG, PNG and WebP are accepted.</li>
+</ul>
+<hr />
+<h2 id="7-step-4-the-pps-qc-check-decision">7. Step 4 — The PPS QC Check decision</h2>
+<p>Stage 8 of the sampling flow, <strong>PPS QC Check</strong>, is the quality gate. It does not have a plain<br />
+"complete" button. Start the stage as usual and you get a <strong>QC Decision</strong> panel with three choices:</p>
+<p><img alt="Three-state QC decision panel" src="screenshots/23-qc-check-three-state-panel.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Approved</strong> (green)</td>
+<td>Stage is completed and the order advances normally.</td>
+</tr>
+<tr>
+<td><strong>Conditional Approved</strong> (amber)</td>
+<td>Stage is completed <strong>but</strong> a condition is recorded against it. On the sampling track this is a note; on the bulk track it also <strong>locks</strong> a downstream stage.</td>
+</tr>
+<tr>
+<td><strong>Not Approved</strong> (red)</td>
+<td>Stage is rejected. The order starts a <strong>new iteration</strong> and production repeats from a stage you choose.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="71-approved">7.1 Approved</h3>
+<p><img alt="Approved confirmation dialog" src="screenshots/24-qc-modal-approved.png" /></p>
+<p>Nothing to fill in. The dialog tells you exactly what will happen. Click<br />
+<strong>Confirm approved</strong>.</p>
+<p><img alt="Result after approval" src="screenshots/29-qc-approved-result.png" /></p>
+<h3 id="72-conditional-approved">7.2 Conditional Approved</h3>
+<p><img alt="Conditional approval dialog" src="screenshots/25-qc-modal-conditional.png" /></p>
+<p>You must pick a <strong>Conditional Requirement</strong> from the list:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it gates (bulk track)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fabric shade / resubmission before bulk fabric dying</td>
+<td>Blocks the <strong>dyeing</strong> stages</td>
+</tr>
+<tr>
+<td>If size specs are incorrect then need to submit fit sample</td>
+<td>Blocks <strong>bulk fabric cutting</strong></td>
+</tr>
+<tr>
+<td>Embellishment printing or embroidery strike off</td>
+<td>Blocks <strong>printing / embroidery / embellishment</strong></td>
+</tr>
+<tr>
+<td>Other — see remarks</td>
+<td>Recorded as a custom condition, no automatic block</td>
+</tr>
+</tbody>
+</table>
+<p>The stage completes and production continues, but the condition stays attached to the order until<br />
+someone clears it with proof. See <a href="#13-step-10--conditional-approval--defect-gating">§13</a>.</p>
+<h3 id="73-not-approved">7.3 Not Approved</h3>
+<p><img alt="Not approved dialog" src="screenshots/26-qc-modal-not-approved.png" /></p>
+<p>Three inputs:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repeat From Stage</strong></td>
+<td>Yes</td>
+<td>On the sampling track you may choose <strong>any stage at or before</strong> QC Check — pick the stage where the fault was actually introduced. On the bulk track a stage can only repeat itself.</td>
+</tr>
+<tr>
+<td><strong>Rejection Reason (Corrective Action)</strong></td>
+<td>Yes</td>
+<td>What is wrong. This becomes the <strong>CA</strong> record. Rejection is refused without it.</td>
+</tr>
+<tr>
+<td><strong>Preventive Plan</strong></td>
+<td>No (but expected)</td>
+<td>How you will stop it recurring. This becomes the <strong>PA</strong> record.</td>
+</tr>
+</tbody>
+</table>
+<p>Click <strong>Confirm not approved</strong>.</p>
+<hr />
+<h2 id="8-step-5-rejection-iterations-ca-pa">8. Step 5 — Rejection, iterations, CA &amp; PA</h2>
+<p>When a stage is rejected, the system does four things at once:</p>
+<ol>
+<li>Increases the order's <strong>iteration</strong> counter (Iteration 1 → 2).</li>
+<li>Resets the chosen repeat-from stage <strong>and everything after it</strong> back to <em>pending</em>, clearing their<br />
+   start and completion dates.</li>
+<li>Writes the reason and plan into the permanent rejection log.</li>
+<li>Puts the order back to <em>in_progress</em> and re-points it at the repeat-from stage.</li>
+</ol>
+<p><img alt="Order after rejection, now iteration 2" src="screenshots/27-after-rejection-iteration2.png" /></p>
+<p>Scroll down the stage panel to find the <strong>QC Rejection Log</strong>:</p>
+<p><img alt="QC rejection log with CA and PA cards" src="screenshots/28-qc-rejection-log-ca-pa.png" /></p>
+<p>Each entry records the iteration jump, the date, <strong>Rejected At</strong>, <strong>Restart From</strong>, and the two<br />
+cards every audit asks for:</p>
+<ul>
+<li><strong>Corrective Action (CA)</strong> — red card, the defect found.</li>
+<li><strong>Preventive Action (PA)</strong> — green card, the fix that prevents recurrence.</li>
+</ul>
+<p>The log is append-only. It is never overwritten by later iterations, so a style rejected three times<br />
+shows all three rounds. This is your CA/PA evidence — write it properly the first time.</p>
+<div class="callout"><strong>Rejection is not available on every stage.</strong> On the sampling track only <strong>PPS QC Check</strong> can<br />
+raise a rejection. On the bulk track only <strong>PP Sample Development</strong>, <strong>Small Vet Dying</strong>,<br />
+<strong>Full Flag Dying Production</strong> and <strong>Final Random Inspection</strong> can. Elsewhere you will see only a<br />
+completion button, and the API refuses with <em>"Rejection is only permitted on designated<br />
+inspection/approval stages."</em></div>
+<p>After a rejection, re-run the repeated stages exactly as before: start, comment, complete. When you<br />
+reach QC Check again you get the same three choices — approve it this time and carry on.</p>
+<hr />
+<h2 id="9-step-6-sample-completed-move-to-bulk">9. Step 6 — Sample completed → Move to Bulk</h2>
+<p>When <strong>every</strong> stage is completed, the system automatically sets the whole order to <strong>completed</strong>.<br />
+You do not mark the order complete yourself.</p>
+<p><img alt="Completed sample order with Move to Bulk" src="screenshots/30-sample-order-completed.png" /></p>
+<p>Note what changed in the top bar: the status chip reads <strong>COMPLETED</strong> and a new<br />
+<strong>↗ MOVE TO BULK</strong> button has appeared. It only exists on a <em>sampling</em> order that is <em>completed</em>.</p>
+<h3 id="91-promoting-the-sample-to-a-bulk-order">9.1 Promoting the sample to a bulk order</h3>
+<p>Click <strong>Move to Bulk</strong>. A five-part form opens, pre-filled from the sample:</p>
+<p><img alt="Move Sample to Bulk, top of the form" src="screenshots/31-move-to-bulk-modal-top.png" /></p>
+<p><strong>1. Bulk Project Classification</strong> — either choose an <strong>Existing Bulk Project</strong> from the dropdown,<br />
+<em>or</em> type a name in <strong>OR Create New Bulk Project Name</strong> and the project is created for you. One of<br />
+the two is required.</p>
+<p><strong>2. Product Specifications</strong> — Product Name, Style Name, PO #, Priority, Fabric, Tech Pack #.<br />
+Pre-filled from the sample where available.</p>
+<div class="callout"><strong>Check the PO #.</strong> It is required. If the sample had its own PO the box reads <code>&lt;sample PO&gt;-BLK</code>;<br />
+if it did not, the system suggests one from the tech pack or style name instead. Overwrite the<br />
+suggestion with the real purchase order number before launching.</div>
+<p><strong>3. Bulk Quantity &amp; Delivery Schedule</strong> — <strong>Bulk Quantity</strong> and <strong>Ex-Factory Date</strong> are both<br />
+required. Order Placement Date defaults to today and drives the new stage schedule.</p>
+<p><strong>4. Assigned Vendor &amp; Floor Lines</strong> — pick the vendor, then tick floors and lines. A floor ticked<br />
+with <strong>no lines</strong> selected means <em>the whole floor</em>.</p>
+<p><img alt="Move to Bulk with the fields filled in" src="screenshots/32-move-to-bulk-filled.png" /></p>
+<p><strong>5. Requirements, reference pictures and the bulk SLA</strong> — the sample's reference pictures are<br />
+carried over. Below them the full <strong>15-stage bulk pipeline</strong> is laid out with sensible default days<br />
+that you can adjust, merge into chunks, or give buffer to.</p>
+<p><img alt="Bulk stage SLA inside the Move to Bulk form" src="screenshots/33-move-to-bulk-stage-sla.png" /></p>
+<p>Click <strong>Launch Bulk Production Order →</strong>. A brand-new bulk order is created, linked back to the<br />
+sample it came from, and you are taken to it:</p>
+<p><img alt="The promoted bulk order" src="screenshots/34-promoted-bulk-order-detail.png" /></p>
+<p>The original sample order is untouched and stays completed. The bulk order starts at stage 1 with<br />
+all 15 stages pending.</p>
+<div class="callout">Only a <strong>completed sampling</strong> order can be promoted. Trying earlier gives<br />
+<em>"Only completed sample orders can be promoted to bulk."</em></div>
+<hr />
+<h2 id="10-step-7-create-a-bulk-project">10. Step 7 — Create a Bulk Project</h2>
+<p>A <strong>Bulk Project</strong> is the bulk-side equivalent of a Sample Class: the folder that holds the POs for<br />
+one production programme.</p>
+<p>Click <strong>Bulk Projects</strong> in the sidebar.</p>
+<p><img alt="Bulk projects list" src="screenshots/35-bulk-projects-list.png" /></p>
+<p>Four summary cards sit above the grid: <strong>Active Projects</strong>, <strong>Visible Results</strong>, <strong>In Production</strong><br />
+and <strong>Completed</strong>. Each project card shows the project number, name, customer, the vendors actually<br />
+used by its orders, a <strong>Production Progress</strong> bar, and <strong>View Batch Items</strong> to open its orders.</p>
+<p>Click <strong>New Bulk Project</strong>:</p>
+<p><img alt="Create Bulk Project dialog, empty" src="screenshots/36-bulk-class-modal-blank.png" /></p>
+<p><img alt="Create Bulk Project dialog, filled in" src="screenshots/37-bulk-class-modal-filled.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project Number</strong></td>
+<td>Yes</td>
+<td>e.g. <code>BP-2026-001</code>. Searchable.</td>
+</tr>
+<tr>
+<td><strong>Customer</strong></td>
+<td>Yes</td>
+<td>e.g. <code>Target</code>. Searchable.</td>
+</tr>
+<tr>
+<td><strong>Project Name</strong></td>
+<td>Yes</td>
+<td>e.g. <code>Winter jackets phase 1</code>.</td>
+</tr>
+<tr>
+<td><strong>Manufacturing Vendor</strong></td>
+<td>No</td>
+<td>Optional here — each order picks its own vendor, so one project can span several factories.</td>
+</tr>
+<tr>
+<td><strong>Remarks</strong></td>
+<td>No</td>
+<td>Scope, target audit dates, notes.</td>
+</tr>
+</tbody>
+</table>
+<p>Click <strong>Create Project</strong>. The card appears in the grid:</p>
+<p><img alt="Bulk projects with the new card" src="screenshots/38-bulk-projects-with-new-card.png" /></p>
+<div class="callout">As with sample classes, <strong>Super Admins and Managers can edit or delete a project card</strong>, and deactivating a project cancels every active order inside it.</p>
+<p><strong>Export CSV:</strong> Click the <strong>Export CSV</strong> button in the top toolbar to download an Excel-compatible report of all bulk projects with customer, vendors, stage completion progress, and latest stage update details.</div>
+<hr />
+<h2 id="11-step-8-register-style-pos-bulk-orders">11. Step 8 — Register Style POs (bulk orders)</h2>
+<p>Open the project with <strong>View Batch Items</strong>:</p>
+<p><img alt="Empty bulk order list" src="screenshots/39-bulk-orders-empty.png" /></p>
+<p>Click <strong>Register Style PO</strong>. The dialog is titled <strong>Add Products</strong>, and this is the key difference<br />
+from sampling: <strong>you can register several POs in one submit</strong>. Each one is a <em>Product Batch</em>.</p>
+<p><img alt="Bulk order form, first batch" src="screenshots/40-bulk-order-form-batch1.png" /></p>
+<h3 id="111-per-batch-fields">11.1 Per-batch fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Product Name</strong></td>
+<td>Yes</td>
+<td>The product for this batch.</td>
+</tr>
+<tr>
+<td><strong>PO #</strong></td>
+<td>Yes</td>
+<td>The purchase order number. Shown on the card as <code>PO: …</code>.</td>
+</tr>
+<tr>
+<td><strong>Style Name</strong></td>
+<td>Yes</td>
+<td>The style reference, e.g. <code>WJ-DEMO-M-2026</code>. This becomes the order's title on the card and the order page, and it is required later by <strong>Reorder</strong> — so fill it properly now.</td>
+</tr>
+<tr>
+<td><strong>Quantity</strong></td>
+<td>Yes</td>
+<td>Pieces for this PO.</td>
+</tr>
+<tr>
+<td><strong>Ex-Factory Date</strong></td>
+<td>Yes</td>
+<td>Delivery date for this PO. Required on bulk (unlike sampling).</td>
+</tr>
+<tr>
+<td><strong>Vendor</strong></td>
+<td>Yes</td>
+<td>The factory for this batch. Changing it clears the floor selection.</td>
+</tr>
+<tr>
+<td><strong>Floors &amp; Lines</strong></td>
+<td>No</td>
+<td>Where the work will run.</td>
+</tr>
+<tr>
+<td><strong>Reference Pictures</strong></td>
+<td>No</td>
+<td>Per-batch images, each with its own requirement note.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Floors &amp; Lines</strong> loads once a vendor is chosen:</p>
+<p><img alt="Floors and lines selector" src="screenshots/41-bulk-floors-lines-selector.png" /></p>
+<ul>
+<li>Tick a <strong>floor</strong> to assign it.</li>
+<li>Then tick individual <strong>lines</strong> under it to use only those lines.</li>
+<li>Tick the floor and <strong>leave every line unticked</strong> to book the <strong>whole floor</strong>.</li>
+<li>Assigned floors and lines are marked <em>occupied</em> for capacity tracking.</li>
+<li>Sample orders never use this — they go to the sampling department instead.</li>
+</ul>
+<h3 id="112-adding-more-batches">11.2 Adding more batches</h3>
+<p><strong>Add Another</strong> appends a second product block; the bin icon in its corner removes it. All batches<br />
+created in one submit share the project, the stage pipeline and the SLA settings below, but keep<br />
+their own product, PO, quantity, date, vendor and floors.</p>
+<p><img alt="Two product batches in one form" src="screenshots/42-bulk-two-batches.png" /></p>
+<h3 id="113-stage-days-and-sla-chunks">11.3 Stage days and SLA chunks</h3>
+<p>Below the batches is the same <strong>Predicted Stage Days</strong> panel, this time listing the <strong>15 bulk<br />
+stages</strong>. The rules are identical: <code>0</code> days means the stage is not created, target days accumulate<br />
+from the start date, and buffer days are recorded separately without moving dates.</p>
+<p><img alt="Bulk stage days filled in" src="screenshots/43-bulk-stage-days-filled.png" /></p>
+<p><strong>Merging stages into one SLA chunk.</strong> Use this when the floor treats several steps as one block of<br />
+time. Tick two or more stages — a <strong>Merge Selected (n)</strong> button appears:</p>
+<p><img alt="Two stages selected for merging" src="screenshots/44-stages-selected-for-merge.png" /></p>
+<p>Click it and enter the total target SLA days and buffer days (contingency time) for the whole group:</p>
+<p><img alt="Set SLA days for the merged group" src="screenshots/45-merge-sla-dialog.png" /></p>
+<p>Confirm, and the group becomes a <strong>Merged Chunk</strong>. It is named automatically from its first and last<br />
+stage ("Pressing to Finishing"), shows <strong>Total Chunk SLA Days</strong> and <strong>+Buffer Days</strong> (both editable),<br />
+lists the stages it contains, and offers <strong>Unmerge</strong>. The merged stages disappear from the individual<br />
+list because their timing is now managed by the chunk.</p>
+<p><img alt="Merged chunk created" src="screenshots/46-merged-chunk-created.png" /></p>
+<p>On the order page later, a chunk appears in the timeline as a bordered block labelled e.g. <code>4D CHUNK</code><br />
+containing its stages.</p>
+<div class="callout"><strong>⚠️ Ex-Factory Date Guard:</strong> The cumulative sum of your bulk stage days (including merged chunks) cannot exceed the earliest Ex-Factory date among the batches. If exceeded, a real-time warning notifies: <em>"⚠️ You exceed X day(s) to Ex-Factory date!"</em> and the Launch Track button is locked until stage durations are reduced or the Ex-Factory date is extended.</div>
+<h3 id="114-submit">11.4 Submit</h3>
+<p>Click <strong>Launch Track</strong>. Every batch becomes its own bulk order, each with its own full stage<br />
+pipeline:</p>
+<p><img alt="Both bulk orders created" src="screenshots/47-bulk-orders-created-list.png" /></p>
+<p>Each card shows the PO, vendor, <strong>Stage Progress</strong> (<code>0 / 15 stages</code>), delay state, and the<br />
+<strong>Edit / History / Delete</strong> actions.</p>
+<div class="callout"><strong>Older orders:</strong> bulk orders created before Style Name was collected have none. The card now falls<br />
+back to the product name so it is never untitled, but add the real style via <strong>Edit</strong> when you see<br />
+one — it is what the order page and reorder both use.</div>
+<hr />
+<h2 id="12-step-9-run-the-15-bulk-stages">12. Step 9 — Run the 15 bulk stages</h2>
+<p>Click a card to open the order.</p>
+<p><img alt="Bulk order detail with 15 stages" src="screenshots/48-bulk-order-detail-15-stages.png" /></p>
+<p>The page is the same as the sampling one, with the 15-stage pipeline in the timeline. Stage 1,<br />
+<strong>Customer Order / Wrapping Card</strong>, is open; everything else is padlocked.</p>
+<p>Running an ordinary bulk stage is exactly as on the sampling track: <strong>Start Phase</strong> → confirm →<br />
+work → <strong>Complete Stage</strong> → confirm.</p>
+<p><img alt="First bulk stage completed" src="screenshots/49-bulk-stage1-completed.png" /></p>
+<p>What differs on the bulk track is that <strong>four stages are quality gates</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Buttons you get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PP Sample Development</strong> (stage 2)</td>
+<td>Three: Approved / Conditional Approved / Not Approved</td>
+</tr>
+<tr>
+<td><strong>Small Vet Dying — Shade Band Continuity Approval</strong></td>
+<td>Two: <strong>Accept</strong> / <strong>Reject</strong></td>
+</tr>
+<tr>
+<td><strong>Full Flag Dying Production</strong></td>
+<td>Two: <strong>Accept</strong> / <strong>Reject</strong></td>
+</tr>
+<tr>
+<td><strong>Final Random Inspection</strong></td>
+<td>Two: <strong>Accept</strong> / <strong>Reject</strong></td>
+</tr>
+<tr>
+<td>Every other stage</td>
+<td>One: <strong>Complete Stage</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-step-10-conditional-approval-defect-gating">13. Step 10 — Conditional approval &amp; defect gating</h2>
+<p>This is the part of the system people most often get stuck on, so follow it closely.</p>
+<p>Start <strong>PP Sample Development</strong>. You get the three-option QC panel:</p>
+<p><img alt="PP Sample Development three-state panel" src="screenshots/50-pp-sample-three-state.png" /></p>
+<p>Choose <strong>Conditional Approved</strong> and pick the requirement:</p>
+<p><img alt="Conditional approval with a requirement selected" src="screenshots/51-conditional-approval-modal.png" /></p>
+<p>The dialog spells out the consequence: the chosen condition <em>"will place a mandatory defect gate on<br />
+downstream production"</em>. Confirm it.</p>
+<p>The stage completes — but an amber banner is now attached to it:</p>
+<p><img alt="Condition pending banner on the stage" src="screenshots/52-condition-pending-banner.png" /></p>
+<p>Production continues, <strong>except</strong> for the stages the condition gates. Select the gated stage and you<br />
+see this:</p>
+<p><img alt="Downstream stage gated and locked" src="screenshots/53-downstream-stage-gated.png" /></p>
+<p>Three things to notice:</p>
+<ol>
+<li>In the timeline, the gated stages carry an amber <strong>GATED</strong> badge and a padlock.</li>
+<li>The action button is replaced by <strong>Phase Locked (Defect Pending)</strong> — it cannot be started or<br />
+   completed, and the API refuses too, so there is no way around it.</li>
+<li>An amber panel states the exact defect requirement and which stage it came from, with a<br />
+<strong>Clear Defect &amp; Upload Proof</strong> button.</li>
+</ol>
+<h3 id="131-clearing-the-defect">13.1 Clearing the defect</h3>
+<p>Click <strong>Clear Defect &amp; Upload Proof</strong>:</p>
+<p><img alt="Clear defect dialog, empty" src="screenshots/54-clear-defect-modal-blank.png" /></p>
+<p>Both inputs are <strong>mandatory</strong> — the system will not accept one without the other:</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mandatory Proof Attachment</strong></td>
+<td>One file: PNG, JPG, WebP or PDF. A swatch photo, lab-dip report or strike-off picture.</td>
+</tr>
+<tr>
+<td><strong>Clearance Notes / Corrective Confirmation</strong></td>
+<td>Written confirmation of how the defect was corrected and verified.</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Clear defect dialog, filled in" src="screenshots/55-clear-defect-modal-filled.png" /></p>
+<p>Click <strong>Verify Proof &amp; Unlock Stage</strong>. The gate lifts immediately:</p>
+<p><img alt="Condition cleared and stage unlocked" src="screenshots/56-condition-cleared-unlocked.png" /></p>
+<p>The banner turns green — <strong>Condition Cleared &amp; Unlocked</strong> — recording who cleared it, when, and the<br />
+notes, with <strong>View Proof Attachment</strong> to open the evidence. The <strong>GATED</strong> badges are gone and<br />
+<strong>Start Phase</strong> is available again. The proof is also filed in the order's attachments as<br />
+<em>[Clearance Proof] <filename></em>.</p>
+<div class="callout">A condition can only be cleared once, and only if the stage was conditionally approved. Attempting<br />
+it twice returns <em>"Condition is already cleared."</em></div>
+<h3 id="132-accept-reject-on-a-dying-stage">13.2 Accept / Reject on a dying stage</h3>
+<p>With the gate cleared, start the dying stage. Because it is an inspection stage, you get<br />
+<strong>Accept</strong> and <strong>Reject</strong>:</p>
+<p><img alt="Accept and Reject on a bulk inspection stage" src="screenshots/57-bulk-accept-reject-stage.png" /></p>
+<p><strong>Reject</strong> opens the rework dialog:</p>
+<p><img alt="Bulk reject and repeat dialog" src="screenshots/58-bulk-reject-repeat-modal.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repeat From Stage</strong></td>
+<td>On bulk this is <strong>locked to the same stage</strong> — a rejected bulk stage repeats itself. The dropdown therefore contains only that one option.</td>
+</tr>
+<tr>
+<td><strong>Rejection Reason</strong></td>
+<td>Required. Becomes the CA record.</td>
+</tr>
+<tr>
+<td><strong>Correction Plan</strong></td>
+<td>Becomes the PA record.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Start Rework Iteration</strong> bumps the iteration counter and resets that stage to pending, exactly as<br />
+on the sampling track, and the entry appears in the QC Rejection Log.</p>
+<hr />
+<h2 id="14-step-11-inspection-stages-completion-reorder">14. Step 11 — Inspection stages, completion &amp; Reorder</h2>
+<p><strong>Final Random Inspection</strong> (stage 14) is the last quality gate before shipment:</p>
+<p><img alt="Final random inspection stage" src="screenshots/59-final-random-inspection.png" /></p>
+<p>Accept it, complete <strong>Shipment / Ex-Factory</strong>, and the order flips to <strong>completed</strong> automatically:</p>
+<p><img alt="Completed bulk order with the Reorder button" src="screenshots/60-bulk-order-completed-reorder.png" /></p>
+<p>A <strong>↻ REORDER</strong> button now appears — the bulk equivalent of <em>Move to Bulk</em>. It clones a finished<br />
+order into a new one so a repeat buy does not have to be typed from scratch.</p>
+<h3 id="141-creating-a-reorder">14.1 Creating a reorder</h3>
+<p><img alt="Reorder dialog, top" src="screenshots/61-reorder-modal-top.png" /></p>
+<p>The form has five numbered sections, all pre-filled from the original order:</p>
+<ol>
+<li><strong>Bulk Project Classification</strong> — the original order's project is already selected. Change it, or<br />
+   name a new project, if the repeat belongs somewhere else.</li>
+<li><strong>Product Specifications</strong> — Product Name, <strong>Style Name</strong>, PO # (suffixed <code>-RO</code> automatically),<br />
+   Priority, Fabric, Tech Pack #.</li>
+<li><strong>Reorder Quantity &amp; Delivery Schedule</strong> — new quantity and a new <strong>Ex-Factory Date</strong> (both required).</li>
+<li><strong>Assigned Vendor &amp; Floor Lines</strong> — carried over; change the factory or lines if the repeat runs elsewhere.</li>
+<li><strong>Stage Pipeline &amp; SLA Schedule</strong> — the original stage days are pre-loaded; adjust, buffer or merge as needed.</li>
+</ol>
+<p><img alt="Reorder dialog, filled in" src="screenshots/62-reorder-modal-filled.png" /></p>
+<p>If you clear a required box, the form tells you exactly which one instead of failing quietly:</p>
+<p><img alt="Reorder validation message naming the missing field" src="screenshots/62b-reorder-validation-message.png" /></p>
+<p>Click <strong>↻ Create Reorder →</strong>. A new bulk order is created, linked to the original, and opened:</p>
+<p><img alt="The new reorder" src="screenshots/63-reorder-created.png" /></p>
+<div class="callout">Only <strong>completed</strong> orders can be reordered — otherwise: <em>"Only completed orders can be reordered."</em></div>
+<hr />
+<h2 id="15-everyday-order-actions">15. Everyday order actions</h2>
+<p>Every order card carries the same action row:</p>
+<p><img alt="Order card actions" src="screenshots/64a-bulk-order-card-actions.png" /></p>
+<h3 id="edit-an-order">Edit an order</h3>
+<p><img alt="Edit order dialog" src="screenshots/64-edit-order-modal.png" /></p>
+<p><strong>Edit</strong> changes Product Name, Style Name, PO #, Quantity, Ex-Factory Date, Priority, Assigned Vendor,<br />
+reference pictures — and, for Super Admins only, the <strong>Sample Class / Bulk Class</strong> the order belongs<br />
+to. Use it to add the missing Style Name on bulk orders.</p>
+<p>Editing an order does <strong>not</strong> rebuild the stage schedule. Stage days are set at creation.</p>
+<h3 id="history">History</h3>
+<p><img alt="Order history modal" src="screenshots/65-order-history-modal.png" /></p>
+<p><strong>History</strong> shows the complete audit trail of the order — creation, every field change, every stage<br />
+start and completion, approvals, rejections, condition clearances and attachments — with who did it<br />
+and when. It merges order history and activity-log entries into one time-ordered list.</p>
+<h3 id="cancel-an-order">Cancel an order</h3>
+<p><img alt="Cancel order confirmation" src="screenshots/66-cancel-order-confirm.png" /></p>
+<p><strong>Delete</strong> does not erase anything. It sets the order to <strong>cancelled</strong> and deactivates it, so it<br />
+leaves the working lists while staying fully readable in history. There is no undo button in the UI —<br />
+confirm deliberately.</p>
+<h3 id="assign-an-order-to-this-class">Assign an order to this class</h3>
+<p>If you open a class and see an order that belongs to no class (or to a different one), an amber<br />
+<strong>Assign</strong> (or blue <strong>Reassign</strong>) button appears on its card. One click permanently links that order<br />
+to the class you are currently viewing. This is how orders created outside a class get filed.</p>
+<h3 id="ex-factory-date-guard">Ex-Factory Date Guard</h3>
+<p>When assigning days to stages or grouping stages into SLA chunks during order creation:<br />
+- <strong>Constraint Rule</strong>: The projected cumulative completion date of the stages <strong>must be equal to or less than</strong> the order's Ex-Factory Date (<code>projected_completion_date &lt;= ex_factory_date</code>).<br />
+- <strong>Real-Time Warning Notification</strong>: If the assigned days exceed what is allowed before the Ex-Factory date, the system triggers a prominent alert:</p>
+<div class="callout"><strong>⚠️ You exceed X day(s) to Ex-Factory date!</strong> (Total assigned: Y days, Allowed: Z days until YYYY-MM-DD).<br />
+- <strong>Submission Guard</strong>: The submit button is locked with <code>Exceeds Ex-Factory Date by Xd</code>. If submission is attempted, an error feedback dialog blocks track initialization.<br />
+- <strong>Backend API Validation</strong>: The backend validates every stage's calculated target date against <code>order.ex_factory_date</code> on creation, additions, and updates, returning HTTP 400 with the exact days exceeded if violated.</div>
+<hr />
+<h2 id="16-supporting-screens">16. Supporting screens</h2>
+<h3 id="order-tracking">Order Tracking</h3>
+<p><img alt="Order tracking dashboard" src="screenshots/67-order-tracking-dashboard.png" /></p>
+<p>One table of every order across both tracks — style, PO, vendor, floor/line, current stage, quality<br />
+risk, DHU and delay status. This is the screen for the daily production meeting.</p>
+<h3 id="161-professional-multi-sheet-excel-xlsx-csv-export">16.1 Professional Multi-Sheet Excel (.xlsx) &amp; CSV Export</h3>
+<p>Both the <strong>Sample Classes</strong> (<code>/samples</code>) and <strong>Bulk Projects</strong> (<code>/bulk-projects</code>) dashboards feature built-in export capabilities for factory review meetings, merchandiser planning, and buyer reporting:</p>
+<p><img alt="Export options in toolbar" src="screenshots/71-excel-export-toolbar.png" /></p>
+<h4 id="1-executive-multi-sheet-excel-workbook-xlsx">1. Executive Multi-Sheet Excel Workbook (<code>.xlsx</code>)</h4>
+<p>Clicking <strong>Export Excel (.xlsx)</strong> generates a styled, multi-sheet workbook tailored for corporate management:<br />
+- <strong>Sheet 1: Master Overview</strong>: Lists every active class and product across the entire system. Features executive Charcoal Slate headers (<code>#1E293B</code>), zebra striping, frozen header rows, and color-coded status badges:<br />
+  - <span style="color:#15803d"><strong>Green (<code>#DCFCE7</code>)</strong></span>: Completed stages and orders.<br />
+  - <span style="color:#0369a1"><strong>Blue (<code>#E0F2FE</code>)</strong></span>: In-progress active production stages.<br />
+  - <span style="color:#b91c1c"><strong>Red (<code>#FEE2E2</code>)</strong></span>: Delayed stages or orders exceeding SLA deadlines.<br />
+  - <span style="color:#b45309"><strong>Amber (<code>#FEF3C7</code>)</strong></span>: Pending upcoming stages.</p>
+<p><img alt="Excel Multi-Sheet Master Overview" src="screenshots/72-excel-export-master-sheet.png" /></p>
+<ul>
+<li><strong>Sheets 2..N: Dedicated Tab Per Class / Project</strong>:</li>
+<li>Every Class/Project automatically receives its own individual tab at the bottom of the Excel workbook.</li>
+<li>Includes an executive Class Banner (<code>#0F766E</code> Teal for Samples, <code>#1E3A8A</code> Navy for Bulk).</li>
+<li>High-level Metadata Card: Buyer/Customer, Assigned Factory/Vendor, Class Status, Active Styles Count, and Total Production Quantity.</li>
+<li>Product Stage Pipeline Table: Shows Style Code, PO #, Quantity, Current Active Stage, Status, Target Date, Progress %, Ex-Factory Date, Delivery Status, and Latest Stage Notes.</li>
+<li>Quick navigation link to jump back to the Master Overview.</li>
+</ul>
+<p><img alt="Individual Class Detail Tab in Excel" src="screenshots/73-excel-export-class-tab.png" /></p>
+<h4 id="2-wip-product-master-sheet-csv">2. WIP Product Master Sheet (CSV)</h4>
+<p>Clicking <strong>Export CSV</strong> downloads a structured Work-In-Progress (WIP) table where every product has its own row:<br />
+- Full 17 columns: <code>Class Serial</code>, <code>Class Name</code>, <code>Customer</code>, <code>Vendor</code>, <code>Product Name</code>, <code>Style Code</code>, <code>Order / PO #</code>, <code>Quantity</code>, <code>Current Stage</code>, <code>Stage Status</code>, <code>Stage Target Date</code>, <code>Completed Stages</code>, <code>Total Stages</code>, <code>Progress %</code>, <code>Ex-Factory Date</code>, <code>Delivery Status</code>, <code>Latest Stage Notes</code>.<br />
+- Enables Excel AutoFilter (e.g. filter to show all products in <em>Stitching</em> or <em>QC Check</em>).<br />
+- Enables sorting by <em>Ex-Factory Date</em> to see imminent shipment deadlines first.<br />
+- Also supports Matrix Grid view (<code>?view=matrix</code>) with classes on the horizontal X-axis.</p>
+<p>Accessible to Super Admin, Admin, and Manager roles.</p>
+<h3 id="approvals">Approvals</h3>
+<p><img alt="Approvals queue" src="screenshots/68-approvals-queue.png" /></p>
+<p>The queue of items waiting on a decision, so approvals are not missed by being buried inside<br />
+individual orders.</p>
+<h3 id="activity-logs">Activity Logs</h3>
+<p><img alt="Activity logs" src="screenshots/69-activity-logs.png" /></p>
+<p>Company-wide audit trail: logins, class and order creation, stage updates, approvals, rejections,<br />
+clearances. Visible to Super Admin, Admin, Manager and Viewer.</p>
+<h3 id="vendors">Vendors</h3>
+<p><img alt="Vendors list" src="screenshots/70-vendors-list.png" /></p>
+<p>Where factories, their <strong>floors</strong>, <strong>lines</strong> and <strong>sampling departments</strong> are maintained. If a floor<br />
+or line is missing from an order form, add it here first. A vendor must be <strong>active</strong> to be usable,<br />
+and Managers only see vendors assigned to them.</p>
+<hr />
+<h2 id="17-error-messages-explained">17. Error messages explained</h2>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>What it means</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Invalid email or password.</em></td>
+<td>Login failed.</td>
+<td>Re-type; if it persists use Forgot password (needs admin approval).</td>
+</tr>
+<tr>
+<td><em>Add predicted days for at least one sample/bulk stage.</em></td>
+<td>Every stage was left at 0 days.</td>
+<td>Enter target days for the stages you need.</td>
+</tr>
+<tr>
+<td><em>Stage 'X' target date exceeds the order's Ex-Factory date… You exceed X day(s) to ex-factory date.</em></td>
+<td>Total stage SLA days exceed the available days before shipment.</td>
+<td>Adjust stage days or chunks to equal or be less than the Ex-Factory date.</td>
+</tr>
+<tr>
+<td><em>Missing Required Field — Please fill in X…</em></td>
+<td>A required box on the Move to Bulk or Reorder form is empty. The dialog names the field.</td>
+<td>Scroll to the named field and complete it.</td>
+</tr>
+<tr>
+<td><em>Selected vendor is not active or does not exist.</em></td>
+<td>The vendor was deactivated.</td>
+<td>Pick another vendor, or have an admin reactivate it.</td>
+</tr>
+<tr>
+<td><em>Cannot update this stage. Previous stage (X) must be COMPLETED first.</em></td>
+<td>Stages run in sequence.</td>
+<td>Complete stage X first.</td>
+</tr>
+<tr>
+<td><em>Stage 'X' is LOCKED by pending conditional defect from Y…</em></td>
+<td>A conditional approval is gating this stage.</td>
+<td>Clear the defect with proof — <a href="#131-clearing-the-defect">§13.1</a>.</td>
+</tr>
+<tr>
+<td><em>Rejection is only permitted on designated inspection/approval stages.</em></td>
+<td>You tried to reject a normal production stage.</td>
+<td>Only the gate stages can reject. Use comments to record the issue, and reject at the next gate.</td>
+</tr>
+<tr>
+<td><em>This bulk stage can only repeat from itself.</em></td>
+<td>On bulk, rework repeats the same stage.</td>
+<td>Accept the single option in the dropdown.</td>
+</tr>
+<tr>
+<td><em>Sample rejection can only be raised from QC Check.</em></td>
+<td>Sampling rejections belong to PPS QC Check.</td>
+<td>Carry on and reject at QC Check.</td>
+</tr>
+<tr>
+<td><em>Rejection reason is required.</em></td>
+<td>The reason box was blank.</td>
+<td>Write the defect (it becomes the CA record).</td>
+</tr>
+<tr>
+<td><em>Mandatory proof attachment file must be uploaded…</em> / <em>Clearance notes/remarks are required.</em></td>
+<td>A defect clearance needs <strong>both</strong> a file and notes.</td>
+<td>Attach the proof and write the confirmation.</td>
+</tr>
+<tr>
+<td><em>Only PDF and image files are allowed.</em></td>
+<td>Wrong file type on an attachment.</td>
+<td>Use PDF, JPG, PNG or WebP. Reference <em>pictures</em> accept images only.</td>
+</tr>
+<tr>
+<td><em>Only completed sample orders can be promoted to bulk.</em></td>
+<td>Move to Bulk needs a finished sample.</td>
+<td>Complete all sample stages first.</td>
+</tr>
+<tr>
+<td><em>Only completed orders can be reordered.</em></td>
+<td>Reorder needs a finished order.</td>
+<td>Complete it, or create a fresh PO instead.</td>
+</tr>
+<tr>
+<td><em>You can only access orders for your assigned vendors.</em> / <em>…your assigned bulk projects.</em></td>
+<td>Role scoping.</td>
+<td>Ask an admin to assign that vendor to you.</td>
+</tr>
+<tr>
+<td><em>Condition is already cleared.</em></td>
+<td>The defect was cleared by someone else.</td>
+<td>Refresh the page.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="18-quick-reference">18. Quick reference</h2>
+<h3 id="sampling-stages-10">Sampling stages (10)</h3>
+<p><code>Sample Start</code> → <code>Fabrication</code> → <code>Fabric Cutting</code> → <code>Printing / Embroidery / Embellishment</code> →<br />
+<code>Stitching</code> → <code>Washing</code> → <code>Finishing</code> → <strong><code>PPS QC Check</code></strong> → <code>Dispatch</code> → <code>Sample Completed</code></p>
+<h3 id="bulk-stages-15">Bulk stages (15)</h3>
+<p><code>Customer Order / Wrapping Card</code> → <strong><code>PP Sample Development</code></strong> →<br />
+<strong><code>Small Vet Dying — Shade Band Continuity Approval</code></strong> → <strong><code>Full Flag Dying Production</code></strong> →<br />
+<code>Sublimation</code> → <code>Bulk Fabric Cutting</code> → <code>Printing / Embroidery / Embellishment</code> → <code>Stitching</code> →<br />
+<code>End Line QC</code> → <code>Washing</code> → <code>Pressing</code> → <code>Finishing</code> → <code>Packing</code> →<br />
+<strong><code>Final Random Inspection</code></strong> → <code>Shipment / Ex-Factory</code></p>
+<p>(Bold stages are quality gates with approve/reject decisions.)</p>
+<h3 id="statuses">Statuses</h3>
+<table>
+<thead>
+<tr>
+<th>Order status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td>Created, no stage started.</td>
+</tr>
+<tr>
+<td><code>in_progress</code></td>
+<td>At least one stage under way.</td>
+</tr>
+<tr>
+<td><code>completed</code></td>
+<td>Every stage completed — set automatically.</td>
+</tr>
+<tr>
+<td><code>delayed</code></td>
+<td>Ex-factory date passed while unfinished.</td>
+</tr>
+<tr>
+<td><code>cancelled</code></td>
+<td>Cancelled via Delete; read-only in history.</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Stage status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td>Not started (or reset by a rework iteration).</td>
+</tr>
+<tr>
+<td><code>in_progress</code></td>
+<td>Started; start time recorded.</td>
+</tr>
+<tr>
+<td><code>completed</code></td>
+<td>Finished; completion time recorded.</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Approval status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>approved</code></td>
+<td>Gate passed.</td>
+</tr>
+<tr>
+<td><code>conditional_approved</code></td>
+<td>Passed with a condition; may gate a downstream stage until proof is filed.</td>
+</tr>
+<tr>
+<td><code>not_approved</code></td>
+<td>Rejected; a new iteration was started.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="day-to-day-rules-worth-memorising">Day-to-day rules worth memorising</h3>
+<ol>
+<li>Vendor → Class/Project → Order → Stages. Always create in that order.</li>
+<li>A stage with <strong>0 target days is never created</strong>.</li>
+<li><strong>Target days build the schedule; buffer days do not.</strong></li>
+<li>Stages are strictly sequential — no skipping.</li>
+<li>Only gate stages can reject; sampling can restart anywhere, bulk repeats itself.</li>
+<li>A conditional approval <strong>stops downstream work</strong> until proof is uploaded.</li>
+<li><code>completed</code> is set by the system, never by hand.</li>
+<li>Delete means <strong>cancel</strong>, not erase.</li>
+<li>Give every bulk order a real <strong>Style Name</strong> — it titles the order and carries into reorders.</li>
+<li>Write the CA and PA properly — they are the permanent audit record.</li>
+</ol>
+  </div>
+  <div class="footer-note">
+    CC Production & QMS — Cotton to Customer &bull; Official System Operating Handbook &bull; Updated September 2026
+  </div>
+</body>
+</html>

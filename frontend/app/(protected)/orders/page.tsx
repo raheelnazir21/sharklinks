@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import api from "@/services/api";
 import { 
   Plus, Search, Package, Calendar, AlertCircle, CheckCircle, Clock, 
@@ -68,6 +68,7 @@ type FloorLineAssignment = {
 type BulkItem = {
   order_no: string;
   product_name: string;
+  style_name: string;
   vendor_id: string;
   quantity: string;
   ex_factory_date: string;
@@ -80,6 +81,7 @@ function createBlankBulkItem(): BulkItem {
   return {
     order_no: "",
     product_name: "",
+    style_name: "",
     vendor_id: "",
     quantity: "",
     ex_factory_date: "",
@@ -164,6 +166,7 @@ function OrdersContent() {
     id: string;
     name: string;
     target_days: number;
+    buffer_days?: number;
     stage_names: string[];
   }
   const [chunks, setChunks] = useState<ChunkType[]>([]);
@@ -193,6 +196,37 @@ function OrdersContent() {
     reference_image: "",
     reference_attachments: [] as ReferenceAttachment[],
   });
+
+  const currentStages = isSampling ? DEFAULT_SAMPLE_STAGES : DEFAULT_BULK_STAGES;
+  const totalStageDays = useMemo(() => {
+    const chunkedNames = chunks.flatMap((c) => c.stage_names);
+    const chunkDaysTotal = chunks.reduce((acc, c) => acc + (Number(c.target_days) || 0), 0);
+    const unchunkedDaysTotal = currentStages
+      .filter((s) => !chunkedNames.includes(s.name))
+      .reduce((acc, s) => acc + (Number(stageDays[s.name]) || 0), 0);
+    return chunkDaysTotal + unchunkedDaysTotal;
+  }, [chunks, currentStages, stageDays]);
+
+  const activeExFactoryDate = isSampling
+    ? formData.ex_factory_date
+    : bulkItems.map((i) => i.ex_factory_date).filter(Boolean).sort()[0] || "";
+
+  const orderPlacementDateStr = formData.order_placement_date || new Date().toISOString().split("T")[0];
+
+  const exFactoryExceedInfo = useMemo(() => {
+    if (!activeExFactoryDate) return null;
+    const startD = new Date(orderPlacementDateStr + "T00:00:00");
+    const endD = new Date(activeExFactoryDate + "T00:00:00");
+    const allowedDays = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24));
+    const projectedCompletion = startD.getTime() + totalStageDays * 24 * 60 * 60 * 1000;
+    const diff = Math.ceil((projectedCompletion - endD.getTime()) / (1000 * 60 * 60 * 24));
+    return {
+      allowedDays,
+      diffDays: diff,
+      isExceeded: diff > 0,
+      activeExFactoryDate,
+    };
+  }, [orderPlacementDateStr, activeExFactoryDate, totalStageDays]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -350,6 +384,15 @@ function OrdersContent() {
       if (sanitizedData[key] === "") sanitizedData[key] = null as any;
     });
 
+    if (!editingOrder && exFactoryExceedInfo?.isExceeded) {
+      setFeedback({
+        type: "error",
+        title: "Ex-Factory Date Exceeded",
+        message: `You exceed ${exFactoryExceedInfo.diffDays} day${exFactoryExceedInfo.diffDays > 1 ? "s" : ""} to Ex-Factory date (${exFactoryExceedInfo.activeExFactoryDate})! Total stage days must be equal or less than the Ex-Factory date.`,
+      });
+      return;
+    }
+
     try {
       if (editingOrder) {
         await api.put(`/orders/${editingOrder.id}`, {
@@ -381,6 +424,7 @@ function OrdersContent() {
       const stageChunksPayload = chunks.map(c => ({
         name: c.name,
         target_days: c.target_days,
+        buffer_days: c.buffer_days || 0,
         stage_names: c.stage_names,
       }));
 
@@ -397,6 +441,7 @@ function OrdersContent() {
             ...sanitizedData,
             order_no: item.order_no,
             product_name: item.product_name,
+            style_name: item.style_name,
             vendor_id: item.vendor_id,
             quantity: parseInt(item.quantity) || 0,
             ex_factory_date: item.ex_factory_date || null,
@@ -610,7 +655,10 @@ function OrdersContent() {
                 </span>
               </div>
               <h3 className="text-white font-black text-2xl mb-1 uppercase tracking-tighter italic">
-                {isSampling ? order.product_name : order.style_name}
+                {/* Older bulk orders were created before Style Name was collected — fall back so the card is never untitled. */}
+                {isSampling
+                  ? (order.product_name || order.style_name || "Untitled")
+                  : (order.style_name || order.product_name || "Untitled")}
               </h3>
               <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-6`}>
                  {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
@@ -886,6 +934,8 @@ function OrdersContent() {
                   setSelectedMergeStages={setSelectedMergeStages}
                   themeHex="#3b82f6"
                   themeColor="blue"
+                  startDate={orderPlacementDateStr}
+                  exFactoryDate={activeExFactoryDate}
                 />
               </div>
             </div>
@@ -920,6 +970,12 @@ function OrdersContent() {
                     <div>
                       <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">PO #</label>
                       <input required type="text" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.order_no} onChange={(e) => updateBulkItem(idx, 'order_no', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Style Name</label>
+                      <input required type="text" placeholder="Style #WJ-2026" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none placeholder:text-slate-800" value={item.style_name} onChange={(e) => updateBulkItem(idx, 'style_name', e.target.value)} />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -980,13 +1036,37 @@ function OrdersContent() {
                   setSelectedMergeStages={setSelectedMergeStages}
                   themeHex="#10b981"
                   themeColor="emerald"
+                  startDate={orderPlacementDateStr}
+                  exFactoryDate={activeExFactoryDate}
                 />
               </div>
             </div>
           )}
 
-          <button type="submit" disabled={isSubmitting} style={{ backgroundColor: themeHex }} className="w-full text-white font-black py-6 rounded-[2.5rem] mt-8 uppercase tracking-[0.4em] text-[10px]">
-            {isSubmitting ? "Processing..." : editingOrder ? "Update Order" : "Launch Track"}
+          {exFactoryExceedInfo?.isExceeded && (
+            <div className="mt-6 rounded-2xl border-2 border-red-500/60 bg-red-950/60 p-4 text-center animate-pulse">
+              <p className="text-xs font-black uppercase tracking-wider text-red-300">
+                ⚠️ You exceed {exFactoryExceedInfo.diffDays} day{exFactoryExceedInfo.diffDays > 1 ? "s" : ""} to Ex-Factory date!
+              </p>
+              <p className="text-[10px] font-bold text-red-200 mt-1">
+                Total stage days ({totalStageDays}d) exceeds available days ({Math.max(0, exFactoryExceedInfo.allowedDays)}d) until {exFactoryExceedInfo.activeExFactoryDate}. Please reduce stage days or update Ex-Factory date.
+              </p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting || Boolean(exFactoryExceedInfo?.isExceeded)}
+            style={{ backgroundColor: exFactoryExceedInfo?.isExceeded ? "#ef4444" : themeHex }}
+            className="w-full text-white font-black py-6 rounded-[2.5rem] mt-8 uppercase tracking-[0.4em] text-[10px] disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+          >
+            {isSubmitting
+              ? "Processing..."
+              : exFactoryExceedInfo?.isExceeded
+              ? `Exceeds Ex-Factory Date by ${exFactoryExceedInfo.diffDays}d`
+              : editingOrder
+              ? "Update Order"
+              : "Launch Track"}
           </button>
         </form>
       </Modal>
@@ -1028,7 +1108,9 @@ function StageMergingComponent({
   selectedMergeStages,
   setSelectedMergeStages,
   themeHex,
-  themeColor
+  themeColor,
+  startDate,
+  exFactoryDate,
 }: any) {
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [chunkDaysInput, setChunkDaysInput] = useState<number>(3);
@@ -1036,6 +1118,31 @@ function StageMergingComponent({
 
   // helper to check if a stage is chunked
   const isChunked = (stageName: string) => chunks.some((c: any) => c.stage_names.includes(stageName));
+
+  const totalAssignedDays = useMemo(() => {
+    const chunkedNames = chunks.flatMap((c: any) => c.stage_names);
+    const chunkDaysTotal = chunks.reduce((acc: number, c: any) => acc + (Number(c.target_days) || 0), 0);
+    const unchunkedDaysTotal = defaultStages
+      .filter((s: any) => !chunkedNames.includes(s.name))
+      .reduce((acc: number, s: any) => acc + (Number(stageDays[s.name]) || 0), 0);
+    return chunkDaysTotal + unchunkedDaysTotal;
+  }, [chunks, defaultStages, stageDays]);
+
+  const exFactoryDiffDays = useMemo(() => {
+    if (!exFactoryDate) return null;
+    const baseStr = startDate || new Date().toISOString().split("T")[0];
+    const startD = new Date(baseStr + "T00:00:00");
+    const endD = new Date(exFactoryDate + "T00:00:00");
+    const allowedDays = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24));
+    const projectedCompletion = startD.getTime() + totalAssignedDays * 24 * 60 * 60 * 1000;
+    const diff = Math.ceil((projectedCompletion - endD.getTime()) / (1000 * 60 * 60 * 24));
+    return {
+      allowedDays,
+      diffDays: diff,
+      isExceeded: diff > 0,
+      exFactoryDate,
+    };
+  }, [startDate, exFactoryDate, totalAssignedDays]);
 
   useEffect(() => {
     if (toastMessage) {
@@ -1075,6 +1182,25 @@ function StageMergingComponent({
 
   return (
     <div className="space-y-6">
+      {/* Ex-Factory Warning Banner */}
+      {exFactoryDiffDays?.isExceeded && (
+        <div className="rounded-2xl border-2 border-red-500/70 bg-red-950/70 p-5 shadow-2xl shadow-red-950/50 animate-pulse">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-6 w-6 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <h5 className="text-xs font-black uppercase tracking-wider text-red-300">
+                ⚠️ Ex-Factory Limit Exceeded
+              </h5>
+              <p className="text-xs font-bold text-white mt-1">
+                You exceed <span className="underline decoration-red-400 font-black text-red-300">{exFactoryDiffDays.diffDays} day{exFactoryDiffDays.diffDays > 1 ? "s" : ""}</span> to Ex-Factory date ({exFactoryDiffDays.exFactoryDate})!
+              </p>
+              <p className="text-[10px] text-red-200 mt-1 font-medium">
+                Total assigned stage duration is <strong>{totalAssignedDays} days</strong>, but only <strong>{Math.max(0, exFactoryDiffDays.allowedDays)} day{exFactoryDiffDays.allowedDays !== 1 ? "s" : ""}</strong> are available. Assigned days must be equal to or less than the Ex-Factory date.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Active Chunks List */}
       {chunks.length > 0 && (
         <div className="space-y-4">

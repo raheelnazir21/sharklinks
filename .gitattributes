@@ -1,0 +1,4 @@
+# Exclude test files from release deployment bundle
+backend/app/tests export-ignore
+.pytest_cache export-ignore
+tests export-ignore

@@ -178,14 +178,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     if (!order) return;
-    const isSamplingOrder = order.track_type === "sample" || !!order.sample_class_name;
+    const isSamplingOrder = order.track_type === "sampling" || !!order.sample_class_name;
     const classEyebrow = isSamplingOrder
       ? (order.sample_class_name ? `Sample Class (${order.sample_class_name}) Order Details` : "Sample Class Order Details")
       : (order.bulk_class_name ? `Bulk Project (${order.bulk_class_name}) Order Details` : "Bulk Order Detail");
     
     setHeaderConfig({
       eyebrow: classEyebrow,
-      title: (isSamplingOrder ? order.product_name : order.style_name) || "Order",
+      title:
+        (isSamplingOrder
+          ? order.product_name || order.style_name
+          : order.style_name || order.product_name) || "Order",
       highlight: order.track_type ? `[${order.track_type.toUpperCase()}]` : "",
       subtitle: `PO: ${order.order_no || "N/A"} • Vendor: ${order.vendor_name || "N/A"}${order.quantity ? ` • Qty: ${order.quantity} Pcs` : ""}`,
     });
@@ -333,9 +336,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setMoveToBulkData({
       bulk_class_id: "",
       new_class_name: "",
-      product_name: order.product_name || "",
-      style_name: order.style_name || "",
-      order_no: order.order_no ? `${order.order_no}-BLK` : "",
+      product_name: order.product_name || order.style_name || "",
+      // PO # is required below. Samples are often raised without one, so derive a
+      // suggestion from whatever identifier the sample does have instead of
+      // opening the form with an empty required field.
+      style_name: order.style_name || order.product_name || "",
+      order_no: `${order.order_no || order.tech_pack_no || order.style_name || "BULK"}-BLK`,
       quantity: "",
       ex_factory_date: "",
       order_placement_date: new Date().toISOString().split("T")[0],
@@ -384,14 +390,26 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  /**
+   * These forms are long and scrollable, so a native browser validation bubble on a
+   * required field can land off-screen and look like nothing happened. Check the
+   * required fields here and name the missing one in a visible dialog.
+   */
+  const firstMissingField = (data: { product_name: string; style_name: string; order_no: string; vendor_id: string; quantity: string; ex_factory_date: string }) => {
+    if (!data.product_name.trim()) return "Product Name";
+    if (!data.style_name.trim()) return "Style Name";
+    if (!data.order_no.trim()) return "PO #";
+    if (!data.vendor_id) return "Assigned Vendor";
+    if (!data.quantity || parseInt(data.quantity) <= 0) return "a valid Quantity";
+    if (!data.ex_factory_date) return "Ex-Factory Date";
+    return null;
+  };
+
   const handleMoveToBulk = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!moveToBulkData.quantity || parseInt(moveToBulkData.quantity) <= 0) {
-      setFeedback({ type: "error", title: "Validation Error", message: "Please specify a valid bulk quantity." });
-      return;
-    }
-    if (!moveToBulkData.ex_factory_date) {
-      setFeedback({ type: "error", title: "Validation Error", message: "Please specify an Ex-Factory delivery date." });
+    const missing = firstMissingField(moveToBulkData);
+    if (missing) {
+      setFeedback({ type: "error", title: "Missing Required Field", message: `Please fill in ${missing} before launching the bulk order.` });
       return;
     }
     setUpdating(true);
@@ -425,6 +443,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       const stageChunksPayload = moveToBulkChunks.map((chunk) => ({
         name: chunk.name,
         target_days: Number(chunk.target_days) || 1,
+        buffer_days: Number(chunk.buffer_days) || 0,
         stage_names: chunk.stage_names,
       }));
 
@@ -499,8 +518,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setReorderData({
       bulk_class_id: order.bulk_class_id ? String(order.bulk_class_id) : "",
       new_class_name: "",
-      product_name: order.product_name || "",
-      style_name: order.style_name || "",
+      product_name: order.product_name || order.style_name || "",
+      // Style Name is required below; bulk orders created before it was collected
+      // have none, so fall back to the product name rather than an empty field.
+      style_name: order.style_name || order.product_name || "",
       order_no: order.order_no ? `${order.order_no}-RO` : "",
       quantity: order.quantity ? String(order.quantity) : "",
       ex_factory_date: "",
@@ -552,12 +573,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleReorder = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!reorderData.quantity || parseInt(reorderData.quantity) <= 0) {
-      setFeedback({ type: "error", title: "Validation Error", message: "Please specify a valid reorder quantity." });
-      return;
-    }
-    if (!reorderData.ex_factory_date) {
-      setFeedback({ type: "error", title: "Validation Error", message: "Please specify an Ex-Factory delivery date." });
+    const missing = firstMissingField(reorderData);
+    if (missing) {
+      setFeedback({ type: "error", title: "Missing Required Field", message: `Please fill in ${missing} before creating the reorder.` });
       return;
     }
     setUpdating(true);
@@ -591,6 +609,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       const stageChunksPayload = reorderChunks.map((chunk) => ({
         name: chunk.name,
         target_days: Number(chunk.target_days) || 1,
+        buffer_days: Number(chunk.buffer_days) || 0,
         stage_names: chunk.stage_names,
       }));
 
@@ -737,12 +756,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         // 1. Fabric shade / resubmission before bulk fabric dying -> blocks bulk dyeing
         const isDyeing = (gated === "bulk_dying" || action.includes("dying") || action.includes("shade")) && target.includes("dying");
-        // 2. Washing execution -> blocks washing or fabrication / cutting
-        const isWashing = (gated === "washing_fabrication" || action.includes("washing")) && (target.includes("washing") || target.includes("fabric_cutting") || target.includes("fabrication"));
+        // 2. If size specs are incorrect then need to submit fit sample -> blocks bulk cutting
+        const isCutting = (gated === "bulk_cutting" || action.includes("size") || action.includes("spec") || action.includes("fit") || action.includes("cutting")) && (target.includes("cutting") || target.includes("bulk_fabric_cutting"));
         // 3. Embellishment strike-off -> blocks embellishment
         const isEmbellishment = (gated === "embellishment" || action.includes("embellish") || action.includes("strike") || action.includes("printing")) && (target.includes("embellish") || target.includes("printing"));
+        // Fallback for legacy washing execution
+        const isWashing = (gated === "washing_fabrication" || action.includes("washing")) && (target.includes("washing") || target.includes("fabric_cutting") || target.includes("fabrication"));
 
-        if (isDyeing || isWashing || isEmbellishment) {
+        if (isDyeing || isCutting || isEmbellishment || isWashing) {
           return st;
         }
       }
@@ -760,10 +781,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         const action = (st.conditional_action || "").toLowerCase();
 
         const isDyeing = (gated === "bulk_dying" || action.includes("dying") || action.includes("shade")) && target.includes("dying");
-        const isWashing = (gated === "washing_fabrication" || action.includes("washing")) && (target.includes("washing") || target.includes("fabric_cutting") || target.includes("fabrication"));
+        const isCutting = (gated === "bulk_cutting" || action.includes("size") || action.includes("spec") || action.includes("fit") || action.includes("cutting")) && (target.includes("cutting") || target.includes("bulk_fabric_cutting"));
         const isEmbellishment = (gated === "embellishment" || action.includes("embellish") || action.includes("strike") || action.includes("printing")) && (target.includes("embellish") || target.includes("printing"));
+        const isWashing = (gated === "washing_fabrication" || action.includes("washing")) && (target.includes("washing") || target.includes("fabric_cutting") || target.includes("fabrication"));
 
-        if (isDyeing || isWashing || isEmbellishment) {
+        if (isDyeing || isCutting || isEmbellishment || isWashing) {
           return st;
         }
       }
@@ -1747,7 +1769,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               >
                 <option value="">Select conditional defect requirement...</option>
                 <option value="Fabric shade / resubmission before bulk fabric dying">1. Fabric shade / resubmission before bulk fabric dying (Blocks Bulk Dyeing)</option>
-                <option value="Washing execution">2. Washing execution (Blocks Fabrication / Washing)</option>
+                <option value="If size specs are incorrect then need to submit fit sample">2. If size specs are incorrect then need to submit fit sample (Blocks Bulk Cutting)</option>
                 <option value="Embellishment printing or embroidery strike off">3. Embellishment printing or embroidery strike off (Blocks Bulk Embellishment)</option>
                 <option value="Other — see remarks">Other — see remarks</option>
               </select>
@@ -1901,7 +1923,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         title="Move Sample to Bulk Production"
         maxWidth="max-w-4xl"
       >
-        <form onSubmit={handleMoveToBulk} className="space-y-6 max-h-[78vh] overflow-y-auto px-1 pr-3 custom-scrollbar">
+        {/* noValidate: this form scrolls inside the modal, so a native validation
+            bubble can land out of sight. firstMissingField() reports the missing
+            field in a dialog instead. */}
+        <form noValidate onSubmit={handleMoveToBulk} className="space-y-6 max-h-[78vh] overflow-y-auto px-1 pr-3 custom-scrollbar">
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4">
             <p className="text-xs font-bold text-emerald-400">
               Launch a full bulk production order directly from this sample prototype. All specifications are pre-populated and can be customized before launch.
@@ -2159,7 +2184,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Comprehensive Reorder Modal */}
       <Modal isOpen={reorderDialog} onClose={() => !updating && setReorderDialog(false)} title="Create Bulk Reorder">
-        <form onSubmit={handleReorder} className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
+        {/* noValidate — see the Move to Bulk form above. */}
+        <form noValidate onSubmit={handleReorder} className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
           <p className="text-xs font-bold text-slate-500">
             Configure the complete reorder specifications, vendor line assignments, SLA pipeline, and reference requirements.
           </p>

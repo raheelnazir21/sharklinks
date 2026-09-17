@@ -1,10 +1,12 @@
 """
 Reports/Exports API — endpoints for downloading PDF and Excel reports.
 """
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from datetime import date
 from typing import Optional
+import os
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles
@@ -15,7 +17,20 @@ from app.services.qc_service import QCService
 
 router = APIRouter(prefix="/reports", tags=["Reports & Exports"])
 
-ReportAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.viewer])
+ReportAccess = require_roles([RoleEnum.super_admin, RoleEnum.admin, RoleEnum.manager, RoleEnum.viewer, RoleEnum.qc_officer])
+
+@router.get("/handbook/pdf", summary="Download System Operating Handbook PDF")
+def download_handbook_pdf():
+    pdf_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../docs/Sample-and-Bulk-Order-Handbook.pdf"))
+    if not os.path.exists(pdf_path):
+        pdf_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../frontend/public/Sample-and-Bulk-Order-Handbook.pdf"))
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="Handbook PDF not found.")
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename="Sample-and-Bulk-Order-Handbook.pdf",
+    )
 
 @router.get("/{report_id}/export/pdf", summary="Export QC Report to PDF")
 def export_pdf(

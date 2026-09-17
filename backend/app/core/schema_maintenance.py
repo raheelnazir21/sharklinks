@@ -150,11 +150,16 @@ def ensure_runtime_schema(engine: Engine) -> None:
                         order_id CHAR(36) NOT NULL,
                         name VARCHAR(200) NOT NULL,
                         target_days INTEGER NOT NULL DEFAULT 1,
+                        buffer_days INTEGER DEFAULT 0,
                         start_date DATETIME,
                         target_date DATETIME,
                         completion_date DATETIME
                     )
                 """))
+            else:
+                chunk_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(production_stage_chunks)")).fetchall()}
+                if "buffer_days" not in chunk_cols:
+                    conn.execute(text("ALTER TABLE production_stage_chunks ADD COLUMN buffer_days INTEGER DEFAULT 0"))
             # Check if chunk_id and approval columns exist in production_stages
             ps_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(production_stages)")).fetchall()}
             if "chunk_id" not in ps_cols:
@@ -234,11 +239,13 @@ def ensure_runtime_schema(engine: Engine) -> None:
                     order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
                     name VARCHAR(200) NOT NULL,
                     target_days INTEGER NOT NULL DEFAULT 1,
+                    buffer_days INTEGER DEFAULT 0,
                     start_date TIMESTAMP,
                     target_date TIMESTAMP,
                     completion_date TIMESTAMP
                 )
             """))
+            conn.execute(text("ALTER TABLE production_stage_chunks ADD COLUMN IF NOT EXISTS buffer_days INTEGER DEFAULT 0"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS chunk_id UUID REFERENCES production_stage_chunks(id) ON DELETE SET NULL"))
 
             conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))

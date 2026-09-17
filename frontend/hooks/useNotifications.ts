@@ -71,7 +71,7 @@ export function useNotifications() {
     if (!user) return;
     try {
       const [notifRes, countRes] = await Promise.all([
-        api.get("/notifications/", { params: { include_read: false, limit: 60 } }),
+        api.get("/notifications", { params: { include_read: false, limit: 60 } }),
         api.get("/notifications/unread-count"),
       ]);
       const newNotifs: AppNotification[] = notifRes.data.data || [];

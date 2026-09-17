@@ -93,6 +93,7 @@ def _serialize(n: Notification) -> dict:
 
 # ─── Public Endpoints ────────────────────────────────────────────────────────
 
+@router.get("", summary="Get all notifications (admin sees all, non-admin sees own)")
 @router.get("/", summary="Get all notifications (admin sees all, non-admin sees own)")
 def get_notifications(
     include_read: bool = False,

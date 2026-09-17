@@ -26,6 +26,7 @@ export function NotificationBell() {
     markRead,
     markAllRead,
     toggleSound,
+    refetch,
   } = useNotifications();
 
   const [open, setOpen] = useState(false);
@@ -49,7 +50,12 @@ export function NotificationBell() {
       {/* Bell Button with Badge matching Screenshot */}
       <button
         id="notification-bell-trigger"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => {
+            if (!v) refetch();
+            return !v;
+          });
+        }}
         title="Notifications"
         className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-xs transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10"
       >

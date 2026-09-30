@@ -23,11 +23,14 @@ AdminOnly = require_roles([RoleEnum.super_admin, RoleEnum.admin])
 
 
 def _serialize_user(user: User) -> dict:
+    role_val = ""
+    if user.role:
+        role_val = user.role.name.value if hasattr(user.role.name, "value") else str(user.role.name)
     return {
         "id": str(user.id),
         "email": user.email,
         "full_name": user.full_name,
-        "role": user.role.name.value,
+        "role": role_val,
         "is_active": user.is_active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
@@ -37,7 +40,7 @@ def _serialize_user(user: User) -> dict:
 @router.get("/", response_model=dict, summary="List All Users", include_in_schema=False)
 def list_users(
     db: Session = Depends(get_db),
-    _=Depends(AdminOnly),
+    current_user: User = Depends(get_current_user),
 ):
     users = db.query(User).order_by(User.created_at.desc()).all()
     return success_response(data=[_serialize_user(u) for u in users])

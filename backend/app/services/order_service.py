@@ -249,6 +249,38 @@ class OrderService:
 
         db.commit()
 
+        # Auto-sync any linked pre-orders if this order belongs to a class
+        class_id = str(order.bulk_class_id or order.sample_class_id or "")
+        if class_id:
+            try:
+                from app.models.pre_order_request import PreOrderRequest, PreOrderStatus
+                matched_pos = db.query(PreOrderRequest).filter(
+                    (PreOrderRequest.linked_class_id == class_id) |
+                    (PreOrderRequest.class_name == (order.bulk_class.name if order.bulk_class else (order.sample_class.name if order.sample_class else None)))
+                ).all()
+                for po in matched_pos:
+                    if order.bulk_class_id:
+                        count_in_class = db.query(Order).filter(Order.bulk_class_id == order.bulk_class_id, Order.is_active == True).count()
+                    else:
+                        count_in_class = db.query(Order).filter(Order.sample_class_id == order.sample_class_id, Order.is_active == True).count()
+                    
+                    po.processed_product_count = count_in_class
+                    if not po.linked_class_id:
+                        po.linked_class_id = class_id
+                    
+                    existing_pos = [p.strip() for p in (po.linked_order_id or "").split(",") if p.strip()]
+                    if order.order_no not in existing_pos:
+                        existing_pos.append(order.order_no)
+                    po.linked_order_id = ", ".join(existing_pos)
+                    
+                    if po.processed_product_count >= (po.total_product_count or 1):
+                        po.status = PreOrderStatus.processed
+                    elif po.processed_product_count > 0:
+                        po.status = PreOrderStatus.partial
+                db.commit()
+            except Exception:
+                pass
+
         OrderRepository.log_history(
             db, str(order.id), "created", user_id,
             new_value={"order_no": order.order_no, "status": order.status.value, "track": track}

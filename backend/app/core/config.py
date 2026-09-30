@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     EMAIL_DRY_RUN: bool = True
     EMAIL_OUTBOX_DIR: str = "uploads/email_outbox"
 
+    # ─── OpenAI AI Assistant ─────────────────────────────────────────────
+    OPENAI_API_KEY: str = ""
+
     # ─── Digest Scheduler ────────────────────────────────────────────────
     # Only the real API process should schedule jobs. Migration scripts and
     # pytest import app.main too, and must not start a scheduler.
@@ -41,6 +44,11 @@ class Settings(BaseSettings):
 
     # Used to build "View in dashboard" links inside the email
     APP_BASE_URL: str = "http://localhost:3000"
+
+    # ─── Pre-Order Reminder Timing ────────────────────────────────────────
+    ORDER_REMINDER_HOURS_1: int = 24    # Hours before 1st reminder email
+    ORDER_REMINDER_HOURS_2: int = 48    # Hours before 2nd reminder email
+    ORDER_ESCALATION_HOURS: int = 72    # Hours before escalation to super admin
 
     class Config:
         env_file = ".env"

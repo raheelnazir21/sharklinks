@@ -38,7 +38,19 @@ class AuthService:
         Generate both access and refresh tokens for a logged-in user.
         Payload includes user ID and role for RBAC checks.
         """
-        payload = {"sub": str(user.id), "role": user.role.name}
+        role_str = ""
+        if user.role:
+            name_val = getattr(user.role, "name", None)
+            role_str = str(name_val.value if hasattr(name_val, "value") else name_val).lower().strip()
+        elif getattr(user, "role_id", None) == 1:
+            role_str = "super_admin"
+
+        payload = {
+            "sub": str(user.id),
+            "role": role_str or "user",
+            "name": user.full_name or "",
+            "email": user.email or "",
+        }
         return {
             "access_token": create_access_token(payload),
             "refresh_token": create_refresh_token(payload),
@@ -78,7 +90,18 @@ class AuthService:
             return None
         user_id = payload.get("sub")
         user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-        if not user:
-            return None
-        new_payload = {"sub": str(user.id), "role": user.role.name}
+        role_str = ""
+        if user.role:
+            name_val = getattr(user.role, "name", None)
+            role_str = str(name_val.value if hasattr(name_val, "value") else name_val).lower().strip()
+        elif getattr(user, "role_id", None) == 1:
+            role_str = "super_admin"
+
+        new_payload = {
+            "sub": str(user.id),
+            "role": role_str or "user",
+            "name": user.full_name or "",
+            "email": user.email or "",
+        }
         return create_access_token(new_payload)
+

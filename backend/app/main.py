@@ -20,6 +20,8 @@ from app.models import order, user, audit_log, qc_report # Import modules to ens
 from app.models.order import OrderAudit  # Ensure audit table is created
 from app.models import inline_qc  # noqa: F401 — registers all advanced QC models including RandomInlineQCReport
 from app.models import comments_notifications  # noqa: F401 — registers StageComment and Notification tables
+from app.models import pre_order_request  # noqa: F401 — registers PreOrderRequest table
+from app.models import ai_chat  # noqa: F401 — registers AIChatSession and AIChatMessage tables
 
 # Notification scheduler
 try:
@@ -47,8 +49,15 @@ app = FastAPI(
 if _scheduler_available:
     _scheduler = BackgroundScheduler(timezone="UTC")
     _scheduler.add_job(run_notification_scan, "interval", minutes=15, id="notification_scan")
+    # Pre-order reminder/escalation scan (runs every hour)
+    try:
+        from app.services.pre_order_service import run_pre_order_reminder_scan
+        _scheduler.add_job(run_pre_order_reminder_scan, "interval", hours=1, id="pre_order_reminder_scan")
+    except Exception as _e:
+        print(f"[Scheduler] Could not register pre-order reminder scan: {_e}")
     _scheduler.start()
     print("[Scheduler] Notification scanner started — runs every 15 minutes.")
+    print("[Scheduler] Pre-order reminder scanner started — runs every hour.")
 
 # Configure CORS (Allows frontend to communicate with backend)
 app.add_middleware(

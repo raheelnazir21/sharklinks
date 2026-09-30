@@ -222,6 +222,41 @@ def ensure_runtime_schema(engine: Engine) -> None:
             if "product_color" not in finish_cols:
                 conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN product_color VARCHAR(100)"))
 
+            # --- pre_order_requests schema updates ---
+            table_pre = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='pre_order_requests'")).scalar()
+            if table_pre:
+                pre_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(pre_order_requests)")).fetchall()}
+                if "total_product_count" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN total_product_count INTEGER DEFAULT 1"))
+                if "processed_product_count" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN processed_product_count INTEGER DEFAULT 0"))
+                if "linked_class_id" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN linked_class_id VARCHAR(36)"))
+
+            # --- ai_chat_sessions & ai_chat_messages tables for SQLite ---
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title VARCHAR(255) NOT NULL DEFAULT 'New Conversation',
+                    is_archived BOOLEAN NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ai_chat_messages (
+                    id VARCHAR(36) PRIMARY KEY,
+                    session_id VARCHAR(36) NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
+                    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    role VARCHAR(20) NOT NULL,
+                    content TEXT NOT NULL,
+                    links JSON,
+                    document_name VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+
             for old_name, new_name in legacy_stage_names.items():
 
 
@@ -282,6 +317,34 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
             conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
             conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
+
+            conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN IF NOT EXISTS total_product_count INTEGER DEFAULT 1"))
+            conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN IF NOT EXISTS processed_product_count INTEGER DEFAULT 0"))
+            conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN IF NOT EXISTS linked_class_id UUID"))
+
+            # --- ai_chat_sessions & ai_chat_messages tables for Postgres ---
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title VARCHAR(255) NOT NULL DEFAULT 'New Conversation',
+                    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc')
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ai_chat_messages (
+                    id UUID PRIMARY KEY,
+                    session_id UUID NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    role VARCHAR(20) NOT NULL,
+                    content TEXT NOT NULL,
+                    links JSONB,
+                    document_name VARCHAR(255),
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc')
+                )
+            """))
 
             for old_name, new_name in legacy_stage_names.items():
 

@@ -42,13 +42,13 @@ export function IndustrialHeading({
           </p>
         )}
         <h1
-          className={`${compact ? "text-xl md:text-2xl" : "text-2xl md:text-4xl"} font-black italic uppercase leading-tight tracking-tight text-slate-950 truncate`}
+          className={`${compact ? "text-xl md:text-2xl" : "text-2xl md:text-4xl"} font-black italic uppercase leading-tight tracking-tight text-slate-950 break-words`}
         >
           {title}
           {highlight && <span className={accent.highlight}> {highlight}</span>}
         </h1>
         {subtitle && (
-          <p className={`${compact ? "mt-0.5 text-[10px] md:text-[11px]" : "mt-2 text-xs md:text-sm"} max-w-5xl font-bold uppercase tracking-wider text-slate-500 truncate`}>
+          <p className={`${compact ? "mt-0.5 text-[10px] md:text-[11px]" : "mt-2 text-xs md:text-sm"} max-w-5xl font-bold uppercase tracking-wider text-slate-500`}>
             {subtitle}
           </p>
         )}
@@ -95,16 +95,19 @@ export function PrimaryButton({
   children,
   onClick,
   type = "button",
+  disabled = false,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   type?: "button" | "submit";
+  disabled?: boolean;
 }) {
   return (
     <button
       type={type}
       onClick={onClick}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-lg shadow-emerald-600/15 transition hover:-translate-y-0.5 hover:bg-emerald-500 active:translate-y-0"
+      disabled={disabled}
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-lg shadow-emerald-600/15 transition hover:-translate-y-0.5 hover:bg-emerald-500 active:translate-y-0 disabled:opacity-60 disabled:pointer-events-none"
     >
       {children}
     </button>

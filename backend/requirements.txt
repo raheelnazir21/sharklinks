@@ -13,3 +13,8 @@ httpx
 pytest
 reportlab
 openpyxl
+openai>=1.0.0
+pdfplumber
+pypdf
+python-docx
+apscheduler

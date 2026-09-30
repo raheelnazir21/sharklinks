@@ -9,6 +9,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import MainContent from "@/components/layout/MainContent";
 import { NotificationToasts } from "@/components/ui/NotificationSystem";
+import AIChatWidget from "@/components/ai/AIChatWidget";
 
 export default function ProtectedLayout({
   children,
@@ -28,6 +29,8 @@ export default function ProtectedLayout({
           </MainContent>
           {/* Global toast popups — renders above everything */}
           <NotificationToasts />
+          {/* AI Assistant — floating chat bubble on every protected page */}
+          <AIChatWidget />
         </div>
       </HeaderProvider>
     </SidebarProvider>

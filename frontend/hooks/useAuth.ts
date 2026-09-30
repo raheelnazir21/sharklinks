@@ -19,11 +19,12 @@ function userFromToken(token: string): AuthUser | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
     if (!payload?.sub || !payload?.role) return null;
+    const roleStr = String(payload.role || "").toLowerCase().trim();
     return {
       id: payload.sub,
-      email: "",
-      full_name: "Super Admin",
-      role: payload.role,
+      email: payload.email || "",
+      full_name: payload.name || (roleStr === "super_admin" ? "Super Admin" : "User"),
+      role: roleStr,
       is_active: true,
     } as AuthUser;
   } catch {

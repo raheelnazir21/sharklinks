@@ -48,7 +48,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
       </button>
 
       {/* Page heading — hidden on mobile to keep header compact, shown from sm up */}
-      <div className="hidden sm:block min-w-0 flex-1">
+      <div className="hidden sm:block min-w-0 flex-1 overflow-hidden">
         <IndustrialHeading
           eyebrow={heading.eyebrow}
           title={heading.title || title || "Workspace"}
@@ -183,6 +183,12 @@ function getPageHeading(pathname: string) {
     title: "System",
     highlight: "Settings",
     subtitle: "Account preferences, security and session controls",
+  };
+  if (pathname.startsWith("/pre-orders")) return {
+    eyebrow: "Order Accountability",
+    title: "Orders to",
+    highlight: "Process",
+    subtitle: "Assign orders to managers and track acknowledgment",
   };
   return {
     eyebrow: "Factory Control Room",

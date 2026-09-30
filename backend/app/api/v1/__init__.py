@@ -59,3 +59,10 @@ api_router.include_router(comments.router)
 from app.api.v1 import notifications
 api_router.include_router(notifications.router)
 
+# Step 13 — AI Assistant (conversational AI with DB tools + document RAG)
+from app.api.v1 import ai_assistant
+api_router.include_router(ai_assistant.router)
+
+# Step 14 — Pre-Order Requests (Orders to Process accountability module)
+from app.api.v1 import pre_orders
+api_router.include_router(pre_orders.router)

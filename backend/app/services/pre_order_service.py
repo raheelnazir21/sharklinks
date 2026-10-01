@@ -53,64 +53,66 @@ def _serialize(req: PreOrderRequest, db: Session) -> dict:
                     req.linked_class_id = linked_class_id
 
         if linked_class_id:
-            if is_bulk:
-                orders_in_class = db.query(Order).filter(Order.bulk_class_id == linked_class_id, Order.is_active == True).all()
-            else:
-                orders_in_class = db.query(Order).filter(Order.sample_class_id == linked_class_id, Order.is_active == True).all()
-
-            actual_orders_count = len(orders_in_class)
-            req.processed_product_count = actual_orders_count
-
-            if orders_in_class:
-                po_numbers = [o.order_no for o in orders_in_class if o.order_no]
-                req.linked_order_id = ", ".join(po_numbers)
-
-            total_needed = req.total_product_count or 1
-            if (req.processed_product_count or 0) >= total_needed:
-                req.status = PreOrderStatus.processed
-            elif (req.processed_product_count or 0) > 0 and req.status != PreOrderStatus.ignored:
-                req.status = PreOrderStatus.partial
             try:
+                with db.begin_nested():
+                    if is_bulk:
+                        orders_in_class = db.query(Order).filter(Order.bulk_class_id == linked_class_id, Order.is_active == True).all()
+                    else:
+                        orders_in_class = db.query(Order).filter(Order.sample_class_id == linked_class_id, Order.is_active == True).all()
+
+                    actual_orders_count = len(orders_in_class)
+                    req.processed_product_count = actual_orders_count
+
+                    if orders_in_class:
+                        po_numbers = [o.order_no for o in orders_in_class if o.order_no]
+                        req.linked_order_id = ", ".join(po_numbers)[:500]
+
+                    total_needed = req.total_product_count or 1
+                    if (req.processed_product_count or 0) >= total_needed:
+                        req.status = PreOrderStatus.processed
+                    elif (req.processed_product_count or 0) > 0 and req.status != PreOrderStatus.ignored:
+                        req.status = PreOrderStatus.partial
+                    db.flush()
                 db.commit()
-            except Exception:
-                db.rollback()
+            except Exception as sync_err:
+                logger.warning(f"[_serialize] Failed to sync class order count: {sync_err}")
     except Exception as e:
         logger.warning(f"[_serialize] Failed to sync class order count: {e}")
 
     return {
-        "id": str(req.id),
-        "class_name": req.class_name,
-        "category": req.category.value if hasattr(req.category, "value") else str(req.category),
-        "style_name": req.style_name,
-        "customer": req.customer,
-        "reference_po": req.reference_po,
-        "quantity": req.quantity,
+        "id": str(getattr(req, "id", "")),
+        "class_name": getattr(req, "class_name", "") or "",
+        "category": req.category.value if hasattr(getattr(req, "category", None), "value") else str(getattr(req, "category", "bulk")),
+        "style_name": getattr(req, "style_name", None),
+        "customer": getattr(req, "customer", None),
+        "reference_po": getattr(req, "reference_po", None),
+        "quantity": getattr(req, "quantity", None),
         "total_product_count": getattr(req, "total_product_count", 1) or 1,
         "processed_product_count": getattr(req, "processed_product_count", 0) or 0,
-        "ex_factory_date": str(req.ex_factory_date) if req.ex_factory_date else None,
-        "priority": req.priority.value if hasattr(req.priority, "value") else str(req.priority),
-        "notes": req.notes,
-        "vendor_id": str(req.vendor_id) if req.vendor_id else None,
+        "ex_factory_date": str(req.ex_factory_date) if getattr(req, "ex_factory_date", None) else None,
+        "priority": req.priority.value if hasattr(getattr(req, "priority", None), "value") else str(getattr(req, "priority", "normal")),
+        "notes": getattr(req, "notes", None),
+        "vendor_id": str(req.vendor_id) if getattr(req, "vendor_id", None) else None,
         "vendor_name": vendor.name if vendor else None,
-        "assigned_manager_id": str(req.assigned_manager_id),
+        "assigned_manager_id": str(getattr(req, "assigned_manager_id", "")),
         "assigned_manager_name": manager.full_name if manager else None,
         "assigned_manager_email": manager.email if manager else None,
-        "assigned_by_id": str(req.assigned_by_id),
+        "assigned_by_id": str(getattr(req, "assigned_by_id", "")),
         "assigned_by_name": assigned_by.full_name if assigned_by else None,
-        "assigned_at": req.assigned_at.isoformat() if req.assigned_at else None,
+        "assigned_at": req.assigned_at.isoformat() if getattr(req, "assigned_at", None) else None,
         "linked_class_id": linked_class_id,
-        "linked_order_id": str(req.linked_order_id) if req.linked_order_id else None,
-        "linked_at": req.linked_at.isoformat() if req.linked_at else None,
-        "status": req.status.value if hasattr(req.status, "value") else str(req.status),
-        "ignore_reason": req.ignore_reason,
+        "linked_order_id": str(getattr(req, "linked_order_id", "")) if getattr(req, "linked_order_id", None) else None,
+        "linked_at": req.linked_at.isoformat() if getattr(req, "linked_at", None) else None,
+        "status": req.status.value if hasattr(getattr(req, "status", None), "value") else str(getattr(req, "status", "pending")),
+        "ignore_reason": getattr(req, "ignore_reason", None),
         "hours_elapsed": hours_elapsed,
         "days_elapsed": days_elapsed,
-        "assignment_email_sent_at": req.assignment_email_sent_at.isoformat() if req.assignment_email_sent_at else None,
-        "first_reminder_sent_at": req.first_reminder_sent_at.isoformat() if req.first_reminder_sent_at else None,
-        "second_reminder_sent_at": req.second_reminder_sent_at.isoformat() if req.second_reminder_sent_at else None,
-        "escalation_sent_at": req.escalation_sent_at.isoformat() if req.escalation_sent_at else None,
-        "created_at": req.created_at.isoformat() if req.created_at else None,
-        "updated_at": req.updated_at.isoformat() if req.updated_at else None,
+        "assignment_email_sent_at": req.assignment_email_sent_at.isoformat() if getattr(req, "assignment_email_sent_at", None) else None,
+        "first_reminder_sent_at": req.first_reminder_sent_at.isoformat() if getattr(req, "first_reminder_sent_at", None) else None,
+        "second_reminder_sent_at": req.second_reminder_sent_at.isoformat() if getattr(req, "second_reminder_sent_at", None) else None,
+        "escalation_sent_at": req.escalation_sent_at.isoformat() if getattr(req, "escalation_sent_at", None) else None,
+        "created_at": req.created_at.isoformat() if getattr(req, "created_at", None) else None,
+        "updated_at": req.updated_at.isoformat() if getattr(req, "updated_at", None) else None,
     }
 
 
@@ -192,22 +194,30 @@ class PreOrderService:
 
             if manager.email:
                 send_assignment_email(serialized, manager.email, cc)
-                req.assignment_email_sent_at = datetime.utcnow()
-                db.commit()
+                try:
+                    with db.begin_nested():
+                        req.assignment_email_sent_at = datetime.utcnow()
+                        db.flush()
+                    db.commit()
+                except Exception as db_email_err:
+                    logger.warning(f"[PreOrderService] Failed to record assignment email timestamp: {db_email_err}")
         except Exception as e:
             logger.error(f"[PreOrderService] Assignment email failed: {e}")
 
         # ── In-app notification to manager ────────────────────────────────
         try:
             from app.models.comments_notifications import Notification
-            db.add(Notification(
-                user_id=req.assigned_manager_id,
-                title=f"New Order Assigned: {req.class_name}",
-                message=f"You have been assigned a new {req.category.value} order: {req.class_name}. Please process it in the system.",
-                category="pre_order_assigned",
-                type="pre_order_assigned",
-                extra_data={"pre_order_id": str(req.id), "class_name": req.class_name},
-            ))
+            cat_name = req.category.value if hasattr(req.category, "value") else str(req.category)
+            with db.begin_nested():
+                db.add(Notification(
+                    user_id=req.assigned_manager_id,
+                    title=f"New Order Assigned: {req.class_name}",
+                    message=f"You have been assigned a new {cat_name} order: {req.class_name}. Please process it in the system.",
+                    category="pre_order_assigned",
+                    type="pre_order_assigned",
+                    extra_data={"pre_order_id": str(req.id), "class_name": req.class_name},
+                ))
+                db.flush()
             db.commit()
         except Exception as e:
             logger.error(f"[PreOrderService] In-app notification failed: {e}")

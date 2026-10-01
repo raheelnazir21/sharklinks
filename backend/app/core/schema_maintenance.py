@@ -10,6 +10,12 @@ from app.models.order import (
     StageApprovalStatus,
     TrackType,
 )
+from app.models.pre_order_request import (
+    PreOrderStatus,
+    PreOrderCategory,
+    PreOrderPriority,
+)
+from app.models.email_tracker import EmailTrackerStatus
 
 
 POSTGRES_ENUMS = {
@@ -20,6 +26,10 @@ POSTGRES_ENUMS = {
     "orderstatus": OrderStatus,
     "orderpriority": OrderPriority,
     "stageapprovalstatus": StageApprovalStatus,
+    "preorderstatus": PreOrderStatus,
+    "preordercategory": PreOrderCategory,
+    "preorderpriority": PreOrderPriority,
+    "emailtrackerstatus": EmailTrackerStatus,
 }
 
 
@@ -47,11 +57,14 @@ def sync_postgres_enums(engine: Engine) -> None:
 
             label_set = set(labels)
             for member in enum_cls:
-                if member.name not in label_set:
-                    conn.execute(
-                        text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS :label"),
-                        {"label": member.name},
-                    )
+                val = member.value if hasattr(member, "value") else member.name
+                for target_label in (member.name, str(val)):
+                    if target_label not in label_set:
+                        conn.execute(
+                            text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS :label"),
+                            {"label": target_label},
+                        )
+                        label_set.add(target_label)
 
 
 def ensure_runtime_schema(engine: Engine) -> None:
@@ -232,6 +245,26 @@ def ensure_runtime_schema(engine: Engine) -> None:
                     conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN processed_product_count INTEGER DEFAULT 0"))
                 if "linked_class_id" not in pre_cols:
                     conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN linked_class_id VARCHAR(36)"))
+                if "vendor_id" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN vendor_id VARCHAR(36)"))
+                if "reference_po" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN reference_po VARCHAR(100)"))
+                if "quantity" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN quantity INTEGER"))
+                if "ex_factory_date" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN ex_factory_date DATE"))
+                if "notes" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN notes TEXT"))
+                if "assignment_email_sent_at" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN assignment_email_sent_at DATETIME"))
+                if "first_reminder_sent_at" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN first_reminder_sent_at DATETIME"))
+                if "second_reminder_sent_at" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN second_reminder_sent_at DATETIME"))
+                if "escalation_sent_at" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN escalation_sent_at DATETIME"))
+                if "ignore_reason" not in pre_cols:
+                    conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN ignore_reason VARCHAR(300)"))
 
             # --- ai_chat_sessions & ai_chat_messages tables for SQLite ---
             conn.execute(text("""
@@ -321,6 +354,16 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS total_product_count INTEGER DEFAULT 1"))
             conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS processed_product_count INTEGER DEFAULT 0"))
             conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS linked_class_id UUID"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS vendor_id UUID"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS reference_po VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS quantity INTEGER"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS ex_factory_date DATE"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS notes TEXT"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS assignment_email_sent_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS first_reminder_sent_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS second_reminder_sent_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS escalation_sent_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS ignore_reason VARCHAR(300)"))
 
             # --- ai_chat_sessions & ai_chat_messages tables for Postgres ---
             conn.execute(text("""

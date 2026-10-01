@@ -140,8 +140,22 @@ def docs_redirect():
 # Global Exception Handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    logger.error(
+        f"[GlobalExceptionHandler] Unhandled error on {request.method} {request.url.path}: {exc}\n"
+        f"{traceback.format_exc()}"
+    )
+    if isinstance(exc, HTTPException):
+        detail_msg = exc.detail if isinstance(exc.detail, str) else "Request error"
+        return error_response(
+            message=detail_msg,
+            status_code=exc.status_code,
+            details=exc.detail,
+        )
     return error_response(
-        message="An unexpected error occurred.",
+        message=f"An unexpected error occurred: {str(exc)}",
         status_code=500,
-        details=str(exc)
+        details=str(exc),
     )

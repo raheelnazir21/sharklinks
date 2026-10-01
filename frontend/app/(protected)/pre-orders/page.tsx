@@ -88,12 +88,44 @@ type Stats = {
 };
 
 type ApiError = {
-  response?: { data?: { detail?: string; message?: string } };
+  response?: { data?: { detail?: any; message?: string; details?: any } };
+  message?: string;
 };
 
-function getApiError(err: unknown, fallback: string) {
-  const e = err as ApiError;
-  return e.response?.data?.detail || e.response?.data?.message || fallback;
+function getApiError(err: unknown, fallback: string): string {
+  const e = err as any;
+  const data = e?.response?.data;
+  if (!data) return e?.message || fallback;
+  if (data.details) {
+    if (typeof data.details === "string" && data.details.trim()) {
+      if (data.message && !data.message.startsWith("An unexpected error occurred")) {
+        return `${data.message} (${data.details})`;
+      }
+      return data.details;
+    }
+    if (typeof data.details === "object") {
+      try {
+        return JSON.stringify(data.details);
+      } catch {
+        // fallback
+      }
+    }
+  }
+  if (data.detail) {
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) {
+      return data.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ");
+    }
+    if (typeof data.detail === "object") {
+      try {
+        return JSON.stringify(data.detail);
+      } catch {
+        // fallback
+      }
+    }
+  }
+  if (data.message) return data.message;
+  return fallback;
 }
 
 // ─── Tone maps ────────────────────────────────────────────────────────────────

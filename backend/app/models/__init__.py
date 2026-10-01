@@ -31,8 +31,9 @@ from app.models.inline_qc import (  # noqa: F401
 # Step 5 — Stage Comments & Notifications
 from app.models.comments_notifications import StageComment, Notification  # noqa: F401
 
-# Step 6 — Pre-Order Requests (Orders to Process module)
+# Step 6 — Pre-Order Requests & Email Order Tracker
 from app.models.pre_order_request import PreOrderRequest, PreOrderStatus, PreOrderCategory, PreOrderPriority  # noqa: F401
+from app.models.email_tracker import EmailOrderTracker, EmailTrackerStatus  # noqa: F401
 
 # Step 7 — AI Chat History (User-isolated conversations)
 from app.models.ai_chat import AIChatSession, AIChatMessage  # noqa: F401

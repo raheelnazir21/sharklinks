@@ -70,6 +70,7 @@ jobs:
             ENV_DIR="/home/ubuntu/deploy-env"
 
             mkdir -p "$ENV_DIR/backend" "$ENV_DIR/frontend" /home/ubuntu/deploy-backups
+            (cd /home/ubuntu/deploy-backups && ls -dt factory-management-system-* 2>/dev/null | tail -n +6 | xargs -r rm -rf || true)
 
             if [ -f "$PROJECT_DIR/backend/.env" ]; then
               cp "$PROJECT_DIR/backend/.env" "$ENV_DIR/backend/.env"

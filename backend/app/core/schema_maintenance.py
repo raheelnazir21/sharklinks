@@ -313,14 +313,14 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE production_stage_chunks ADD COLUMN IF NOT EXISTS buffer_days INTEGER DEFAULT 0"))
             conn.execute(text("ALTER TABLE production_stages ADD COLUMN IF NOT EXISTS chunk_id UUID REFERENCES production_stage_chunks(id) ON DELETE SET NULL"))
 
-            conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
-            conn.execute(text("ALTER TABLE inline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
-            conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
-            conn.execute(text("ALTER TABLE finish_endline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE IF EXISTS inline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE IF EXISTS inline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE IF EXISTS finish_endline_qc_reports ADD COLUMN IF NOT EXISTS article_code VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE IF EXISTS finish_endline_qc_reports ADD COLUMN IF NOT EXISTS product_color VARCHAR(100)"))
 
-            conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN IF NOT EXISTS total_product_count INTEGER DEFAULT 1"))
-            conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN IF NOT EXISTS processed_product_count INTEGER DEFAULT 0"))
-            conn.execute(text("ALTER TABLE pre_order_requests ADD COLUMN IF NOT EXISTS linked_class_id UUID"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS total_product_count INTEGER DEFAULT 1"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS processed_product_count INTEGER DEFAULT 0"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS linked_class_id UUID"))
 
             # --- ai_chat_sessions & ai_chat_messages tables for Postgres ---
             conn.execute(text("""

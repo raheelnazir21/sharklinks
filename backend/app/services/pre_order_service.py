@@ -209,9 +209,12 @@ class PreOrderService:
             from app.models.comments_notifications import Notification
             cat_name = req.category.value if hasattr(req.category, "value") else str(req.category)
             with db.begin_nested():
+                notif_title = f"New Order Assigned: {req.class_name}"
+                if len(notif_title) > 450:
+                    notif_title = notif_title[:447] + "..."
                 db.add(Notification(
                     user_id=req.assigned_manager_id,
-                    title=f"New Order Assigned: {req.class_name}",
+                    title=notif_title,
                     message=f"You have been assigned a new {cat_name} order: {req.class_name}. Please process it in the system.",
                     category="pre_order_assigned",
                     type="pre_order_assigned",

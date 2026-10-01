@@ -43,11 +43,11 @@ class PreOrderRequest(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
 
     # ─── Order Details ────────────────────────────────────────────────────────
-    class_name              = Column(String(200), nullable=False)
+    class_name              = Column(Text, nullable=False)
     category                = Column(Enum(PreOrderCategory), nullable=False)
-    style_name              = Column(String(200), nullable=True)
-    customer                = Column(String(200), nullable=True)
-    reference_po            = Column(String(100), nullable=True)   # External PO / reference number
+    style_name              = Column(Text, nullable=True)
+    customer                = Column(String(500), nullable=True)
+    reference_po            = Column(String(500), nullable=True)   # External PO / reference number
     quantity                = Column(Integer, nullable=True)        # Total garment pieces (e.g. 500 pcs)
     total_product_count     = Column(Integer, nullable=False, default=1)  # Number of products/styles to create
     processed_product_count = Column(Integer, nullable=False, default=0)  # Number of products created so far

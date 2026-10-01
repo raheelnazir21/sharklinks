@@ -93,3 +93,43 @@ def test_create_pre_order_and_auto_sync_existing_orders(db):
     assert result["status"] == "partial"
     assert "PO-2026-001" in result["linked_order_id"]
     assert "PO-2026-002" in result["linked_order_id"]
+
+
+def test_create_pre_order_with_long_class_name(db):
+    admin_role = db.query(Role).filter(Role.name == RoleEnum.admin).first()
+    if not admin_role:
+        admin_role = Role(name=RoleEnum.admin, permissions=[])
+        db.add(admin_role)
+        db.commit()
+
+    manager_user = User(
+        email="manager_long@example.com",
+        full_name="Plant Lead",
+        password_hash="fakehash",
+        role_id=admin_role.id,
+        is_active=True,
+    )
+    db.add(manager_user)
+    db.commit()
+
+    long_class_name = (
+        "COTTON COLLECTIVE PO# CC1001-DIRTY // CC1001-HTHR // CC1001-LEPRD // "
+        "CC1001-DRPSLBBNE // CC1001-CWCUB // CC1001CW-LEPRD // CC1001-HD15CUB // "
+        "CC1001LS-SLDLIMO // CC1001-LSOILBLU // CC1001-HODNAT // CC1001-HODSTRNG // CC1001-HD15SGGRN"
+    )
+    assert len(long_class_name) > 200
+
+    payload = PreOrderCreate(
+        class_name=long_class_name,
+        category=PreOrderCategory.bulk,
+        customer="Cotton Collective",
+        total_product_count=12,
+        assigned_manager_id=str(manager_user.id),
+        notes="These are all reorders. Please make sure they are made in same hand, color, wash, appearance exactly as last time and weights and specs are what the client approved.",
+    )
+
+    result = PreOrderService.create(db, payload, manager_user)
+    assert result is not None
+    assert result["class_name"] == long_class_name
+    assert result["total_product_count"] == 12
+

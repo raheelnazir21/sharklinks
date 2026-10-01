@@ -365,6 +365,15 @@ def ensure_runtime_schema(engine: Engine) -> None:
             conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS escalation_sent_at TIMESTAMP"))
             conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ADD COLUMN IF NOT EXISTS ignore_reason VARCHAR(300)"))
 
+            # --- Expand length restrictions for textile multi-product classes ---
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ALTER COLUMN class_name TYPE TEXT"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ALTER COLUMN style_name TYPE TEXT"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ALTER COLUMN customer TYPE VARCHAR(500)"))
+            conn.execute(text("ALTER TABLE IF EXISTS pre_order_requests ALTER COLUMN reference_po TYPE VARCHAR(500)"))
+            conn.execute(text("ALTER TABLE IF EXISTS bulk_classes ALTER COLUMN name TYPE TEXT"))
+            conn.execute(text("ALTER TABLE IF EXISTS sample_classes ALTER COLUMN name TYPE TEXT"))
+            conn.execute(text("ALTER TABLE IF EXISTS notifications ALTER COLUMN title TYPE VARCHAR(500)"))
+
             # --- ai_chat_sessions & ai_chat_messages tables for Postgres ---
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS ai_chat_sessions (

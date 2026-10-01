@@ -31,7 +31,7 @@ class Notification(Base):
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     # Notification content
-    title = Column(String(200), nullable=False)
+    title = Column(String(500), nullable=False)
     message = Column(Text, nullable=False)
     html_content = Column(Text, nullable=True)
 

@@ -104,7 +104,7 @@ class Vendor(Base):
 class SampleClass(Base):
     __tablename__ = "sample_classes"
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    name = Column(String(200), nullable=False)
+    name = Column(Text, nullable=False)
     serial_number = Column(String(100), nullable=True)
     customer = Column(String(100), nullable=True)
     vendor_id = Column(GUID(), ForeignKey("vendors.id"), nullable=True)
@@ -119,7 +119,7 @@ class SampleClass(Base):
 class BulkClass(Base):
     __tablename__ = "bulk_classes"
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    name = Column(String(200), nullable=False)
+    name = Column(Text, nullable=False)
     serial_number = Column(String(100), nullable=True)
     customer = Column(String(100), nullable=True)
     vendor_id = Column(GUID(), ForeignKey("vendors.id"), nullable=True)

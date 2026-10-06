@@ -108,7 +108,7 @@ export function useNotifications() {
 
   const markAllRead = useCallback(async () => {
     try {
-      await api.post("/notifications/mark-all-read");
+      await api.post("/notifications/mark-all-read?all_users=true");
       setNotifications([]);
       setUnreadCount(0);
       prevCountRef.current = 0;

@@ -398,8 +398,24 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 )
             """))
 
-            for old_name, new_name in legacy_stage_names.items():
+            # --- Deduplicate spam unread notifications in Postgres ---
+            conn.execute(text("""
+                WITH ranked_notifs AS (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY user_id, type, coalesce(order_id::text, ''), coalesce(stage_id::text, '')
+                               ORDER BY created_at DESC
+                           ) as rn
+                    FROM notifications
+                    WHERE is_read = FALSE
+                )
+                UPDATE notifications n
+                SET is_read = TRUE
+                FROM ranked_notifs r
+                WHERE n.id = r.id AND r.rn > 1;
+            """))
 
+            for old_name, new_name in legacy_stage_names.items():
 
                 conn.execute(
                     text("UPDATE production_stages SET stage_name = CAST(:new_name AS stagename) WHERE stage_name::text = :old_name"),

@@ -928,7 +928,7 @@ const AI_CHAT_STYLES = `
   position: fixed;
   bottom: 28px;
   right: 28px;
-  z-index: 9999;
+  z-index: 99999;
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -983,7 +983,7 @@ const AI_CHAT_STYLES = `
   position: fixed;
   bottom: 28px;
   right: 28px;
-  z-index: 9998;
+  z-index: 99999;
   width: 420px;
   max-width: calc(100vw - 40px);
   height: 640px;
@@ -1021,7 +1021,7 @@ const AI_CHAT_STYLES = `
   transform: translateX(50%);
   border-radius: 20px !important;
   box-shadow: 0 32px 120px rgba(0,0,0,0.28), 0 8px 32px rgba(5,150,105,0.18) !important;
-  z-index: 10000;
+  z-index: 100000;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */

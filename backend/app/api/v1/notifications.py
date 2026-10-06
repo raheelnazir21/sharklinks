@@ -9,10 +9,13 @@ Per-user alert system with:
 """
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, String, cast, or_
 from datetime import date, timedelta, datetime
 from typing import Optional
 from pydantic import BaseModel
+import uuid
+
+from app.repositories.order_repo import _id_variants
 
 from app.core.database import get_db, SessionLocal
 from app.core.dependencies import get_current_user
@@ -106,7 +109,9 @@ def get_notifications(
     # RBAC: Only admin & super_admin can see company-wide notifications.
     # Other users (managers, qc officers, viewers) only see their own.
     if not _is_admin_user(current_user) or not all_users:
-        query = query.filter(Notification.user_id == current_user.id)
+        query = query.filter(
+            cast(Notification.user_id, String).in_(_id_variants(str(current_user.id)))
+        )
 
     if not include_read:
         query = query.filter(Notification.is_read == False)
@@ -123,7 +128,9 @@ def unread_count(
 ):
     query = db.query(func.count(Notification.id)).filter(Notification.is_read == False)
     if not _is_admin_user(current_user) or not all_users:
-        query = query.filter(Notification.user_id == current_user.id)
+        query = query.filter(
+            cast(Notification.user_id, String).in_(_id_variants(str(current_user.id)))
+        )
     count = query.scalar()
     return success_response(data={"count": count or 0})
 
@@ -134,9 +141,13 @@ def mark_read(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = db.query(Notification).filter(Notification.id == notification_id)
+    query = db.query(Notification).filter(
+        cast(Notification.id, String).in_(_id_variants(str(notification_id)))
+    )
     if not _is_admin_user(current_user):
-        query = query.filter(Notification.user_id == current_user.id)
+        query = query.filter(
+            cast(Notification.user_id, String).in_(_id_variants(str(current_user.id)))
+        )
     n = query.first()
     if n:
         n.is_read = True
@@ -146,13 +157,15 @@ def mark_read(
 
 @router.post("/mark-all-read", summary="Mark all notifications as read")
 def mark_all_read(
-    all_users: bool = False,
+    all_users: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Notification).filter(Notification.is_read == False)
     if not _is_admin_user(current_user) or not all_users:
-        query = query.filter(Notification.user_id == current_user.id)
+        query = query.filter(
+            cast(Notification.user_id, String).in_(_id_variants(str(current_user.id)))
+        )
     query.update({"is_read": True}, synchronize_session=False)
     db.commit()
     return success_response(message="All notifications marked as read.")
@@ -194,18 +207,25 @@ def _already_notified_today(
     stage_id: Optional[str] = None,
     notif_type: str = "stage_overdue",
 ) -> bool:
-    """Prevent duplicate notifications for the same entity and type on the same day."""
+    """Prevent duplicate notifications for the same entity and type."""
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     query = db.query(Notification).filter(
-        Notification.user_id == user_id,
+        cast(Notification.user_id, String).in_(_id_variants(str(user_id))),
         Notification.type == notif_type,
-        Notification.created_at >= today_start,
     )
     if order_id:
-        query = query.filter(Notification.order_id == order_id)
+        query = query.filter(cast(Notification.order_id, String).in_(_id_variants(str(order_id))))
     if stage_id:
-        query = query.filter(Notification.stage_id == stage_id)
-    return query.first() is not None
+        query = query.filter(cast(Notification.stage_id, String).in_(_id_variants(str(stage_id))))
+
+    # Suppress duplicate if there is ALREADY an unread alert for this entity, OR if one was sent today
+    existing = query.filter(
+        or_(
+            Notification.is_read == False,
+            Notification.created_at >= today_start,
+        )
+    ).first()
+    return existing is not None
 
 
 # ─── Instant Dispatch Functions ───────────────────────────────────────────────

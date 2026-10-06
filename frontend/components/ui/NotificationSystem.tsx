@@ -329,7 +329,7 @@ export function NotificationToasts() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 items-end pointer-events-none">
+    <div className="fixed bottom-[96px] right-6 z-40 flex flex-col gap-2 items-end pointer-events-none">
       {toasts.map((toast) => {
         const { tag, tagColor, line1, line2, line3, line4 } = parseNotifLines(toast);
         const targetUrl = toast.order_id ? `/orders/${toast.order_id}` : "/orders";

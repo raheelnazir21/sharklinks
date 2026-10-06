@@ -2,9 +2,17 @@
 QC Report Repository V2 — Handles DB operations for the new enterprise QC system.
 """
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func
-from app.models.qc_report import QCReport, QCReportItem, DefectCode, DefectCategory, ReportStatus, QCReportType
+from app.models.qc_report import (
+    QCReport,
+    QCReportItem,
+    QCReportItemDefect,
+    DefectCode,
+    DefectCategory,
+    ReportStatus,
+    QCReportType,
+)
 
 
 class QCReportRepository:
@@ -19,7 +27,14 @@ class QCReportRepository:
         limit: int = 100,
         user_id: Optional[str] = None,
     ) -> List[QCReport]:
-        q = db.query(QCReport)
+        q = db.query(QCReport).options(
+            joinedload(QCReport.vendor),
+            joinedload(QCReport.floor),
+            joinedload(QCReport.line),
+            joinedload(QCReport.order),
+            joinedload(QCReport.article_code),
+            joinedload(QCReport.product_color),
+        )
         if vendor_id:
             q = q.filter(QCReport.vendor_id == vendor_id)
         if report_type:
@@ -94,8 +109,23 @@ class QCReportRepository:
             q = q.filter((QCReport.created_by == user_id) | (QCReport.auditor_id == user_id))
             
         total = q.count()
-        # Ensure we load defect_entries for the frontend
-        items = q.order_by(QCReport.inspection_date.desc()).offset(skip).limit(limit).all()
+        # Eager load report (with vendor, floor, line, order, article_code, product_color)
+        # and defect_entries (with defect) to eliminate hundreds of N+1 queries.
+        items = (
+            q.options(
+                joinedload(QCReportItem.report).joinedload(QCReport.vendor),
+                joinedload(QCReportItem.report).joinedload(QCReport.floor),
+                joinedload(QCReportItem.report).joinedload(QCReport.line),
+                joinedload(QCReportItem.report).joinedload(QCReport.order),
+                joinedload(QCReportItem.report).joinedload(QCReport.article_code),
+                joinedload(QCReportItem.report).joinedload(QCReport.product_color),
+                selectinload(QCReportItem.defect_entries).joinedload(QCReportItemDefect.defect),
+            )
+            .order_by(QCReport.inspection_date.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
         
         return items, total
 

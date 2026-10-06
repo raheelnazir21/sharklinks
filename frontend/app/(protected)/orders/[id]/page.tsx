@@ -8,7 +8,7 @@ import {
   ImageIcon, Info, ListChecks, Timer, Zap, Package, Truck, ArrowRightCircle,
   GitBranch, RefreshCcw, MessageSquare, ListOrdered, CheckCircle, ShieldCheck,
   Paperclip, Download, ExternalLink, Trash2, AlertTriangle, ThumbsUp, ThumbsDown,
-  AlertOctagon, ArrowUpRight, RotateCcw, CheckSquare
+  AlertOctagon, ArrowUpRight, RotateCcw, CheckSquare, Mail
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,7 @@ import { useHeader } from "@/hooks/useHeader";
 import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import OrderHistoryModal from "@/components/orders/OrderHistoryModal";
+import OrderReminderModal from "@/components/orders/OrderReminderModal";
 import StageComments from "@/components/ui/StageComments";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -47,6 +48,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [stageData, setStageData] = useState<any>({});
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [pendingStageAction, setPendingStageAction] = useState<{ stageId: string; status: string; label: string } | null>(null);
   const [reworkDialog, setReworkDialog] = useState<{ stageId: string; repeatFromStageId: string; reason: string; plan: string } | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; title: string; message: string } | null>(null);
@@ -937,6 +939,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             >
               History
             </button>
+            <button
+              type="button"
+              onClick={() => setReminderModalOpen(true)}
+              className="rounded-full border border-teal-300 bg-teal-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-teal-800 hover:bg-teal-100 hover:border-teal-400 transition shadow-sm flex items-center gap-1.5"
+            >
+              <Mail className="w-3.5 h-3.5" /> Email Reminders
+            </button>
             {/* Move to Bulk button — only for completed sample orders */}
             {canManage && isSampling && order.status === "completed" && (
               <button
@@ -1754,6 +1763,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </form>
       </Modal>
       <OrderHistoryModal orderId={historyOpen ? id : null} onClose={() => setHistoryOpen(false)} />
+      <OrderReminderModal isOpen={reminderModalOpen} onClose={() => setReminderModalOpen(false)} orderId={id} />
 
       {/* 3-State Approval Modal */}
       <Modal isOpen={Boolean(approvalDialog)} onClose={() => !updating && setApprovalDialog(null)} title={`QC Decision — ${stageLabel(approvalDialog?.stageName)}`}>

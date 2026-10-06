@@ -5,7 +5,7 @@ from typing import List, Optional
 import uuid
 from datetime import date
 from sqlalchemy import String, cast, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from app.models.order import Order, ProductionStage, OrderHistory, OrderStatus, Vendor, SampleClass, BulkClass
 
 
@@ -148,14 +148,31 @@ class OrderRepository:
             q = q.filter(cast(Order.vendor_id, String).in_(allowed_vendor_ids))
 
         
-        # Eager load vendor for name access
-        return q.order_by(Order.ex_factory_date.asc()).offset(skip).limit(limit).all()
+        # Eager load vendor and stages to eliminate N+1 queries during serialization
+        return (
+            q.options(
+                joinedload(Order.vendor),
+                selectinload(Order.stages),
+            )
+            .order_by(Order.ex_factory_date.asc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     @staticmethod
     def get_by_id(db: Session, order_id: str) -> Optional[Order]:
-        return db.query(Order).filter(
-            cast(Order.id, String).in_(_id_variants(order_id)), Order.is_active == True
-        ).first()
+        return (
+            db.query(Order)
+            .options(
+                joinedload(Order.vendor),
+                selectinload(Order.stages),
+            )
+            .filter(
+                cast(Order.id, String).in_(_id_variants(order_id)), Order.is_active == True
+            )
+            .first()
+        )
 
     @staticmethod
     def get_by_order_no(db: Session, order_no: str) -> Optional[Order]:

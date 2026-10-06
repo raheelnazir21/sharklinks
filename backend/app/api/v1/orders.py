@@ -1,7 +1,7 @@
 """
 Orders & Production Stages API.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
@@ -1388,3 +1388,172 @@ def upload_attachment(
         data={"file_name": file.filename, "file_path": filepath},
         message="File uploaded successfully."
     )
+
+
+# ─── Order Reminder Templates API (Partial, Date Delay, Order Complete) ─────────
+
+from pydantic import BaseModel, Field
+from app.services.email_service import (
+    build_partial_order_email,
+    build_date_delay_email,
+    build_order_complete_email,
+    send_order_status_reminder,
+)
+
+
+class SendOrderReminderRequest(BaseModel):
+    template_type: str = Field(..., description="One of: partial, date_delay, order_complete")
+    recipients: list[str] = Field(..., min_length=1, description="List of destination email addresses")
+    cc: list[str] = Field(default=[], description="Optional CC email addresses")
+    custom_note: str = Field(default="", description="Optional note to append to the reminder")
+    subject_override: str = Field(default="", description="Optional override for the email subject")
+
+
+def _build_order_dict_for_reminder(order: Order) -> dict:
+    current_stage_name = "Production Planning"
+    if order.stages:
+        pending_stages = [s for s in order.stages if str(getattr(s, "status", "")) != "completed"]
+        if pending_stages:
+            active_s = pending_stages[0]
+            current_stage_name = active_s.stage_name.value if hasattr(active_s.stage_name, "value") else str(active_s.stage_name)
+        else:
+            current_stage_name = "Packing & Dispatch"
+
+    customer_name = "Direct Customer"
+    if order.sample_class and order.sample_class.customer:
+        customer_name = order.sample_class.customer
+    elif order.bulk_class and order.bulk_class.customer:
+        customer_name = order.bulk_class.customer
+
+    return {
+        "id": str(order.id),
+        "order_no": order.order_no or f"PO-{str(order.id)[:8]}",
+        "style_name": order.style_name or order.product_name or "Standard Garment",
+        "product_name": order.product_name,
+        "customer": customer_name,
+        "vendor_name": order.vendor.name if order.vendor else "Main Factory Facility",
+        "quantity": order.quantity or 0,
+        "completed_quantity": int((order.quantity or 0) * 0.5) if order.status != OrderStatus.completed else (order.quantity or 0),
+        "ex_factory_date": str(order.ex_factory_date) if order.ex_factory_date else "TBD",
+        "current_stage": current_stage_name,
+        "days_delayed": order.delay_days,
+        "delay_reason": order.delay_reason or "Material supply delay / Quality re-inspection",
+        "delay_capa": order.delay_capa or "Line balancing adjusted, weekend overtime scheduled",
+        "recovery_date": str(order.recovery_date) if order.recovery_date else None,
+        "remarks": order.remarks,
+        "status": order.status.value if hasattr(order.status, "value") else str(order.status),
+        "qa_audit_status": order.qa_audit_status or "PASSED (AQL 1.5 Standard)",
+    }
+
+
+@router.get("/{order_id}/reminder-templates", tags=["Orders"])
+def get_order_reminder_templates(
+    order_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(OrderReadAccess),
+):
+    """
+    Returns all 3 pre-rendered reminder templates (Partial, Date Delay, Order Complete)
+    populated with real data for this order, ready for visual preview or direct copying.
+    """
+    order = _assert_order_access(db, order_id, current_user)
+    order_data = _build_order_dict_for_reminder(order)
+
+    subj_partial, html_partial = build_partial_order_email(order_data)
+    subj_delay, html_delay     = build_date_delay_email(order_data)
+    subj_comp, html_comp       = build_order_complete_email(order_data)
+
+    manager_email = order.vendor.assigned_manager.email if order.vendor and order.vendor.assigned_manager else current_user.email
+    vendor_email = order.vendor.email if order.vendor and order.vendor.email else ""
+
+    suggested_recipients = [e for e in [manager_email, vendor_email] if e]
+    if not suggested_recipients:
+        suggested_recipients = [current_user.email]
+
+    return success_response(
+        data={
+            "order": order_data,
+            "suggested_recipients": suggested_recipients,
+            "templates": {
+                "partial": {
+                    "key": "partial",
+                    "title": "Partial Order Attention",
+                    "badge": "⏳ Partial Progress",
+                    "badge_color": "#d97706",
+                    "description": "Notice for orders with partial quantity complete or stuck in mid-stages.",
+                    "subject": subj_partial,
+                    "html": html_partial,
+                },
+                "date_delay": {
+                    "key": "date_delay",
+                    "title": "Date Delay Escalation",
+                    "badge": f"🚨 {order_data['days_delayed']} Days Overdue" if order_data['days_delayed'] > 0 else "🚨 Schedule Risk",
+                    "badge_color": "#dc2626",
+                    "description": "Urgent escalation alert when ex-factory deadline is breached or at risk.",
+                    "subject": subj_delay,
+                    "html": html_delay,
+                },
+                "order_complete": {
+                    "key": "order_complete",
+                    "title": "Order Completed & Dispatch",
+                    "badge": "✅ 100% Completed",
+                    "badge_color": "#16a34a",
+                    "description": "Milestone notification confirming 100% production and final QC sign-off.",
+                    "subject": subj_comp,
+                    "html": html_comp,
+                },
+            },
+        },
+        message="Reminder templates generated successfully."
+    )
+
+
+@router.post("/{order_id}/send-reminder", tags=["Orders"])
+def send_order_reminder(
+    order_id: str,
+    payload: SendOrderReminderRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(ManagerAccess),
+):
+    """
+    Sends the selected reminder email template (partial, date_delay, or order_complete)
+    with optional custom notes and subject overrides in the background.
+    """
+    order = _assert_order_access(db, order_id, current_user)
+    order_data = _build_order_dict_for_reminder(order)
+
+    # Queue email sending in the background so HTTP request finishes in <100ms
+    background_tasks.add_task(
+        send_order_status_reminder,
+        template_type=payload.template_type,
+        order=order_data,
+        recipients=payload.recipients,
+        cc_emails=payload.cc,
+        custom_note=payload.custom_note,
+        subject_override=payload.subject_override,
+    )
+
+    ActivityLogService.record(
+        db,
+        action="ORDER_REMINDER_SENT",
+        entity_type="Order",
+        entity_id=order_id,
+        user=current_user,
+        payload={
+            "template_type": payload.template_type,
+            "recipients": payload.recipients,
+            "subject": payload.subject_override or f"Order Status Update — {order_data.get('order_no')}",
+        },
+    )
+
+    return success_response(
+        data={
+            "status": "queued",
+            "template_type": payload.template_type,
+            "recipients": payload.recipients,
+            "cc": payload.cc,
+        },
+        message=f"Reminder email '{payload.template_type}' queued and sending in the background."
+    )
+

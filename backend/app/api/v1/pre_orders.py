@@ -4,7 +4,7 @@ Access:
   - Super Admin / Admin : full CRUD (create, edit, delete, ignore, link)
   - Manager / QC / Viewer: read-only — see only their own assigned pre-orders
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -41,11 +41,12 @@ def list_pre_orders(
 @router.post("/", summary="Create a new pre-order request")
 def create_pre_order(
     payload: PreOrderCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(WriteAccess),   # admin only
 ):
-    data = PreOrderService.create(db, payload, current_user)
-    return success_response(data=data, message="Pre-order created. Assignment email sent.")
+    data = PreOrderService.create(db, payload, current_user, background_tasks=background_tasks)
+    return success_response(data=data, message="Pre-order created. Assignment email queued in background.")
 
 
 @router.get("/stats/summary", summary="Summary counts for dashboard widgets")

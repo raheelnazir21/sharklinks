@@ -5,7 +5,8 @@ Handles CRUD, email dispatch, and the reminder/escalation scheduler scan.
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, List
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
+from sqlalchemy import cast, String
 from sqlalchemy.orm import Session
 
 from app.models.pre_order_request import PreOrderRequest, PreOrderStatus
@@ -19,12 +20,25 @@ logger = logging.getLogger(__name__)
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
-def _serialize(req: PreOrderRequest, db: Session) -> dict:
+def _serialize(
+    req: PreOrderRequest,
+    db: Session,
+    user_map: Optional[dict] = None,
+    vendor_map: Optional[dict] = None,
+) -> dict:
     """Convert a PreOrderRequest ORM object to a serializable dict with joined names."""
-    # Load related names
-    manager = db.query(User).filter(User.id == req.assigned_manager_id).first()
-    assigned_by = db.query(User).filter(User.id == req.assigned_by_id).first()
-    vendor = db.query(Vendor).filter(Vendor.id == req.vendor_id).first() if req.vendor_id else None
+    # Load related names (utilizing preloaded maps to eliminate N+1 query loops)
+    if user_map is not None:
+        manager = user_map.get(str(req.assigned_manager_id)) if req.assigned_manager_id else None
+        assigned_by = user_map.get(str(req.assigned_by_id)) if req.assigned_by_id else None
+    else:
+        manager = db.query(User).filter(User.id == req.assigned_manager_id).first()
+        assigned_by = db.query(User).filter(User.id == req.assigned_by_id).first()
+
+    if vendor_map is not None:
+        vendor = vendor_map.get(str(req.vendor_id)) if req.vendor_id else None
+    else:
+        vendor = db.query(Vendor).filter(Vendor.id == req.vendor_id).first() if req.vendor_id else None
 
     hours_elapsed = None
     days_elapsed = None
@@ -147,12 +161,34 @@ def _get_super_admin_emails(db: Session) -> list[str]:
     return list(set(emails))
 
 
+def _send_assignment_email_task(req_id: str, serialized: dict, manager_email: str, cc: list[str]) -> None:
+    """Background task to dispatch assignment email and update DB timestamp without blocking HTTP response."""
+    try:
+        from app.services.email_service import send_assignment_email
+        send_assignment_email(serialized, manager_email, cc)
+        try:
+            with SessionLocal() as bg_db:
+                bg_req = bg_db.query(PreOrderRequest).filter(cast(PreOrderRequest.id, String) == str(req_id)).first()
+                if bg_req:
+                    bg_req.assignment_email_sent_at = datetime.utcnow()
+                    bg_db.commit()
+        except Exception as db_email_err:
+            logger.warning(f"[BackgroundTasks] Failed to record assignment email timestamp for {req_id}: {db_email_err}")
+    except Exception as e:
+        logger.error(f"[BackgroundTasks] Assignment email failed for {req_id}: {e}")
+
+
 # ─── CRUD ────────────────────────────────────────────────────────────────────
 
 class PreOrderService:
 
     @staticmethod
-    def create(db: Session, payload: PreOrderCreate, current_user: User) -> dict:
+    def create(
+        db: Session,
+        payload: PreOrderCreate,
+        current_user: User,
+        background_tasks: Optional[BackgroundTasks] = None,
+    ) -> dict:
         # Validate manager exists
         manager = db.query(User).filter(
             User.id == payload.assigned_manager_id,
@@ -182,9 +218,8 @@ class PreOrderService:
         db.commit()
         db.refresh(req)
 
-        # ── Fire instant assignment email ──────────────────────────────────
+        # ── Fire assignment email (BackgroundTasks if available, else inline) ──
         try:
-            from app.services.email_service import send_assignment_email
             serialized = _serialize(req, db)
             admin_emails = _get_admin_emails(db)
             # CC = all admins except the manager (avoid duplicate TO/CC)
@@ -193,16 +228,14 @@ class PreOrderService:
                 cc.append(current_user.email)
 
             if manager.email:
-                send_assignment_email(serialized, manager.email, cc)
-                try:
-                    with db.begin_nested():
-                        req.assignment_email_sent_at = datetime.utcnow()
-                        db.flush()
-                    db.commit()
-                except Exception as db_email_err:
-                    logger.warning(f"[PreOrderService] Failed to record assignment email timestamp: {db_email_err}")
+                if background_tasks:
+                    background_tasks.add_task(
+                        _send_assignment_email_task, str(req.id), serialized, manager.email, cc
+                    )
+                else:
+                    _send_assignment_email_task(str(req.id), serialized, manager.email, cc)
         except Exception as e:
-            logger.error(f"[PreOrderService] Assignment email failed: {e}")
+            logger.error(f"[PreOrderService] Assignment email scheduling failed: {e}")
 
         # ── In-app notification to manager ────────────────────────────────
         try:
@@ -252,7 +285,22 @@ class PreOrderService:
             query = query.filter(PreOrderRequest.status == status)
 
         reqs = query.order_by(PreOrderRequest.created_at.desc()).offset(skip).limit(limit).all()
-        return [_serialize(r, db) for r in reqs]
+        if not reqs:
+            return []
+
+        # Batch preload users and vendors to eliminate N+1 queries during serialization
+        user_ids = {str(r.assigned_manager_id) for r in reqs if r.assigned_manager_id} | {
+            str(r.assigned_by_id) for r in reqs if r.assigned_by_id
+        }
+        vendor_ids = {str(r.vendor_id) for r in reqs if r.vendor_id}
+
+        users = db.query(User).filter(cast(User.id, String).in_(list(user_ids))).all() if user_ids else []
+        user_map = {str(u.id): u for u in users}
+
+        vendors = db.query(Vendor).filter(cast(Vendor.id, String).in_(list(vendor_ids))).all() if vendor_ids else []
+        vendor_map = {str(v.id): v for v in vendors}
+
+        return [_serialize(r, db, user_map=user_map, vendor_map=vendor_map) for r in reqs]
 
     @staticmethod
     def get(db: Session, pre_order_id: str, current_user: User) -> dict:

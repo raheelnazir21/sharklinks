@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
+
+_backend_env = Path(__file__).resolve().parent.parent.parent / ".env"
+_root_env = _backend_env.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -51,7 +55,7 @@ class Settings(BaseSettings):
     ORDER_ESCALATION_HOURS: int = 72    # Hours before escalation to super admin
 
     class Config:
-        env_file = ".env"
+        env_file = [str(_backend_env), str(_root_env), ".env"]
         extra = "ignore"
 
 

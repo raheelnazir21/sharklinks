@@ -618,6 +618,234 @@ def build_order_complete_email(order: dict, custom_note: str = "") -> tuple[str,
     return subject, html
 
 
+def build_control_zones_directive_email(data: Optional[dict] = None, custom_note: str = "") -> tuple[str, str]:
+    """
+    Template 4: Cotton Collective WIP CSV Download & Daily Notification Reminders Directive.
+    Official executive announcement detailing:
+    - Weekly WIP CSV Download requirement
+    - The 6 Daily Notification Control Zones (Zone 1 to Zone 6)
+    - Live WIP update mandate from CUT TO PACK
+    """
+    data = data or {}
+    po_references = data.get(
+        "po_references",
+        "CC0910-CRPLIM // CC0910-CRPSNW // CC0910-FRGRN // CC0910-LIMO // CC0910-NVY // CC0910-BLK // CC0910-WHT"
+    )
+    brand_name = data.get("brand_name", "COTTON COLLECTIVE")
+    wip_url = data.get("wip_url") or f"{settings.APP_BASE_URL}/tracking-dashboard"
+    orders_url = f"{settings.APP_BASE_URL}/orders"
+
+    subject = f"📢 [{brand_name}] WIP CSV DOWNLOAD & DAILY NOTIFICATION REMINDERS (CONTROL ZONES 1–6) — PO# {po_references[:55]}..."
+
+    note_section = ""
+    if custom_note:
+        note_section = f"""
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;padding:14px 18px;border-radius:6px;margin:24px 0;">
+          <div style="font-size:12px;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:4px;">Executive Note:</div>
+          <div style="font-size:13px;color:#1e3a8a;line-height:1.5;">{custom_note}</div>
+        </div>"""
+
+    body = f"""
+    <!-- PO References Header Pill -->
+    <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#475569;line-height:1.5;">
+      <strong style="color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;">Reference Purchase Orders:</strong><br/>
+      <span style="font-family:monospace;color:#0369a1;font-size:12px;word-break:break-all;">{po_references}</span>
+    </div>
+
+    <!-- Executive Greeting & Core Directives -->
+    <p style="font-size:15px;color:#1e293b;line-height:1.6;margin:0 0 16px;">
+      Dear Factory Management, Merchandising &amp; Quality Control Teams,
+    </p>
+
+    <!-- Key Announcement 1: CSV Download -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:6px;padding:16px;margin:0 0 16px;">
+      <div style="font-size:13px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
+        📥 1. CSV Download Function Added to WIP
+      </div>
+      <p style="font-size:14px;color:#166534;line-height:1.6;margin:0;">
+        I am also adding a <strong>CSV DOWNLOAD FUNCTION</strong> to the WIP. 
+        Please submit the updated CSV report <strong>AT THE END OF EVERY WEEK</strong>.
+      </p>
+    </div>
+
+    <!-- Key Announcement 2: Daily Reminders Intro -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;border-radius:6px;padding:16px;margin:0 0 24px;">
+      <div style="font-size:13px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
+        🔔 2. Daily Notification Reminders Activated
+      </div>
+      <p style="font-size:14px;color:#1e40af;line-height:1.6;margin:0;">
+        We are also adding <strong>DAILY NOTIFICATION REMINDERS</strong> this week.<br/>
+        The notification system will be divided into the following control zones:
+      </p>
+    </div>
+
+    <!-- ─── 6 CONTROL ZONES BREAKDOWN ─── -->
+    <div style="margin:24px 0;">
+      <div style="font-size:14px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:14px;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">
+        Operational Control Zones Overview
+      </div>
+
+      <!-- ZONE 1 -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff5f5;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:8px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">
+                ZONE 1
+              </span>
+              <span style="font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;">
+                EX-FACTORY DATE PASSED
+              </span>
+            </div>
+            <p style="font-size:13px;color:#450a0a;line-height:1.5;margin:4px 0 6px;">
+              POs already beyond the committed ex-factory date.
+            </p>
+            <div style="background:#ffffff;border:1px dashed #fca5a5;border-radius:6px;padding:8px 12px;font-size:12px;color:#991b1b;font-weight:600;">
+              ⚠️ Mandatory: The <strong>DELAY REASON + CAPA + RECOVERY DATE</strong> must be documented.
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ZONE 2 -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fed7aa;border-left:5px solid #ea580c;border-radius:8px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="background:#ffedd5;color:#9a3412;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">
+                ZONE 2
+              </span>
+              <span style="font-size:12px;font-weight:700;color:#ea580c;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;">
+                DEVELOPMENT / PROCESS STAGE DELAYED
+              </span>
+            </div>
+            <p style="font-size:13px;color:#7c2d12;line-height:1.5;margin:4px 0 6px;">
+              POs stuck at any stage beyond the planned completion date for that stage.
+            </p>
+            <div style="background:#ffffff;border:1px dashed #fdba74;border-radius:6px;padding:8px 12px;font-size:12px;color:#9a3412;font-weight:600;">
+              ⚠️ Mandatory: The <strong>ROOT CAUSE, CORRECTIVE/PREVENTIVE ACTION AND REVISED STAGE COMPLETION DATE</strong> must be updated.
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ZONE 3 -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-left:5px solid #d97706;border-radius:8px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">
+                ZONE 3
+              </span>
+              <span style="font-size:12px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;">
+                EX-FACTORY DATE APPROACHING
+              </span>
+            </div>
+            <p style="font-size:13px;color:#78350f;line-height:1.5;margin:4px 0 0;">
+              POs within approximately <strong>7 days of ex-factory</strong> but not yet completed.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ZONE 4 -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f9ff;border:1px solid #bae6fd;border-left:5px solid #0284c7;border-radius:8px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="background:#e0f2fe;color:#075985;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">
+                ZONE 4
+              </span>
+              <span style="font-size:12px;font-weight:700;color:#0284c7;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;">
+                COMPLETED / READY FOR FINAL QC
+              </span>
+            </div>
+            <p style="font-size:13px;color:#0c4a6e;line-height:1.5;margin:4px 0 0;">
+              POs completed and presented for final inspection.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ZONE 5 -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#faf5ff;border:1px solid #e9d5ff;border-left:5px solid #7c3aed;border-radius:8px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="background:#f3e8ff;color:#5b21b6;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">
+                ZONE 5
+              </span>
+              <span style="font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;">
+                QC REJECTED / REWORK REQUIRED
+              </span>
+            </div>
+            <p style="font-size:13px;color:#4c1d95;line-height:1.5;margin:4px 0 6px;">
+              POs rejected and currently under corrective action or rework.
+            </p>
+            <div style="background:#ffffff;border:1px dashed #c084fc;border-radius:6px;padding:8px 12px;font-size:12px;color:#6b21a8;font-weight:600;">
+              ⚠️ Mandatory: The <strong>REJECTION REASON, REWORK PLAN AND EXPECTED RE-INSPECTION DATE</strong> must be recorded.
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ZONE 6 -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:5px solid #16a34a;border-radius:8px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="background:#dcfce7;color:#14532d;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">
+                ZONE 6
+              </span>
+              <span style="font-size:12px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;">
+                QC PASSED / READY FOR DISPATCH
+              </span>
+            </div>
+            <p style="font-size:13px;color:#14532d;line-height:1.5;margin:4px 0 0;">
+              POs successfully passed Final QC and cleared for shipment.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Live WIP Mandatory Protocol Card -->
+    <div style="background:#0f172a;color:#ffffff;border-radius:10px;padding:20px 22px;margin:24px 0;">
+      <div style="font-size:12px;font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        ⚡ Mandatory Operational Standard
+      </div>
+      <p style="font-size:14px;color:#f8fafc;font-weight:700;line-height:1.6;margin:0 0 10px;">
+        LIVE WIP UPDATES ARE REQUIRED AS EACH ACTIVITY IS STARTED, COMPLETED OR DELAYED.
+      </p>
+      <p style="font-size:13px;color:#cbd5e1;line-height:1.6;margin:0;">
+        This will allow us to identify exactly <strong>WHERE AND WHY</strong> delays occur, measure performance against committed dates, and implement corrective action before the delay impacts final delivery.
+      </p>
+    </div>
+
+    {note_section}
+
+    <!-- Collaborative Partnership Signoff -->
+    <p style="font-size:14px;color:#334155;line-height:1.6;margin:24px 0 12px;">
+      I look forward to working closely with the factory to establish the required SOPs, set measurable KPIs, strengthen accountability, and optimize the complete process from <strong>CUT TO PACK</strong>.
+    </p>
+
+    <p style="font-size:15px;color:#0f172a;font-weight:700;margin:16px 0 0;">
+      Thanks!<br/>
+      <span style="font-size:13px;color:#64748b;font-weight:600;">Cotton Collective Management &amp; Production Control</span>
+    </p>
+    """
+
+    html = _base_template(
+        title="WIP CSV Export & Daily Notification System",
+        badge_color="#0f766e",
+        badge_label="📋 Directive Notice",
+        body_html=body,
+        cta_url=wip_url,
+        cta_label="Open Live WIP Dashboard & Export CSV →",
+    )
+    return subject, html
+
+
 def send_order_status_reminder(
     template_type: str,
     order: dict,
@@ -627,10 +855,11 @@ def send_order_status_reminder(
     subject_override: str = "",
 ) -> dict:
     """
-    Unified dispatcher to send any of the 3 production reminder templates:
+    Unified dispatcher to send any of the production reminder templates:
       - 'partial'
       - 'date_delay'
       - 'order_complete'
+      - 'wip_directive' / 'control_zones'
     """
     cc_list = cc_emails or []
     if template_type == "partial":
@@ -639,8 +868,12 @@ def send_order_status_reminder(
         default_subject, html = build_date_delay_email(order, custom_note)
     elif template_type == "order_complete":
         default_subject, html = build_order_complete_email(order, custom_note)
+    elif template_type in ("wip_directive", "control_zones"):
+        default_subject, html = build_control_zones_directive_email(order, custom_note)
     else:
-        raise ValueError(f"Unknown template_type '{template_type}'. Must be one of: partial, date_delay, order_complete.")
+        raise ValueError(
+            f"Unknown template_type '{template_type}'. Must be one of: partial, date_delay, order_complete, wip_directive, control_zones."
+        )
 
     subject = subject_override.strip() if subject_override else default_subject
     all_recipients = list(set([r.strip() for r in recipients if r.strip()] + [c.strip() for c in cc_list if c.strip()]))
@@ -659,4 +892,5 @@ def send_order_status_reminder(
         "cc": cc_list,
         "dry_run": settings.EMAIL_DRY_RUN,
     }
+
 

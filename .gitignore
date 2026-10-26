@@ -21,6 +21,7 @@ alembic/versions/*.py
 # Uploads
 backend/uploads/
 backend/backups/
+uploads/
 
 # Node / Next.js
 node_modules/

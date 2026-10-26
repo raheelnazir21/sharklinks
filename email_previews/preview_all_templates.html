@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Production Reminder Templates — Master Showcase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0d9488, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .tabs {
+      display: flex;
+      background: #0f172a;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      gap: 4px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .tab-btn.active {
+      background: #0d9488;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.4);
+    }
+    .tab-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .badge-amber { background: #78350f; color: #fde68a; }
+    .badge-red { background: #7f1d1d; color: #fecaca; }
+    .badge-green { background: #064e3b; color: #a7f3d0; }
+    .badge-teal { background: #134e4a; color: #5eead4; }
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .device-toggle {
+      display: flex;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 3px;
+    }
+    .dev-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .dev-btn.active {
+      background: #334155;
+      color: #ffffff;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px;
+      background: #090d16;
+    }
+    .viewport-card {
+      width: 100%;
+      max-width: 680px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      transition: max-width 0.25s ease;
+      border: 1px solid #334155;
+    }
+    .viewport-card.tablet {
+      max-width: 768px;
+    }
+    .viewport-card.mobile {
+      max-width: 390px;
+    }
+    iframe {
+      width: 100%;
+      height: 840px;
+      border: none;
+      display: block;
+      background: #ffffff;
+    }
+    .meta-bar {
+      background: #1e293b;
+      padding: 10px 16px;
+      font-size: 11px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+    }
+    .meta-subj {
+      font-weight: 600;
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-badge">✉️</div>
+      <div>
+        <div class="brand-title">Order Reminder &amp; Notification Preview</div>
+        <div class="brand-sub">Textile Production &amp; QC System — Automated Communications</div>
+      </div>
+    </div>
+
+    <!-- Template Switcher Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="loadTemplate('4_wip_control_zones_directive.html', this, '📢 [COTTON COLLECTIVE] WIP CSV DOWNLOAD & DAILY NOTIFICATION REMINDERS (CONTROL ZONES 1–6)')">
+        <span>⭐ WIP &amp; Control Zones</span>
+        <span class="tab-badge badge-teal">Directive</span>
+      </button>
+      <button class="tab-btn" onclick="loadTemplate('1_partial_order_reminder.html', this, '⏳ [ACTION NEEDED] Partial Order Progress Review: PO #PO-98421 — Heavyweight Fleece Hoodie 420GSM (54% Complete)')">
+        <span>1. Partial Order</span>
+        <span class="tab-badge badge-amber">Action</span>
+      </button>
+      <button class="tab-btn" onclick="loadTemplate('2_date_delay_alert.html', this, '🚨 [CRITICAL DELAY] PO #PO-98421 — Heavyweight Fleece Hoodie 420GSM is 5 Day(s) Behind Ex-Factory Schedule')">
+        <span>2. Date Delay Alert</span>
+        <span class="tab-badge badge-red">Urgent</span>
+      </button>
+      <button class="tab-btn" onclick="loadTemplate('3_order_completed.html', this, '✅ [ORDER COMPLETE & DISPATCH READY] PO #PO-98421 — Heavyweight Fleece Hoodie 420GSM (12,500 pcs)')">
+        <span>3. Order Completed</span>
+        <span class="tab-badge badge-green">Sign-off</span>
+      </button>
+    </div>
+
+    <!-- Viewport Size Controls -->
+    <div class="toolbar-right">
+      <div class="device-toggle">
+        <button class="dev-btn active" onclick="setSize('desktop', this)">Desktop (680px)</button>
+        <button class="dev-btn" onclick="setSize('mobile', this)">Mobile (390px)</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="viewport-card" id="card">
+      <div class="meta-bar">
+        <span><strong>Subject:</strong> <span id="subj-text" class="meta-subj">📢 [COTTON COLLECTIVE] WIP CSV DOWNLOAD &amp; DAILY NOTIFICATION REMINDERS (CONTROL ZONES 1–6)</span></span>
+        <span>Simulated Outlook / Gmail View</span>
+      </div>
+      <iframe id="preview-frame" src="4_wip_control_zones_directive.html"></iframe>
+    </div>
+  </main>
+
+  <script>
+    function loadTemplate(file, btn, subj) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('preview-frame').src = file;
+      document.getElementById('subj-text').innerText = subj;
+    }
+    function setSize(mode, btn) {
+      document.querySelectorAll('.dev-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const card = document.getElementById('card');
+      card.className = 'viewport-card ' + (mode === 'mobile' ? 'mobile' : '');
+    }
+  </script>
+
+</body>
+</html>

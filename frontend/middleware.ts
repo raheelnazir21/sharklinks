@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Pages that do NOT require login
-const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password", "/email-preview"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

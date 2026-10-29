@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # Keep True until SMTP credentials are verified — avoids spamming real users.
     EMAIL_DRY_RUN: bool = True
     EMAIL_OUTBOX_DIR: str = "uploads/email_outbox"
+    # Delay between consecutive emails (in seconds) to safeguard sender domain reputation against spam filters
+    EMAIL_THROTTLE_SECONDS: int = 60
 
     # ─── OpenAI AI Assistant ─────────────────────────────────────────────
     OPENAI_API_KEY: str = ""
@@ -47,7 +49,7 @@ class Settings(BaseSettings):
     DIGEST_SEND_WHEN_EMPTY: bool = False  # skip the send if there's nothing to report
 
     # Used to build "View in dashboard" links inside the email
-    APP_BASE_URL: str = "http://localhost:3000"
+    APP_BASE_URL: str = "https://textileapperal.com"
 
     # ─── Pre-Order Reminder Timing ────────────────────────────────────────
     ORDER_REMINDER_HOURS_1: int = 24    # Hours before 1st reminder email

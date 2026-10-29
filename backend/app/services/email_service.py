@@ -5,6 +5,8 @@ Uses Python's built-in smtplib. Supports EMAIL_DRY_RUN mode (writes to disk).
 import os
 import smtplib
 import logging
+import time
+import threading
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -14,14 +16,33 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Global thread lock and timestamp tracking for email rate limiting (1 minute delay between emails)
+_email_send_lock = threading.Lock()
+_last_email_send_time: float = 0.0
+
+
+from email.mime.application import MIMEApplication
 
 def _build_message(
     to: list[str],
     cc: list[str],
     subject: str,
     html_body: str,
+    attachments: list[tuple[str, bytes]] = None,
 ) -> MIMEMultipart:
-    msg = MIMEMultipart("alternative")
+    if attachments:
+        msg = MIMEMultipart("mixed")
+        body_part = MIMEMultipart("alternative")
+        body_part.attach(MIMEText(html_body, "html", "utf-8"))
+        msg.attach(body_part)
+        for fname, fbytes in attachments:
+            part = MIMEApplication(fbytes, Name=fname)
+            part["Content-Disposition"] = f'attachment; filename="{fname}"'
+            msg.attach(part)
+    else:
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
     msg["Subject"] = subject
     msg["From"]    = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>"
     msg["To"]      = ", ".join(to)
@@ -29,7 +50,6 @@ def _build_message(
         msg["Cc"] = ", ".join(cc)
     if settings.EMAIL_REPLY_TO:
         msg["Reply-To"] = settings.EMAIL_REPLY_TO
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
     return msg
 
 
@@ -52,16 +72,33 @@ def _send_or_dryrun(msg: MIMEMultipart, all_recipients: list[str]) -> None:
         logger.warning("[EmailService] SMTP_HOST not configured — email skipped.")
         return
 
-    try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
-            if settings.SMTP_USE_TLS:
-                server.starttls()
-            if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.sendmail(settings.EMAIL_FROM, all_recipients, msg.as_string())
-        logger.info(f"[EmailService] Email sent to {all_recipients}")
-    except Exception as e:
-        logger.error(f"[EmailService] Failed to send email: {e}")
+    global _last_email_send_time
+    with _email_send_lock:
+        throttle_seconds = getattr(settings, "EMAIL_THROTTLE_SECONDS", 60)
+        if throttle_seconds > 0 and _last_email_send_time > 0:
+            elapsed = time.time() - _last_email_send_time
+            if elapsed < throttle_seconds:
+                wait_time = throttle_seconds - elapsed
+                logger.info(
+                    f"[EmailService] Safety delay active: waiting {wait_time:.1f}s "
+                    f"(minimum {throttle_seconds}s interval) to protect sender domain reputation..."
+                )
+                print(f"⏳ [Safety Delay] Waiting {wait_time:.1f}s before sending next email to protect domain reputation...")
+                time.sleep(wait_time)
+
+        try:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+                if settings.SMTP_USE_TLS:
+                    server.starttls()
+                if settings.SMTP_USER and settings.SMTP_PASSWORD:
+                    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.sendmail(settings.EMAIL_FROM, all_recipients, msg.as_string())
+            _last_email_send_time = time.time()
+            logger.info(f"[EmailService] Email successfully sent to {all_recipients}")
+            print(f"✅ [EmailService] Email successfully sent to {all_recipients}")
+        except Exception as e:
+            logger.error(f"[EmailService] Failed to send email to {all_recipients}: {e}")
+            raise e
 
 
 def _base_template(title: str, badge_color: str, badge_label: str, body_html: str, cta_url: str = "", cta_label: str = "View in Dashboard") -> str:
@@ -89,19 +126,21 @@ def _base_template(title: str, badge_color: str, badge_label: str, body_html: st
 
         <!-- Header -->
         <tr>
-          <td style="background:{badge_color};padding:24px 32px;">
+          <td bgcolor="{badge_color}" style="background-color:{badge_color};padding:24px 32px;">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <div style="font-size:11px;color:rgba(255,255,255,0.8);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
-                    Textile Production &amp; QC System
+                  <div style="font-size:11px;color:rgba(255,255,255,0.9);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">
+                    <font color="#ffffff">Textile Production &amp; QC System</font>
                   </div>
-                  <div style="font-size:20px;font-weight:700;color:#ffffff;">{title}</div>
+                  <div style="font-size:20px;font-weight:700;color:#ffffff !important;-webkit-text-fill-color:#ffffff;">
+                    <font color="#ffffff">{title}</font>
+                  </div>
                 </td>
                 <td align="right">
-                  <span style="background:rgba(255,255,255,0.2);color:#fff;padding:4px 12px;
-                               border-radius:20px;font-size:12px;font-weight:600;">
-                    {badge_label}
+                  <span style="background:rgba(255,255,255,0.2);color:#fff !important;-webkit-text-fill-color:#ffffff;padding:4px 12px;
+                               border-radius:20px;font-size:12px;font-weight:600;display:inline-block;">
+                    <font color="#ffffff">{badge_label}</font>
                   </span>
                 </td>
               </tr>

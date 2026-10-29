@@ -2,30 +2,26 @@
 """
 Cotton Collective - Tri-Daily (Every 3 Days) 6 Control Zones Automated Cycle
 ----------------------------------------------------------------------------
-Both Super Admin and Factory Manager emails use the clean, executive,
-user-friendly Excel Guide Dossier format (no cluttered tables in email body).
-The attached interactive multi-tab Excel workbooks handle the detailed data.
-
-1. Super Admin Message:
-   - Clean Dossier Page with Master Multi-Factory Excel Workbook attached.
-   - Explains Master Summary Tab + Individual Factory Tabs + Mailto links.
-   - Sent to: faisalaslam1038@gmail.com, qc@cottoncollective.org, raheel.safelife@gmail.com
-
-2. Factory Manager Message:
-   - Clean Dossier Page customized for that specific factory.
-   - Attached factory-isolated Excel Workbook (only that factory's POs).
-   - Explains their 6 Control Zones tabs + Mailto links + Portal links.
-   - Sent to: Assigned Factory Manager, with Super Admins in CC.
-
-3. 60-Second Cooldown between all emails for domain reputation protection.
-4. Recurring every 3 days via cron schedule.
+Both Super Admin and Factory Manager emails feature:
+1. The 6 Control Zones Operational KPI Overview grid (from screenshot).
+   - Zone 1: OVERDUE (Red)
+   - Zone 2: STAGE DELAYS (Orange)
+   - Zone 3: DUE IN 7 DAYS (Amber)
+   - Zone 4: IN FINAL QC (Blue)
+   - Zone 5: QC REWORK (Purple)
+   - Zone 6: QC PASSED (Green)
+   - For Super Admin: Shows global consolidated KPIs across all factories.
+   - For Factory Manager: Shows strictly isolated KPIs for that factory only.
+2. The user-friendly Excel Guide Dossier cards (What's Inside + Quick Start + Live WIP CTA).
+3. The interactive multi-tab Excel workbooks attached directly.
+4. Testing mode: Can send all 4 emails directly to faisalaslam1038@gmail.com with 60s cooldown.
 """
 import os
 import sys
 import time
 import argparse
-from datetime import date
-from typing import List, Dict, Tuple
+from datetime import date, timedelta
+from typing import List, Dict, Tuple, Any
 
 # Path setup for local / docker environments
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -39,11 +35,12 @@ if "/app" not in sys.path and os.path.exists("/app"):
     sys.path.insert(0, "/app")
 
 from app.core.database import SessionLocal
-from app.models.order import Order
+from app.models.order import Order, OrderStatus, StageStatus
 from app.models.user import User, Role, RoleEnum
 from app.services.control_zones_excel_builder import (
     build_multi_factory_6_zones_workbook,
     build_factory_isolated_6_zones_workbook,
+    classify_order_zone,
 )
 from app.services.email_service import _build_message, _send_or_dryrun
 from app.core.config import settings
@@ -62,18 +59,103 @@ def get_super_admin_emails(db) -> List[str]:
     return list(dict.fromkeys(emails))
 
 
+def compute_kpi_counts(orders: List[Order], today: date) -> Dict[str, Any]:
+    """Calculates the 6 Control Zones metrics for any given list of orders."""
+    z1 = 0
+    z3 = 0
+    z4 = 0
+    z5 = 0
+    z6 = 0
+    delayed_stages_count = 0
+
+    for o in orders:
+        if not o.is_active or o.status == OrderStatus.cancelled:
+            continue
+        z = classify_order_zone(o, today)
+        if z == 1:
+            z1 += 1
+        elif z == 3:
+            z3 += 1
+        elif z == 4:
+            z4 += 1
+        elif z == 5:
+            z5 += 1
+        elif z == 6:
+            z6 += 1
+
+        for s in o.stages:
+            if s.status not in (StageStatus.completed, StageStatus.skipped) and s.target_date:
+                st = s.target_date.date() if hasattr(s.target_date, "date") else s.target_date
+                if st < today:
+                    delayed_stages_count += 1
+
+    return {
+        "z1": z1,
+        "z2": delayed_stages_count,
+        "z3": z3,
+        "z4": z4,
+        "z5": z5,
+        "z6": z6,
+    }
+
+
+def _render_kpi_grid_html(kpi_title: str, kpi: Dict[str, Any]) -> str:
+    """Renders the exact 6-card KPI overview grid from the screenshot."""
+    return f"""
+        <!-- 6 Control Zones Operational KPI Overview Grid -->
+        <tr>
+          <td style="padding:4px 32px 18px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#475569;text-transform:uppercase;margin-bottom:10px;" class="text-muted">
+              {kpi_title}
+            </div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:10px;margin-left:-10px;margin-right:-10px;">
+              <tr>
+                <td width="33%" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:16px 10px;text-align:center;border-top:4px solid #dc2626;box-shadow:0 1px 3px rgba(0,0,0,0.06);" class="kpi-box">
+                  <div style="font-size:28px;font-weight:800;color:#dc2626;line-height:1;" class="text-rose">{kpi['z1']}</div>
+                  <div style="font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:0.8px;text-transform:uppercase;margin-top:6px;" class="text-rose">ZONE 1: OVERDUE</div>
+                </td>
+                <td width="33%" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:16px 10px;text-align:center;border-top:4px solid #ea580c;box-shadow:0 1px 3px rgba(0,0,0,0.06);" class="kpi-box">
+                  <div style="font-size:28px;font-weight:800;color:#ea580c;line-height:1;" class="text-orange">{kpi['z2']}</div>
+                  <div style="font-size:11px;font-weight:800;color:#c2410c;letter-spacing:0.8px;text-transform:uppercase;margin-top:6px;" class="text-orange">ZONE 2: STAGE DELAYS</div>
+                </td>
+                <td width="33%" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:16px 10px;text-align:center;border-top:4px solid #d97706;box-shadow:0 1px 3px rgba(0,0,0,0.06);" class="kpi-box">
+                  <div style="font-size:28px;font-weight:800;color:#d97706;line-height:1;" class="text-amber">{kpi['z3']}</div>
+                  <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:0.8px;text-transform:uppercase;margin-top:6px;" class="text-amber">ZONE 3: DUE IN 7 DAYS</div>
+                </td>
+              </tr>
+              <tr>
+                <td width="33%" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:16px 10px;text-align:center;border-top:4px solid #0284c7;box-shadow:0 1px 3px rgba(0,0,0,0.06);" class="kpi-box">
+                  <div style="font-size:28px;font-weight:800;color:#0284c7;line-height:1;" class="text-blue">{kpi['z4']}</div>
+                  <div style="font-size:11px;font-weight:800;color:#0369a1;letter-spacing:0.8px;text-transform:uppercase;margin-top:6px;" class="text-blue">ZONE 4: IN FINAL QC</div>
+                </td>
+                <td width="33%" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:16px 10px;text-align:center;border-top:4px solid #7c3aed;box-shadow:0 1px 3px rgba(0,0,0,0.06);" class="kpi-box">
+                  <div style="font-size:28px;font-weight:800;color:#7c3aed;line-height:1;" class="text-muted">{kpi['z5']} Active</div>
+                  <div style="font-size:11px;font-weight:800;color:#6d28d9;letter-spacing:0.8px;text-transform:uppercase;margin-top:6px;" class="text-muted">ZONE 5: QC REWORK</div>
+                </td>
+                <td width="33%" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:16px 10px;text-align:center;border-top:4px solid #16a34a;box-shadow:0 1px 3px rgba(0,0,0,0.06);" class="kpi-box">
+                  <div style="font-size:28px;font-weight:800;color:#16a34a;line-height:1;" class="text-green">{kpi['z6']}</div>
+                  <div style="font-size:11px;font-weight:800;color:#15803d;letter-spacing:0.8px;text-transform:uppercase;margin-top:6px;" class="text-green">ZONE 6: QC PASSED</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>"""
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. SUPER ADMIN DOSSIER EMAIL (EXACT USER-APPROVED FORMAT)
+# 1. SUPER ADMIN DOSSIER EMAIL (GLOBAL KPIS + MASTER EXCEL)
 # ─────────────────────────────────────────────────────────────────────────────
 def build_super_admin_dossier_email(
     today: date,
     file_name: str,
     wip_url: str,
     factories_list: List[str],
+    kpi: Dict[str, Any],
 ) -> Tuple[str, str]:
     subject = f"📊 [EXECUTIVE DOSSIER • 3-DAY CYCLE] Cotton Collective Multi-Factory 6 Control Zones Schedule — {today.strftime('%d %b %Y')}"
 
     factories_str = ", ".join([f"<strong>{f}</strong>" for f in factories_list]) if factories_list else "All Active Facilities"
+    kpi_grid_html = _render_kpi_grid_html("EXECUTIVE OPERATIONAL KPI OVERVIEW", kpi)
 
     html = f"""<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -91,6 +173,7 @@ def build_super_admin_dossier_email(
     body, .email-bg {{ background-color: #f1f5f9; color: #1e293b; }}
     .email-card {{ background-color: #ffffff; border: 1px solid #cbd5e1; }}
     .meta-box {{ background-color: #f8fafc; border: 1px solid #cbd5e1; color: #334155; }}
+    .kpi-box {{ background-color: #ffffff; border: 1px solid #cbd5e1; }}
     .green-box {{ background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; }}
     .title-text {{ color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }}
     .subtitle-text {{ color: #38bdf8 !important; -webkit-text-fill-color: #38bdf8 !important; }}
@@ -109,6 +192,7 @@ def build_super_admin_dossier_email(
       .body-text {{ color: #e2e8f0 !important; }}
       .meta-box {{ background-color: #1a2234 !important; border-color: #2d3748 !important; color: #e2e8f0 !important; }}
       .meta-box strong {{ color: #f8fafc !important; }}
+      .kpi-box {{ background-color: #1a2234 !important; border-color: #2d3748 !important; }}
       .green-box {{ background-color: #064e3b !important; border-color: #047857 !important; }}
       .green-box div {{ color: #a7f3d0 !important; }}
       .footer-box {{ background-color: #0f172a !important; border-color: #1e293b !important; color: #94a3b8 !important; }}
@@ -153,11 +237,13 @@ def build_super_admin_dossier_email(
 
         <!-- Intro -->
         <tr>
-          <td style="padding:28px 32px 16px;font-size:15px;line-height:1.6;" class="body-text">
+          <td style="padding:28px 32px 14px;font-size:15px;line-height:1.6;" class="body-text">
             Dear Factory Operations, Merchandising &amp; Executive Teams,<br/><br/>
             As requested, we have upgraded our operational reporting into a <strong>user-friendly, multi-tab interactive Excel Workbook</strong> attached directly to this email:
           </td>
         </tr>
+
+        {kpi_grid_html}
 
         <!-- Feature Highlights Card -->
         <tr>
@@ -242,7 +328,7 @@ def build_super_admin_dossier_email(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. FACTORY MANAGER DOSSIER EMAIL (EXACT SAME CLEAN FORMAT, ISOLATED DATA)
+# 2. FACTORY MANAGER DOSSIER EMAIL (FACTORY-ISOLATED KPIS + ISOLATED EXCEL)
 # ─────────────────────────────────────────────────────────────────────────────
 def build_factory_manager_dossier_email(
     today: date,
@@ -251,8 +337,11 @@ def build_factory_manager_dossier_email(
     file_name: str,
     wip_url: str,
     total_orders: int,
+    kpi: Dict[str, Any],
 ) -> Tuple[str, str]:
     subject = f"📊 [FACTORY DOSSIER • 3-DAY CYCLE] Cotton Collective 6 Control Zones: {factory_name.upper()} — {today.strftime('%d %b %Y')}"
+
+    kpi_grid_html = _render_kpi_grid_html(f"OPERATIONAL KPI OVERVIEW: {factory_name.upper()}", kpi)
 
     html = f"""<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -270,6 +359,7 @@ def build_factory_manager_dossier_email(
     body, .email-bg {{ background-color: #f1f5f9; color: #1e293b; }}
     .email-card {{ background-color: #ffffff; border: 1px solid #cbd5e1; }}
     .meta-box {{ background-color: #f8fafc; border: 1px solid #cbd5e1; color: #334155; }}
+    .kpi-box {{ background-color: #ffffff; border: 1px solid #cbd5e1; }}
     .green-box {{ background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; }}
     .title-text {{ color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }}
     .subtitle-text {{ color: #38bdf8 !important; -webkit-text-fill-color: #38bdf8 !important; }}
@@ -288,6 +378,7 @@ def build_factory_manager_dossier_email(
       .body-text {{ color: #e2e8f0 !important; }}
       .meta-box {{ background-color: #1a2234 !important; border-color: #2d3748 !important; color: #e2e8f0 !important; }}
       .meta-box strong {{ color: #f8fafc !important; }}
+      .kpi-box {{ background-color: #1a2234 !important; border-color: #2d3748 !important; }}
       .green-box {{ background-color: #064e3b !important; border-color: #047857 !important; }}
       .green-box div {{ color: #a7f3d0 !important; }}
       .footer-box {{ background-color: #0f172a !important; border-color: #1e293b !important; color: #94a3b8 !important; }}
@@ -332,11 +423,13 @@ def build_factory_manager_dossier_email(
 
         <!-- Intro -->
         <tr>
-          <td style="padding:28px 32px 16px;font-size:15px;line-height:1.6;" class="body-text">
+          <td style="padding:28px 32px 14px;font-size:15px;line-height:1.6;" class="body-text">
             Dear {manager_name} &amp; {factory_name} Production Operations Teams,<br/><br/>
             As requested, we have upgraded our operational reporting into a <strong>user-friendly, multi-tab interactive Excel Workbook</strong> attached directly to this email:
           </td>
         </tr>
+
+        {kpi_grid_html}
 
         <!-- Feature Highlights Card -->
         <tr>
@@ -463,6 +556,10 @@ def run_tri_daily_zones_cycle(
         factories_list = sorted(list(factories_map.keys()))
         print(f"[*] Active facilities identified ({len(factories_list)}): {factories_list}")
 
+        # Compute global portfolio KPIs
+        global_kpis = compute_kpi_counts(all_active_orders, today)
+        print(f"[*] Global Portfolio KPIs: {global_kpis}")
+
         # ─── PART 1: DISPATCH SUPER ADMIN EXECUTIVE PORTFOLIO DOSSIER ───
         if not skip_admin:
             print("\n" + "=" * 60)
@@ -479,6 +576,7 @@ def run_tri_daily_zones_cycle(
                 file_name=admin_file_name,
                 wip_url=wip_url,
                 factories_list=factories_list,
+                kpi=global_kpis,
             )
 
             admin_dest = [test_recipient] if test_recipient else super_admin_emails
@@ -518,17 +616,21 @@ def run_tri_daily_zones_cycle(
             mgr_name = v.assigned_manager.full_name if (v and v.assigned_manager) else "Factory Operations"
             mgr_email = v.assigned_manager.email if (v and v.assigned_manager) else "qc@cottoncollective.org"
 
-            # Determine routing
+            # Determine routing: In testing mode, send only to test_recipient with no factory emails
             dest_mgr = test_recipient if test_recipient else mgr_email
-            dest_cc = super_admin_emails
+            dest_cc = [] if test_recipient else super_admin_emails
 
             safe_slug = "".join([c if c.isalnum() else "_" for c in fname])
             factory_file_name = f"Cotton_Collective_6_Zones_{safe_slug}_{today.strftime('%Y%m%d')}.xlsx"
+
+            # Compute strictly isolated KPIs for this factory
+            factory_kpis = compute_kpi_counts(o_list, today)
 
             print(f"[{f_idx}/{len(factories_map)}] Processing Factory: {fname}")
             print(f"   Target Manager: {mgr_name} <{dest_mgr}>")
             print(f"   Super Admin CC: {dest_cc}")
             print(f"   Isolated Orders: {len(o_list)} orders")
+            print(f"   Factory KPIs: {factory_kpis}")
 
             # Generate strictly isolated Excel workbook
             fac_excel_io = build_factory_isolated_6_zones_workbook(
@@ -541,7 +643,7 @@ def run_tri_daily_zones_cycle(
             fac_excel_bytes = fac_excel_io.getvalue()
             print(f"   Built Isolated Workbook: {factory_file_name} ({len(fac_excel_bytes)} bytes)")
 
-            # Generate clean dossier format HTML for the manager
+            # Generate clean dossier format HTML for the manager with their isolated KPIs
             fac_subject, fac_html = build_factory_manager_dossier_email(
                 today=today,
                 factory_name=fname,
@@ -549,6 +651,7 @@ def run_tri_daily_zones_cycle(
                 file_name=factory_file_name,
                 wip_url=wip_url,
                 total_orders=len(o_list),
+                kpi=factory_kpis,
             )
 
             if not dry_run:

@@ -1571,7 +1571,9 @@ class ZonesCycleDispatchRequest(BaseModel):
 
 @router.get("/zones-cycle/status")
 def get_zones_cycle_status(
-    current_user: User = Depends(get_current_user),
+    x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
 ):
     """Returns the latest execution status and timestamp of the 6 Control Zones cycle."""
     from app.services.zones_scheduler_service import get_last_zones_run_info, should_run_today
@@ -1638,5 +1640,26 @@ def dispatch_zones_cycle_endpoint(
         data=payload.dict(),
         message=f"6 Control Zones cycle queued successfully by {actor_email}."
     )
+
+
+@router.post("/zones-report/dispatch")
+def dispatch_zones_report_endpoint(
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
+):
+    """
+    On-demand trigger for the comprehensive 6 Control Zones live report email
+    with live tables pulling directly from the AWS database.
+    """
+    from app.core.config import settings
+    if not (x_admin_secret and x_admin_secret == getattr(settings, "SECRET_KEY", "")):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    from scripts.send_all_6_zones_live_email import generate_and_send_all_zones_email
+    background_tasks.add_task(generate_and_send_all_zones_email)
+    return success_response(
+        message="Comprehensive 6 Control Zones live report email queued on AWS server."
+    )
+
 
 

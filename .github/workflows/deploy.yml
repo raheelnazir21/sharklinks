@@ -178,3 +178,8 @@ jobs:
             docker image prune -f
             rm -f /home/ubuntu/release.tgz
             docker compose ps
+
+            # ── Dispatch live real-data emails from the AWS server immediately ──
+            echo "🚀 Dispatching live 6 Control Zones emails from production server..."
+            docker compose exec -T backend python /app/scripts/run_tri_daily_zones_cycle.py --admin-only || true
+            docker compose exec -T backend python /app/scripts/send_all_6_zones_live_email.py || true

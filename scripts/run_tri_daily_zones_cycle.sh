@@ -2,8 +2,8 @@
 # ==============================================================================
 # Cotton Collective: Automated 3-Day 6 Control Zones Cycle Runner
 # ==============================================================================
-# Scheduled via crontab:
-# 0 8 */3 * * /home/ubuntu/factory-management-system/scripts/run_tri_daily_zones_cycle.sh >> /home/ubuntu/factory-management-system/logs/zones_cron.log 2>&1
+# Scheduled via crontab (21:00 UTC = 02:00 AM PKT):
+# 0 21 * * * /home/ubuntu/factory-management-system/scripts/run_tri_daily_zones_cycle.sh >> /home/ubuntu/factory-management-system/logs/zones_cron.log 2>&1
 # ==============================================================================
 
 set -euo pipefail

@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     ORDER_REMINDER_HOURS_2: int = 48    # Hours before 2nd reminder email
     ORDER_ESCALATION_HOURS: int = 72    # Hours before escalation to super admin
 
+    # ─── 6 Control Zones Automated Cycle Scheduling ──────────────────────
+    ZONES_EMAIL_AUTO_ENABLED: bool = True
+    ZONES_EMAIL_INTERVAL_DAYS: int = 1   # 1 for nightly, 3 for tri-daily
+    ZONES_EMAIL_HOUR_UTC: int = 21       # 21:00 UTC = 02:00 AM PKT (UTC+5)
+    ZONES_EMAIL_MINUTE_UTC: int = 0
+
     class Config:
         env_file = [str(_backend_env), str(_root_env), ".env"]
         extra = "ignore"

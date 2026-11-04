@@ -170,6 +170,11 @@ jobs:
               sleep 10
             done
 
+            # Ensure scripts are executable and host fallback crontab is active
+            chmod +x "$PROJECT_DIR"/scripts/*.sh 2>/dev/null || true
+            CRON_CMD="0 21 * * * $PROJECT_DIR/scripts/run_tri_daily_zones_cycle.sh >> $PROJECT_DIR/logs/zones_cron.log 2>&1"
+            (crontab -l 2>/dev/null | grep -v "run_tri_daily_zones_cycle.sh" ; echo "$CRON_CMD") | crontab - || true
+
             docker image prune -f
             rm -f /home/ubuntu/release.tgz
             docker compose ps

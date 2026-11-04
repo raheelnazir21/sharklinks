@@ -1557,3 +1557,75 @@ def send_order_reminder(
         message=f"Reminder email '{payload.template_type}' queued and sending in the background."
     )
 
+
+# ─── 6 Control Zones Cycle On-Demand Management ──────────────────────────────
+
+class ZonesCycleDispatchRequest(BaseModel):
+    force: bool = Field(default=False, description="Force dispatch even if already run today")
+    dry_run: bool = Field(default=False, description="Simulate without actually sending SMTP emails")
+    admin_only: bool = Field(default=False, description="Send only Super Admin dossier")
+    test_recipient: Optional[str] = Field(default=None, description="Send to this email instead of live routing")
+    factory_filter: Optional[str] = Field(default=None, description="Filter to a specific factory name")
+    skip_admin: bool = Field(default=False, description="Skip Super Admin dossier")
+
+
+@router.get("/zones-cycle/status")
+def get_zones_cycle_status(
+    current_user: User = Depends(get_current_user),
+):
+    """Returns the latest execution status and timestamp of the 6 Control Zones cycle."""
+    from app.services.zones_scheduler_service import get_last_zones_run_info, should_run_today
+    info = get_last_zones_run_info()
+    should_run, reason = should_run_today()
+    return success_response(
+        data={
+            "last_run": info,
+            "can_run_today": should_run,
+            "status_reason": reason,
+        },
+        message="Zones cycle status retrieved successfully."
+    )
+
+
+@router.post("/zones-cycle/dispatch")
+def dispatch_zones_cycle_endpoint(
+    payload: ZonesCycleDispatchRequest = ZonesCycleDispatchRequest(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    On-demand trigger for the 6 Control Zones Automated Cycle.
+    Restricted to Super Admins and Managers.
+    Queues execution in the background so API returns immediately.
+    """
+    if current_user.role.name not in (RoleEnum.super_admin, RoleEnum.manager):
+        raise HTTPException(status_code=403, detail="Only Super Admins and Managers can trigger the Zones cycle.")
+
+    from app.services.zones_scheduler_service import dispatch_zones_cycle
+
+    background_tasks.add_task(
+        dispatch_zones_cycle,
+        force=payload.force,
+        dry_run=payload.dry_run,
+        admin_only=payload.admin_only,
+        test_recipient=payload.test_recipient,
+        factory_filter=payload.factory_filter,
+        skip_admin=payload.skip_admin,
+    )
+
+    ActivityLogService.record(
+        db,
+        action="ZONES_CYCLE_TRIGGERED",
+        entity_type="System",
+        entity_id="6_control_zones",
+        user=current_user,
+        payload=payload.dict(),
+    )
+
+    return success_response(
+        data=payload.dict(),
+        message="6 Control Zones cycle queued successfully for background execution."
+    )
+
+

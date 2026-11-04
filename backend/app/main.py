@@ -55,6 +55,25 @@ if _scheduler_available:
         _scheduler.add_job(run_pre_order_reminder_scan, "interval", hours=1, id="pre_order_reminder_scan")
     except Exception as _e:
         print(f"[Scheduler] Could not register pre-order reminder scan: {_e}")
+
+    # 6 Control Zones automated cycle (nightly at 21:00 UTC = 02:00 AM PKT)
+    if getattr(settings, "ZONES_EMAIL_AUTO_ENABLED", True):
+        try:
+            from app.services.zones_scheduler_service import scheduled_zones_cycle_job
+            zones_hour = getattr(settings, "ZONES_EMAIL_HOUR_UTC", 21)
+            zones_minute = getattr(settings, "ZONES_EMAIL_MINUTE_UTC", 0)
+            _scheduler.add_job(
+                scheduled_zones_cycle_job,
+                "cron",
+                hour=zones_hour,
+                minute=zones_minute,
+                id="control_zones_cycle",
+                replace_existing=True,
+            )
+            print(f"[Scheduler] 6 Control Zones cycle registered — runs nightly at {zones_hour:02d}:{zones_minute:02d} UTC (02:00 AM PKT).")
+        except Exception as _e:
+            print(f"[Scheduler] Could not register Control Zones automated cycle: {_e}")
+
     _scheduler.start()
     print("[Scheduler] Notification scanner started — runs every 15 minutes.")
     print("[Scheduler] Pre-order reminder scanner started — runs every hour.")

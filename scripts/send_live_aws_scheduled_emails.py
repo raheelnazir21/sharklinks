@@ -37,6 +37,9 @@ from app.core.database import SessionLocal  # type: ignore # noqa: E402
 from app.models.order import Order, OrderStatus, StageStatus  # type: ignore # noqa: E402
 # pyrefly: ignore[missing-import]
 # pyright: reportMissingImports=false
+from app.models.user import User, Role, RoleEnum  # type: ignore # noqa: E402
+# pyrefly: ignore[missing-import]
+# pyright: reportMissingImports=false
 from app.services.email_service import (  # type: ignore # noqa: E402
     build_control_zones_directive_email,
     build_date_delay_email,
@@ -47,6 +50,20 @@ from app.services.email_service import (  # type: ignore # noqa: E402
 # pyrefly: ignore[missing-import]
 # pyright: reportMissingImports=false
 from app.core.config import settings  # type: ignore # noqa: E402
+
+
+def get_super_admin_emails(db) -> list[str]:
+    """Retrieves all active Super Admin emails from DB (including Casey), ensuring standard fallbacks are present."""
+    super_admins = db.query(User).join(Role).filter(
+        Role.name == RoleEnum.super_admin,
+        User.is_active == True
+    ).all()
+    emails = [u.email.strip() for u in super_admins if u.email and "@" in u.email]
+    for fallback in ["faisalaslam1038@gmail.com", "qc@cottoncollective.org", "raheel.safelife@gmail.com"]:
+        if fallback not in emails:
+            emails.append(fallback)
+    return list(dict.fromkeys(emails))
+
 
 
 def build_daily_zones_executive_digest(
@@ -244,14 +261,14 @@ def build_daily_zones_executive_digest(
 
 
 def main():
-    recipient = "faisalaslam1038@gmail.com"
-    print("==================================================")
-    print("🚀 Live AWS Scheduled Emails Dispatcher Starting")
-    print(f"Target Recipient: {recipient}")
-    print("==================================================")
-
     db = SessionLocal()
     try:
+        super_admins = get_super_admin_emails(db)
+        print("==================================================")
+        print("🚀 Live AWS Scheduled Emails Dispatcher Starting")
+        print(f"Target Super Admins ({len(super_admins)}): {super_admins}")
+        print("==================================================")
+
         today = date.today()
         print(f"[*] Querying live production database for {today}...")
 
@@ -307,7 +324,7 @@ def main():
         res1 = send_order_status_reminder(
             template_type="wip_directive",
             order=directive_data,
-            recipients=[recipient],
+            recipients=super_admins,
             custom_note="Official Cotton Collective executive directive generated with live AWS production PO data.",
         )
         print(f"✅ Directive Sent: {res1}")
@@ -332,8 +349,8 @@ def main():
             zone4_orders=[],
             wip_url=wip_url,
         )
-        msg2 = _build_message(to=[recipient], cc=[], subject=subj2, html_body=html2)
-        _send_or_dryrun(msg2, [recipient])
+        msg2 = _build_message(to=super_admins, cc=[], subject=subj2, html_body=html2)
+        _send_or_dryrun(msg2, super_admins)
         print(f"✅ Daily Zones Digest Sent: {subj2}")
 
         # Safety countdown: 60 seconds pacing so process/domain is not hurt
@@ -368,14 +385,14 @@ def main():
         res3 = send_order_status_reminder(
             template_type="date_delay",
             order=escalation_data,
-            recipients=[recipient],
+            recipients=super_admins,
             custom_note="Live Zone 1 escalation dispatch from Cotton Collective production scanner.",
         )
         print(f"✅ PO Delay Escalation Sent: {res3}")
 
         print("\n" + "="*50)
         print("🎉 ALL SCHEDULED LIVE EMAILS SUCCESSFULLY SENT TO:")
-        print(f"👉 {recipient}")
+        print(f"👉 {super_admins}")
         print("==================================================")
 
     finally:

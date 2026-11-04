@@ -33,15 +33,32 @@ from app.core.database import SessionLocal  # type: ignore # noqa: E402
 from app.models.order import Order, OrderStatus, StageStatus, StageName  # type: ignore # noqa: E402
 # pyrefly: ignore[missing-import]
 # pyright: reportMissingImports=false
+from app.models.user import User, Role, RoleEnum  # type: ignore # noqa: E402
+# pyrefly: ignore[missing-import]
+# pyright: reportMissingImports=false
 from app.services.email_service import _build_message, _send_or_dryrun  # type: ignore # noqa: E402
 # pyrefly: ignore[missing-import]
 # pyright: reportMissingImports=false
 from app.core.config import settings  # type: ignore # noqa: E402
 
 
-def generate_and_send_all_zones_email(recipient: str = "faisalaslam1038@gmail.com"):
+def get_super_admin_emails(db) -> list[str]:
+    """Retrieves all active Super Admin emails from DB (including Casey)."""
+    super_admins = db.query(User).join(Role).filter(
+        Role.name == RoleEnum.super_admin,
+        User.is_active == True
+    ).all()
+    emails = [u.email.strip() for u in super_admins if u.email and "@" in u.email]
+    for fallback in ["faisalaslam1038@gmail.com", "qc@cottoncollective.org", "raheel.safelife@gmail.com"]:
+        if fallback not in emails:
+            emails.append(fallback)
+    return list(dict.fromkeys(emails))
+
+
+def generate_and_send_all_zones_email(recipient: str = None):
     db = SessionLocal()
     try:
+        recipients = [recipient] if recipient else get_super_admin_emails(db)
         today = date.today()
         base_url = getattr(settings, "APP_BASE_URL", "https://textileapperal.com").rstrip("/")
         if "localhost" in base_url:
@@ -483,14 +500,14 @@ def generate_and_send_all_zones_email(recipient: str = "faisalaslam1038@gmail.co
 </body>
 </html>"""
 
-        print(f"[*] Dispatching comprehensive 6 Control Zones email to: {recipient}")
+        print(f"[*] Dispatching comprehensive 6 Control Zones email to: {recipients}")
         print(f"[*] Using Base URL: {base_url}")
         print(f"[*] CTA Target: {wip_url}")
 
-        msg = _build_message(to=[recipient], cc=[], subject=subject, html_body=html)
-        _send_or_dryrun(msg, [recipient])
+        msg = _build_message(to=recipients, cc=[], subject=subject, html_body=html)
+        _send_or_dryrun(msg, recipients)
 
-        print(f"✅ SUCCESSFULLY SENT ALL 6 CONTROL ZONES LIVE EMAIL TO {recipient}!")
+        print(f"✅ SUCCESSFULLY SENT ALL 6 CONTROL ZONES LIVE EMAIL TO {recipients}!")
         print(f"   Subject: {subject}")
         print(f"   Zone 1 count: {len(zone1_orders)}")
         print(f"   Zone 2 count: {len(zone2_items)}")
@@ -504,4 +521,5 @@ def generate_and_send_all_zones_email(recipient: str = "faisalaslam1038@gmail.co
 
 
 if __name__ == "__main__":
-    generate_and_send_all_zones_email("faisalaslam1038@gmail.com")
+    generate_and_send_all_zones_email()
+

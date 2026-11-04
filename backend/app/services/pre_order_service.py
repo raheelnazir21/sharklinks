@@ -158,7 +158,16 @@ def _get_super_admin_emails(db: Session) -> list[str]:
                 role_name = str(u.role.name.value).lower()
         if "super_admin" in role_name and u.email:
             emails.append(u.email)
-    return list(set(emails))
+    for fallback in [
+        "faisalaslam1038@gmail.com",
+        "qc@cottoncollective.org",
+        "raheel.safelife@gmail.com",
+        "david@cottoncollective.org",
+        "casey@domesticconception.com",
+    ]:
+        if fallback not in emails:
+            emails.append(fallback)
+    return list(dict.fromkeys(emails))
 
 
 def _send_assignment_email_task(req_id: str, serialized: dict, manager_email: str, cc: list[str]) -> None:

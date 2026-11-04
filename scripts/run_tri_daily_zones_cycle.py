@@ -53,7 +53,13 @@ def get_super_admin_emails(db) -> List[str]:
         User.is_active == True
     ).all()
     emails = [u.email.strip() for u in super_admins if u.email and "@" in u.email]
-    for fallback in ["faisalaslam1038@gmail.com", "qc@cottoncollective.org", "raheel.safelife@gmail.com"]:
+    for fallback in [
+        "faisalaslam1038@gmail.com",
+        "qc@cottoncollective.org",
+        "raheel.safelife@gmail.com",
+        "david@cottoncollective.org",
+        "casey@domesticconception.com",
+    ]:
         if fallback not in emails:
             emails.append(fallback)
     return list(dict.fromkeys(emails))

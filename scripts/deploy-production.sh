@@ -5,7 +5,7 @@
 
 set -e
 
-PROJECT_DIR="/home/ubuntu/factory-management-system"
+PROJECT_DIR="/home/ubuntu/sharklinks"
 
 echo "📂 Navigating to project directory..."
 cd "$PROJECT_DIR"

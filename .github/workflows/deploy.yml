@@ -64,13 +64,13 @@ jobs:
           script: |
             set -e
 
-            PROJECT_DIR="/home/ubuntu/factory-management-system"
-            RELEASE_DIR="/home/ubuntu/factory-management-system-release"
-            BACKUP_DIR="/home/ubuntu/deploy-backups/factory-management-system-$(date +%Y%m%d%H%M%S)"
+            PROJECT_DIR="/home/ubuntu/sharklinks"
+            RELEASE_DIR="/home/ubuntu/sharklinks-release"
+            BACKUP_DIR="/home/ubuntu/deploy-backups/sharklinks-$(date +%Y%m%d%H%M%S)"
             ENV_DIR="/home/ubuntu/deploy-env"
 
             mkdir -p "$ENV_DIR/backend" "$ENV_DIR/frontend" /home/ubuntu/deploy-backups
-            (cd /home/ubuntu/deploy-backups && ls -dt factory-management-system-* 2>/dev/null | tail -n +6 | xargs -r rm -rf || true)
+            (cd /home/ubuntu/deploy-backups && ls -dt sharklinks-* 2>/dev/null | tail -n +6 | xargs -r rm -rf || true)
 
             if [ -f "$PROJECT_DIR/backend/.env" ]; then
               cp "$PROJECT_DIR/backend/.env" "$ENV_DIR/backend/.env"

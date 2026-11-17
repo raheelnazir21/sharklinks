@@ -58,7 +58,7 @@ class Settings(BaseSettings):
 
     # ─── 6 Control Zones Automated Cycle Scheduling ──────────────────────
     ZONES_EMAIL_AUTO_ENABLED: bool = True
-    ZONES_EMAIL_INTERVAL_DAYS: int = 1   # 1 for nightly, 3 for tri-daily
+    ZONES_EMAIL_INTERVAL_DAYS: int = 3   # 3 working days (Mon–Fri only)
     ZONES_EMAIL_HOUR_UTC: int = 21       # 21:00 UTC = 02:00 AM PKT (UTC+5)
     ZONES_EMAIL_MINUTE_UTC: int = 0
 

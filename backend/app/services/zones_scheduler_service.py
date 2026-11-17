@@ -53,11 +53,24 @@ def record_zones_run_info(status: str, summary: Dict[str, Any]) -> None:
         logger.error(f"[ZonesScheduler] Failed to write {path}: {e}")
 
 
+def _count_working_days(start: date, end: date) -> int:
+    """Counts working days (Mon–Fri) between two dates, exclusive of start, inclusive of end."""
+    count = 0
+    current = start
+    while current < end:
+        current = date(current.year, current.month, current.day + 1) if False else \
+            date.fromordinal(current.toordinal() + 1)
+        if current.weekday() < 5:  # 0=Mon, 4=Fri
+            count += 1
+    return count
+
+
 def should_run_today(force: bool = False) -> Tuple[bool, str]:
     """
     Determines whether the Control Zones cycle should execute.
     - Honors ZONES_EMAIL_AUTO_ENABLED
-    - Enforces interval days (e.g. 1 for daily, 3 for tri-daily)
+    - Skips weekends (Saturday=5, Sunday=6) — only sends on working days (Mon–Fri)
+    - Enforces interval in WORKING days (e.g. 3 = every 3 working days)
     - Deduplicates to prevent double-dispatch on the same calendar day unless forced
     """
     if force:
@@ -66,24 +79,33 @@ def should_run_today(force: bool = False) -> Tuple[bool, str]:
     if not getattr(settings, "ZONES_EMAIL_AUTO_ENABLED", True):
         return False, "Automated 6 Control Zones cycle is disabled in settings (ZONES_EMAIL_AUTO_ENABLED=False)."
 
+    today = date.today()
+
+    # Skip weekends — never send on Saturday or Sunday
+    if today.weekday() >= 5:
+        day_name = "Saturday" if today.weekday() == 5 else "Sunday"
+        return False, f"Today is {day_name} — email only sent on working days (Mon–Fri)."
+
     last_run = get_last_zones_run_info()
     last_date_str = last_run.get("last_run_date")
-    today = date.today()
 
     if last_date_str:
         try:
             last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
-            days_since = (today - last_date).days
-            interval = max(1, int(getattr(settings, "ZONES_EMAIL_INTERVAL_DAYS", 1)))
+            working_days_since = _count_working_days(last_date, today)
+            interval = max(1, int(getattr(settings, "ZONES_EMAIL_INTERVAL_DAYS", 3)))
 
-            if days_since < 1:
+            if working_days_since < 1:
                 return False, f"Cycle already executed today ({last_date_str}). Deduplication active."
-            if days_since < interval:
-                return False, f"Interval not yet met: {days_since}/{interval} days elapsed since last run ({last_date_str})."
+            if working_days_since < interval:
+                return False, (
+                    f"Working-day interval not yet met: {working_days_since}/{interval} "
+                    f"working days elapsed since last run ({last_date_str})."
+                )
         except Exception as e:
             logger.warning(f"[ZonesScheduler] Date parsing error: {e}")
 
-    return True, "Scheduled criteria satisfied."
+    return True, "Scheduled criteria satisfied (3 working days elapsed)."
 
 
 def dispatch_zones_cycle(

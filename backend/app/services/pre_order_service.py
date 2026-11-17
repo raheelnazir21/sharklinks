@@ -162,8 +162,6 @@ def _get_super_admin_emails(db: Session) -> list[str]:
         "faisalaslam1038@gmail.com",
         "qc@cottoncollective.org",
         "raheel.safelife@gmail.com",
-        "david@cottoncollective.org",
-        "casey@domesticconception.com",
     ]:
         if fallback not in emails:
             emails.append(fallback)

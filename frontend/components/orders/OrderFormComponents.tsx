@@ -8,13 +8,11 @@ import Modal from "@/components/ui/Modal";
 export const DEFAULT_BULK_STAGES = [
   { name: "customer_order_wrapping_card", label: "Customer Order / Wrapping Card" },
   { name: "pp_sample_development", label: "PP Sample Development" },
-  { name: "small_vet_dying_shade_band_continuity_approval", label: "Small Vet Dying — Shade Band Continuity Approval" },
   { name: "full_flag_dying_production", label: "Full Flag Dying Production" },
   { name: "sublimation", label: "Sublimation" },
   { name: "bulk_fabric_cutting", label: "Bulk Fabric Cutting" },
   { name: "printing_embroidery_embellishment", label: "Printing / Embroidery / Embellishment" },
   { name: "stitching", label: "Stitching" },
-  { name: "end_line_qc", label: "End Line QC" },
   { name: "washing", label: "Washing" },
   { name: "pressing", label: "Pressing" },
   { name: "finishing", label: "Finishing" },

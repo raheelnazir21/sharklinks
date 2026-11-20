@@ -11,9 +11,9 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  title: "Textile QC System",
+  title: "Sharknits WIP & Production Management System",
   description:
-    "Professional Production & Quality Control Management System for Textile Manufacturing",
+    "Sharknits Internal Production, WIP & Quality Management System",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className={`${inter.className} bg-slate-50 text-slate-950 antialiased`}>
+      <body className={`${inter.className} bg-[#F6F8FC] text-[#16233B] antialiased`}>
         {children}
       </body>
     </html>

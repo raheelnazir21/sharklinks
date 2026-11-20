@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, Suspense } from "react";
+import React, { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import api from "@/services/api";
 import { 
-  Plus, Search, Package, Calendar, AlertCircle, CheckCircle, Clock, 
-  Building2, Tag, Shirt, Layers, ChevronLeft, Info, Edit3, Trash2, History, Factory,
+  Plus, Search, Package, AlertCircle, 
+  Shirt, ChevronLeft, Edit3, Trash2, History, Factory,
   Paperclip, Upload, X, Pin, Activity
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import Modal from "@/components/ui/Modal";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import OrderHistoryModal from "@/components/orders/OrderHistoryModal";
@@ -17,13 +16,11 @@ import { useAuth } from "@/hooks/useAuth";
 const DEFAULT_BULK_STAGES = [
   { name: "customer_order_wrapping_card", label: "Customer Order / Wrapping Card" },
   { name: "pp_sample_development", label: "PP Sample Development" },
-  { name: "small_vet_dying_shade_band_continuity_approval", label: "Small Vet Dying — Shade Band Continuity Approval" },
   { name: "full_flag_dying_production", label: "Full Flag Dying Production" },
   { name: "sublimation", label: "Sublimation" },
   { name: "bulk_fabric_cutting", label: "Bulk Fabric Cutting" },
   { name: "printing_embroidery_embellishment", label: "Printing / Embroidery / Embellishment" },
   { name: "stitching", label: "Stitching" },
-  { name: "end_line_qc", label: "End Line QC" },
   { name: "washing", label: "Washing" },
   { name: "pressing", label: "Pressing" },
   { name: "finishing", label: "Finishing" },
@@ -46,12 +43,7 @@ const DEFAULT_SAMPLE_STAGES = [
 ];
 
 
-function formatDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+
 
 
 type ReferenceAttachment = {
@@ -67,6 +59,9 @@ type FloorLineAssignment = {
 
 type BulkItem = {
   order_no: string;
+  po_number?: string;
+  style_code?: string;
+  order_value?: string;
   product_name: string;
   style_name: string;
   vendor_id: string;
@@ -80,6 +75,9 @@ type BulkItem = {
 function createBlankBulkItem(): BulkItem {
   return {
     order_no: "",
+    po_number: "",
+    style_code: "",
+    order_value: "",
     product_name: "",
     style_name: "",
     vendor_id: "",
@@ -141,7 +139,7 @@ function OrdersContent() {
   const [sampleClasses, setSampleClasses] = useState<any[]>([]);
   const [bulkClasses, setBulkClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -171,12 +169,12 @@ function OrdersContent() {
   }
   const [chunks, setChunks] = useState<ChunkType[]>([]);
   const [selectedMergeStages, setSelectedMergeStages] = useState<string[]>([]);
-  const [mergingName, setMergingName] = useState("");
-  const [mergingDays, setMergingDays] = useState<number>(0);
-  const [isMergePanelOpen, setIsMergePanelOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     order_no: "",
+    po_number: "",
+    style_code: "",
+    order_value: "",
     vendor_id: "",
     style_name: "",
     product_name: "",
@@ -228,7 +226,7 @@ function OrdersContent() {
     };
   }, [orderPlacementDateStr, activeExFactoryDate, totalStageDays]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [ordersRes, vendorsRes] = await Promise.all([
@@ -249,11 +247,11 @@ function OrdersContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, track, sampleClassId, bulkClassId]);
 
   useEffect(() => {
     fetchData();
-  }, [statusFilter, track, sampleClassId, bulkClassId]);
+  }, [fetchData]);
 
   // Load class lists for the super_admin class dropdown in the edit modal
   useEffect(() => {
@@ -398,6 +396,9 @@ function OrdersContent() {
         await api.put(`/orders/${editingOrder.id}`, {
           vendor_id: sanitizedData.vendor_id,
           order_no: sanitizedData.order_no,
+          po_number: sanitizedData.po_number || undefined,
+          style_code: sanitizedData.style_code || undefined,
+          order_value: parseFloat(formData.order_value) || 0.0,
           style_name: sanitizedData.style_name,
           product_name: sanitizedData.product_name,
           product_type: sanitizedData.product_type,
@@ -439,7 +440,10 @@ function OrdersContent() {
           bulk_class_id: bulkClassId,
           items: bulkItems.map(item => ({
             ...sanitizedData,
-            order_no: item.order_no,
+            order_no: item.order_no || undefined,
+            po_number: item.po_number || item.order_no || undefined,
+            style_code: item.style_code || undefined,
+            order_value: parseFloat(item.order_value || "0") || 0.0,
             product_name: item.product_name,
             style_name: item.style_name,
             vendor_id: item.vendor_id,
@@ -470,6 +474,9 @@ function OrdersContent() {
 
         const res = await api.post("/orders/", {
           ...sanitizedData,
+          po_number: sanitizedData.po_number || undefined,
+          style_code: sanitizedData.style_code || undefined,
+          order_value: parseFloat(formData.order_value) || 0.0,
           quantity: parseInt(formData.quantity) || 0,
           stages: selectedStages,
           stage_chunks: stageChunksPayload,
@@ -503,6 +510,9 @@ function OrdersContent() {
     setEditingOrder(order);
     setFormData({
       order_no: order.order_no || "",
+      po_number: order.po_number || order.order_no || "",
+      style_code: order.style_code || order.style_name || "",
+      order_value: String(order.order_value || ""),
       vendor_id: order.vendor_id || "",
       style_name: order.style_name || "",
       product_name: order.product_name || "",
@@ -531,6 +541,9 @@ function OrdersContent() {
     setEditingOrder(null);
     setFormData({
       order_no: "",
+      po_number: "",
+      style_code: "",
+      order_value: "",
       vendor_id: "",
       style_name: "",
       product_name: "",
@@ -590,6 +603,8 @@ function OrdersContent() {
 
   const filtered = orders.filter((o: any) => 
     (o.order_no?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (o.po_number?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (o.style_code?.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (o.style_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (o.product_name?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -601,7 +616,7 @@ function OrdersContent() {
           <button
             type="button"
             onClick={() => router.push(isSampling ? "/samples" : "/bulk-projects")}
-            className="border border-emerald-600 bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95"
+            className="border border-emerald-600 bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-[0_4px_14px_rgba(0,68,230,0.2)] active:scale-95"
           >
             <ChevronLeft className="w-4 h-4" /> Back to {isSampling ? "Samples" : "Bulk Projects"}
           </button>
@@ -654,15 +669,35 @@ function OrdersContent() {
                   {order.status}
                 </span>
               </div>
-              <h3 className="text-white font-black text-2xl mb-1 uppercase tracking-tighter italic">
+              <h3 className="text-[#16233B] font-black text-2xl mb-1 uppercase tracking-tighter italic">
                 {/* Older bulk orders were created before Style Name was collected — fall back so the card is never untitled. */}
                 {isSampling
                   ? (order.product_name || order.style_name || "Untitled")
                   : (order.style_name || order.product_name || "Untitled")}
               </h3>
-              <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.3em] mb-6`}>
-                 {isSampling ? "Sampling" : `PO: ${order.order_no}`} • {order.vendor_name}
+              <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3`}>
+                 {`PO: ${order.po_number || order.order_no || "Pending"}`} • Style: {order.style_code || order.style_name || "N/A"} • {order.vendor_name}
               </p>
+
+              {/* Financial Summary Pill — Visible to Super Admin Only */}
+              {isSuperAdmin && (
+                <div className="grid grid-cols-3 gap-2 py-2 px-3 mb-5 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-[10px]">
+                  <div>
+                    <span className="text-slate-500 uppercase tracking-wider block font-bold text-[8.5px]">Value</span>
+                    <span className="font-mono font-bold text-white">${Number(order.order_value || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 uppercase tracking-wider block font-bold text-[8.5px]">Cost</span>
+                    <span className="font-mono font-bold text-amber-400">${Number(order.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 uppercase tracking-wider block font-bold text-[8.5px]">Margin</span>
+                    <span className={`font-mono font-bold ${(order.remaining_margin || 0) < 0 ? "text-red-400" : "text-emerald-400"}`}>
+                      ${Number(order.remaining_margin || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Individual Stage Progress & Buffer Indicator */}
               <div className="mb-6 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 space-y-2">
@@ -784,10 +819,22 @@ function OrdersContent() {
                   <input className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={formData.style_name} onChange={(e) => setFormData({...formData, style_name: e.target.value})} />
                 </div>
               </div>
-              <div>
-                <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">PO / Order Number</label>
-                <input className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={formData.order_no} onChange={(e) => setFormData({...formData, order_no: e.target.value})} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">PO / Order Number</label>
+                  <input className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={formData.order_no} onChange={(e) => setFormData({...formData, order_no: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black text-blue-500 uppercase tracking-widest mb-3 italic">Style Code (e.g. DZ_BJ)</label>
+                  <input className="w-full bg-slate-950 border border-blue-900/50 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" placeholder="DZ_BJ" value={formData.style_code} onChange={(e) => setFormData({...formData, style_code: e.target.value})} />
+                </div>
               </div>
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 italic">Order Value / Total Sale Worth ($)</label>
+                  <input type="number" step="0.01" className="w-full bg-slate-950 border border-emerald-900/50 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" placeholder="e.g. 1200.00" value={formData.order_value} onChange={(e) => setFormData({...formData, order_value: e.target.value})} />
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Quantity</label>
@@ -916,8 +963,8 @@ function OrdersContent() {
               />
 
               <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-8">
-                <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
-                  <Plus className="w-4 h-4 text-blue-500" /> Predicted Stage Days (SLA Grouping Enabled)
+                <h4 className="text-[#16233B] text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
+                  <Plus className="w-4 h-4 text-[#0044E6]" /> Predicted Stage Days (SLA Grouping Enabled)
                 </h4>
                 <p className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                   Select multiple stages to merge them under a combined SLA chunk, or assign days individually.
@@ -943,8 +990,8 @@ function OrdersContent() {
 
           {!editingOrder && !isSampling && (
             <div className="space-y-8">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h4 className="text-white text-xs font-black uppercase tracking-widest italic">Product Batches</h4>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <h4 className="text-[#16233B] text-xs font-black uppercase tracking-widest italic">Product Batches</h4>
                 <button type="button" onClick={handleAddBulkItem} className="text-emerald-400 hover:text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                   <Plus className="w-4 h-4" /> Add Another
                 </button>
@@ -968,15 +1015,25 @@ function OrdersContent() {
                       <input required type="text" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.product_name} onChange={(e) => updateBulkItem(idx, 'product_name', e.target.value)} />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">PO #</label>
-                      <input required type="text" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.order_no} onChange={(e) => updateBulkItem(idx, 'order_no', e.target.value)} />
+                      <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">PO # (Auto SK100 if blank)</label>
+                      <input type="text" placeholder="Auto SK100, SK101..." className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.order_no} onChange={(e) => updateBulkItem(idx, 'order_no', e.target.value)} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div>
-                      <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Style Name</label>
-                      <input required type="text" placeholder="Style #WJ-2026" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none placeholder:text-slate-800" value={item.style_name} onChange={(e) => updateBulkItem(idx, 'style_name', e.target.value)} />
+                      <label className="block text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3 italic">Brand / Style Name</label>
+                      <input required type="text" placeholder="e.g. Delta Zeta" className="w-full bg-slate-950 border border-slate-900 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none placeholder:text-slate-800" value={item.style_name} onChange={(e) => updateBulkItem(idx, 'style_name', e.target.value)} />
                     </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-blue-500 uppercase tracking-widest mb-3 italic">Style Code (Auto DZ_BJ)</label>
+                      <input type="text" placeholder="e.g. DZ_BJ" className="w-full bg-slate-950 border border-blue-900/50 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none placeholder:text-slate-800" value={item.style_code || ""} onChange={(e) => updateBulkItem(idx, 'style_code', e.target.value)} />
+                    </div>
+                    {isSuperAdmin && (
+                      <div>
+                        <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 italic">Order Value ($)</label>
+                        <input type="number" step="0.01" placeholder="e.g. 1200.00" className="w-full bg-slate-950 border border-emerald-900/50 rounded-2xl px-5 py-4 text-xs font-bold text-white focus:outline-none" value={item.order_value || ""} onChange={(e) => updateBulkItem(idx, 'order_value', e.target.value)} />
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
@@ -1018,8 +1075,8 @@ function OrdersContent() {
               ))}
 
               <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-8">
-                <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
-                  <Plus className="w-4 h-4 text-emerald-500" /> Predicted Stage Days (SLA Grouping Enabled)
+                <h4 className="text-[#16233B] text-[10px] font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3 italic">
+                  <Plus className="w-4 h-4 text-[#0044E6]" /> Predicted Stage Days (SLA Grouping Enabled)
                 </h4>
                 <p className="mb-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                   Select multiple stages to merge them under a combined SLA chunk, or assign days individually.
@@ -1108,7 +1165,6 @@ function StageMergingComponent({
   selectedMergeStages,
   setSelectedMergeStages,
   themeHex,
-  themeColor,
   startDate,
   exFactoryDate,
 }: any) {
@@ -1351,7 +1407,7 @@ function StageMergingComponent({
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
           <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in zoom-in duration-300">
             <div className="text-center space-y-2">
-              <h3 className="text-white font-black text-lg uppercase tracking-wider">Set SLA Days</h3>
+              <h3 className="text-[#16233B] font-black text-lg uppercase tracking-wider">Set SLA Days</h3>
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-normal max-h-12 overflow-y-auto">
                 Grouping: {getAutoChunkName()}
               </p>
@@ -1474,6 +1530,7 @@ function ReferenceAttachmentButton({
               {attachments.map((attachment, index) => (
                 <div key={`${attachment.url}-${index}`} className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-800 bg-slate-950 p-3 md:grid-cols-[88px_1fr_auto] md:items-center">
                   <a href={attachment.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={attachment.url} alt={attachment.requirement || "Reference picture"} className="h-20 w-full object-cover md:w-20" />
                   </a>
                   <div>
@@ -1524,6 +1581,7 @@ function VendorFloorLineSelector({
         api.get(`/vendors/${vendorId}/floors`)
           .then(res => setFloors(res.data.data || []))
           .catch(() => setFloors([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [vendorId]);
 
     const isFloorSelected = (floorId: string) => value.some((assignment) => assignment.floor_id === floorId);
@@ -1623,6 +1681,7 @@ function SamplingDepartmentSelector({ vendorId, value, onChange }: { vendorId: s
             setDepartments([]);
             onChange("");
           });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [vendorId]);
 
     return (
@@ -1643,9 +1702,3 @@ function SamplingDepartmentSelector({ vendorId, value, onChange }: { vendorId: s
         </div>
     );
 }
-
-const ArrowRight = ({ className }: { className?: string }) => (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-    </svg>
-);

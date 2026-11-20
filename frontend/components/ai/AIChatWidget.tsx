@@ -567,7 +567,7 @@ export default function AIChatWidget() {
                     </div>
                   ) : sessions.length === 0 ? (
                     <div className="ai-history-empty">
-                      <div className="mx-auto w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                      <div className="mx-auto w-10 h-10 rounded-full bg-[#EBF0FF] text-[#0044E6] flex items-center justify-center mb-2">
                         <AISparkIcon />
                       </div>
                       <p className="font-bold text-slate-700 text-sm">No saved chats yet</p>
@@ -596,7 +596,7 @@ export default function AIChatWidget() {
                             {currentSessionId === s.id && (
                               <>
                                 <span>•</span>
-                                <span className="text-emerald-600 font-bold">Active</span>
+                                <span className="text-[#0044E6] font-bold">Active</span>
                               </>
                             )}
                           </div>

@@ -80,7 +80,7 @@ export default function DefectMasterPage() {
           {REPORT_TYPES.map(t => (
             <button key={t.id} onClick={() => setFilterType(t.id)}
               className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                filterType === t.id ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                filterType === t.id ? "bg-emerald-600 text-white shadow-md shadow-[0_4px_14px_rgba(0,68,230,0.2)]" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}>
               {t.label}
             </button>
@@ -129,7 +129,7 @@ export default function DefectMasterPage() {
             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                <div className="relative flex-1 max-w-xs">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                 <input type="text" placeholder="Search codes..." className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+                 <input type="text" placeholder="Search codes..." className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0044E6]/30" />
                </div>
             </div>
             <div className="overflow-x-auto">

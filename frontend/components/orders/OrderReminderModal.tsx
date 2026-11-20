@@ -354,13 +354,13 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
         {/* Top Header */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400">
+            <div className="w-10 h-10 rounded-xl bg-[#0044E6]/20 border border-[#0044E6]/40 flex items-center justify-center text-[#0044E6]">
               <Mail className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-white tracking-tight">Order Reminder &amp; Notification Center</h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0044E6]/20 text-[#4477FF] border border-[#0044E6]/30">
                   3-in-1 Suite
                 </span>
               </div>
@@ -378,12 +378,12 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
         </div>
 
         {/* 3 Unified Tabs */}
-        <div className="bg-slate-50 border-b border-slate-200 px-6 pt-3 flex items-center justify-between gap-4">
-          <div className="flex gap-2">
+        <div className="bg-slate-50 border-b border-slate-200 px-6 pt-3 flex items-center justify-between gap-4 overflow-x-auto">
+          <div className="flex gap-2 shrink-0">
             {/* Tab 1: Partial */}
             <button
               onClick={() => setActiveTab("partial")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs tracking-wide transition-all border-t border-x ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs tracking-wide transition-all border-t border-x whitespace-nowrap shrink-0 ${
                 activeTab === "partial"
                   ? "bg-white text-amber-700 border-slate-200 shadow-sm -mb-px"
                   : "bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200/70"
@@ -399,7 +399,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
             {/* Tab 2: Date Delay */}
             <button
               onClick={() => setActiveTab("date_delay")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs tracking-wide transition-all border-t border-x ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs tracking-wide transition-all border-t border-x whitespace-nowrap shrink-0 ${
                 activeTab === "date_delay"
                   ? "bg-white text-rose-700 border-slate-200 shadow-sm -mb-px"
                   : "bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200/70"
@@ -415,48 +415,57 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
             {/* Tab 3: Complete */}
             <button
               onClick={() => setActiveTab("order_complete")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs tracking-wide transition-all border-t border-x ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs tracking-wide transition-all border-t border-x whitespace-nowrap shrink-0 ${
                 activeTab === "order_complete"
-                  ? "bg-white text-emerald-700 border-slate-200 shadow-sm -mb-px"
+                  ? "bg-white text-[#0044E6] border-slate-200 shadow-sm -mb-px"
                   : "bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200/70"
               }`}
             >
-              <CheckCircle2 className={`w-4 h-4 ${activeTab === "order_complete" ? "text-emerald-600" : "text-slate-400"}`} />
+              <CheckCircle2 className={`w-4 h-4 ${activeTab === "order_complete" ? "text-[#0044E6]" : "text-slate-400"}`} />
               <span>3. Order Completed</span>
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800">
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-[#EBF0FF] text-[#0044E6]">
                 Sign-off
               </span>
             </button>
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-200/70 p-1 rounded-lg text-xs font-semibold text-slate-600 mb-2">
+          <div className="flex items-center bg-slate-200/80 p-1 rounded-xl text-xs font-semibold text-slate-600 mb-2 shrink-0 min-w-fit">
             <button
+              type="button"
               onClick={() => setViewMode("visual")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
-                viewMode === "visual" ? "bg-white text-slate-900 shadow-xs" : "hover:text-slate-900"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 text-xs font-bold transition-all ${
+                viewMode === "visual"
+                  ? "bg-white text-[#0044E6] shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <Eye className="w-3.5 h-3.5 text-teal-600" />
-              <span>Visual</span>
+              <Eye className="w-3.5 h-3.5 text-[#0044E6]" />
+              <span className="whitespace-nowrap">Visual</span>
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("html")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
-                viewMode === "html" ? "bg-white text-slate-900 shadow-xs" : "hover:text-slate-900"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 text-xs font-bold transition-all ${
+                viewMode === "html"
+                  ? "bg-white text-[#0044E6] shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <Code2 className="w-3.5 h-3.5 text-indigo-600" />
-              <span>HTML</span>
+              <Code2 className="w-3.5 h-3.5 text-[#0044E6]" />
+              <span className="whitespace-nowrap">HTML</span>
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("text")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
-                viewMode === "text" ? "bg-white text-slate-900 shadow-xs" : "hover:text-slate-900"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 text-xs font-bold transition-all ${
+                viewMode === "text"
+                  ? "bg-white text-[#0044E6] shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <FileText className="w-3.5 h-3.5 text-amber-600" />
-              <span>Plain Text</span>
+              <FileText className="w-3.5 h-3.5 text-[#0044E6]" />
+              <span className="whitespace-nowrap">Plain Text</span>
             </button>
           </div>
         </div>
@@ -545,7 +554,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
             <div className="bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden flex-1 min-h-[440px]">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-72 text-slate-400 gap-2">
-                  <RefreshCw className="w-6 h-6 animate-spin text-teal-600" />
+                  <RefreshCw className="w-6 h-6 animate-spin text-[#0044E6]" />
                   <span className="text-xs font-semibold">Generating customized template...</span>
                 </div>
               ) : viewMode === "visual" ? (
@@ -575,7 +584,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
             {/* Quick Context Card */}
             <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs space-y-3">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Info className="w-4 h-4 text-teal-600" />
+                <Info className="w-4 h-4 text-[#0044E6]" />
                 <span>Template Objective</span>
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
@@ -597,7 +606,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
             {/* Email Dispatch Controls */}
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Send className="w-4 h-4 text-teal-600" />
+                <Send className="w-4 h-4 text-[#0044E6]" />
                 <span>Direct Email Dispatch</span>
               </h3>
 
@@ -628,7 +637,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
                   value={recipients}
                   onChange={(e) => setRecipients(e.target.value)}
                   placeholder="e.g. manager@factory.com, client@brand.com"
-                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all font-mono"
+                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
                   Separate multiple addresses with commas.
@@ -645,7 +654,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
                   value={ccEmails}
                   onChange={(e) => setCcEmails(e.target.value)}
                   placeholder="e.g. head_qc@company.com, admin@textile.com"
-                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all font-mono"
+                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all font-mono"
                 />
               </div>
 
@@ -659,7 +668,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
                   value={customNote}
                   onChange={(e) => setCustomNote(e.target.value)}
                   placeholder="Add specific instructions for this order (injected into email body)..."
-                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all resize-none"
+                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all resize-none"
                 />
               </div>
 
@@ -673,7 +682,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
                   value={subjectOverride}
                   onChange={(e) => setSubjectOverride(e.target.value)}
                   placeholder={activeTemplate.subject}
-                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all"
+                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all"
                 />
               </div>
 
@@ -681,7 +690,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
               <button
                 onClick={handleSendEmail}
                 disabled={sending}
-                className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 px-4 bg-[#0044E6] hover:bg-[#0036B8] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {sending ? (
                   <>
@@ -707,7 +716,7 @@ Open Order: https://textileapperal.com/orders/${ord.id || ""}`;
         {/* Modal Bottom Bar */}
         <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#0044E6] animate-pulse" />
             <span>All 3 templates ready for deployment &amp; client communication.</span>
           </div>
           <button

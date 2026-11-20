@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Enum, Boolean, Date, Text, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum, Boolean, Date, Text, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.user import GUID
@@ -136,6 +136,9 @@ class Order(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     vendor_id = Column(GUID(), ForeignKey("vendors.id"), nullable=False)
     order_no = Column(String(100), nullable=True)
+    po_number = Column(String(50), unique=True, index=True, nullable=True)
+    style_code = Column(String(100), index=True, nullable=True)
+    order_value = Column(Float, default=0.0, nullable=True)
     style_name = Column(String(200), nullable=True)
     product_name = Column(String(200), nullable=True)
     product_type = Column(String(100), nullable=True)
@@ -184,8 +187,18 @@ class Order(Base):
     stages = relationship("ProductionStage", back_populates="order", order_by="ProductionStage.stage_order")
     stage_chunks = relationship("ProductionStageChunk", back_populates="order", cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="order")
+    expenses = relationship("StageExpense", back_populates="order", cascade="all, delete-orphan")
     assignments = relationship("OrderProductionAssignment", back_populates="order")
     history = relationship("OrderHistory", back_populates="order")
+
+    @property
+    def total_cost(self) -> float:
+        return sum(float(e.amount or 0.0) for e in self.expenses) if self.expenses else 0.0
+
+    @property
+    def remaining_margin(self) -> float:
+        val = float(self.order_value or 0.0)
+        return val - self.total_cost
 
     @property
     def delay_days(self):
@@ -351,3 +364,40 @@ class VendorLine(Base):
     is_active = Column(Boolean, default=True)
     status = Column(Enum(LocationStatus), default=LocationStatus.available)
     floor = relationship("VendorFloor", back_populates="lines")
+
+
+class POSequence(Base):
+    __tablename__ = "po_sequences"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prefix = Column(String(10), default="SK", nullable=False)
+    next_val = Column(Integer, default=100, nullable=False)
+
+
+class Style(Base):
+    __tablename__ = "styles"
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    style_code = Column(String(100), unique=True, nullable=False, index=True)
+    brand_name = Column(String(200), nullable=True)
+    article_type = Column(String(200), nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StageExpense(Base):
+    __tablename__ = "stage_expenses"
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False, index=True)
+    stage_id = Column(GUID(), ForeignKey("production_stages.id"), nullable=True, index=True)
+    stage_name = Column(String(100), nullable=True, index=True)
+    amount = Column(Float, nullable=False, default=0.0)
+    description = Column(Text, nullable=True)
+    expense_date = Column(Date, default=datetime.utcnow)
+    receipt_url = Column(String(500), nullable=True)
+    receipt_filename = Column(String(255), nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("Order", back_populates="expenses")
+    stage = relationship("ProductionStage")
+    creator = relationship("User", foreign_keys=[created_by])
+

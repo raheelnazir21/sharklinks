@@ -12,6 +12,7 @@ from app.models.password_reset_request import PasswordResetRequest, ResetRequest
 from app.models.order import (  # noqa: F401
     Vendor, Order, ProductionStage, ProductionStageChunk, Attachment, OrderHistory,
     OrderStatus, OrderPriority, StageStatus, StageName,
+    POSequence, Style, StageExpense,
 )
 
 # Step 3 — QC Reports

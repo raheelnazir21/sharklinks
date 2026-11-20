@@ -1,20 +1,18 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, useCallback, use } from "react";
 import api from "@/services/api";
 import {
   Calendar, Clock, CheckCircle2, AlertCircle, ChevronLeft,
-  Edit3, Save, X, Lock, ArrowRight, Upload, FileText,
-  ImageIcon, Info, ListChecks, Timer, Zap, Package, Truck, ArrowRightCircle,
-  GitBranch, RefreshCcw, MessageSquare, ListOrdered, CheckCircle, ShieldCheck,
-  Paperclip, Download, ExternalLink, Trash2, AlertTriangle, ThumbsUp, ThumbsDown,
-  AlertOctagon, ArrowUpRight, RotateCcw, CheckSquare, Mail
+  Lock, Upload, FileText,
+  ImageIcon, Info, Timer, Zap,
+  GitBranch, RefreshCcw, CheckCircle, ShieldCheck,
+  Paperclip, ExternalLink, Trash2, AlertTriangle, ThumbsUp, ThumbsDown,
+  AlertOctagon, ArrowUpRight, RotateCcw, CheckSquare, Mail, Plus
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import { useHeader } from "@/hooks/useHeader";
-import { IndustrialHeading } from "@/components/ui/PagePrimitives";
 import { ConfirmDialog, FeedbackDialog } from "@/components/ui/ActionDialogs";
 import OrderHistoryModal from "@/components/orders/OrderHistoryModal";
 import OrderReminderModal from "@/components/orders/OrderReminderModal";
@@ -37,6 +35,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const { user } = useAuth();
   const isViewer = user?.role === "viewer";
   const canManage = !isViewer;
+  const isSuperAdmin = user?.role === "super_admin";
   const { setHeaderConfig } = useHeader();
   const [order, setOrder] = useState<any>(null);
   const [stages, setStages] = useState<any[]>([]);
@@ -145,22 +144,68 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [clearProofNotes, setClearProofNotes] = useState("");
   const [clearingCondition, setClearingCondition] = useState(false);
 
-  const fetchData = async () => {
+  // Sharknits v2.0: Stage Expenses & Financial Ledger
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [financialSummary, setFinancialSummary] = useState<any>({
+    order_value: 0,
+    total_cost: 0,
+    remaining_margin: 0,
+    stage_breakdown: {},
+  });
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    stage_id: "",
+    stage_name: "",
+    amount: "",
+    description: "",
+    expense_date: new Date().toISOString().split("T")[0],
+    receipt_url: "",
+    receipt_filename: "",
+  });
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+
+  const fetchData = useCallback(async () => {
     try {
-      const [orderRes, stagesRes, vendorsRes, bulkClassRes] = await Promise.all([
+      const promises: Promise<any>[] = [
         api.get(`/orders/${id}`),
         api.get(`/orders/${id}/stages`),
         api.get("/vendors/"),
         api.get("/orders/bulk-classes"),
-      ]);
+      ];
+      if (isSuperAdmin) {
+        promises.push(
+          api.get(`/orders/${id}/expenses`).catch(() => ({ data: { data: { expenses: [], total_cost: 0, order_value: 0, remaining_margin: 0, stage_breakdown: {} } } }))
+        );
+      }
 
-      const oData = orderRes.data.data;
-      const sData = stagesRes.data.data;
+      const results = await Promise.all(promises);
+      const oData = results[0].data.data;
+      const sData = results[1].data.data;
+      const vendorsData = results[2].data.data || [];
+      const bulkClassesData = results[3].data.data || [];
+      const expData = isSuperAdmin && results[4] ? (results[4].data?.data || {}) : {};
 
       setOrder(oData);
       setStages(sData);
-      setVendors(vendorsRes.data.data || []);
-      setBulkClasses(bulkClassRes.data.data || []);
+      setVendors(vendorsData);
+      setBulkClasses(bulkClassesData);
+      if (isSuperAdmin) {
+        setExpenses(expData.expenses || []);
+        setFinancialSummary({
+          order_value: expData.order_value ?? oData.order_value ?? 0,
+          total_cost: expData.total_cost ?? oData.total_cost ?? 0,
+          remaining_margin: expData.remaining_margin ?? oData.remaining_margin ?? 0,
+          stage_breakdown: expData.stage_breakdown || {},
+        });
+      } else {
+        setExpenses([]);
+        setFinancialSummary({
+          order_value: 0,
+          total_cost: 0,
+          remaining_margin: 0,
+          stage_breakdown: {},
+        });
+      }
 
       // Default Selection: The first non-completed stage (the working stage)
       const currentWorking = sData.find((s: any) => s.status !== "completed") || sData[sData.length - 1];
@@ -172,11 +217,83 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     } finally {
       setLoading(false);
     }
+  }, [id, isSuperAdmin]);
+
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(expenseForm.amount);
+    if (!amt || amt <= 0) {
+      setFeedback({ type: "error", title: "Invalid Amount", message: "Please enter an amount greater than 0." });
+      return;
+    }
+    setUpdating(true);
+    try {
+      await api.post(`/orders/${id}/expenses`, {
+        stage_id: expenseForm.stage_id || null,
+        stage_name: expenseForm.stage_name || null,
+        amount: amt,
+        description: expenseForm.description || null,
+        expense_date: expenseForm.expense_date || null,
+        receipt_url: expenseForm.receipt_url || null,
+        receipt_filename: expenseForm.receipt_filename || null,
+      });
+      await fetchData();
+      setExpenseModalOpen(false);
+      setExpenseForm({
+        stage_id: "",
+        stage_name: "",
+        amount: "",
+        description: "",
+        expense_date: new Date().toISOString().split("T")[0],
+        receipt_url: "",
+        receipt_filename: "",
+      });
+      setFeedback({ type: "success", title: "Expense Added", message: "Stage expense logged and ledger updated." });
+    } catch (err: any) {
+      setFeedback({ type: "error", title: "Operation Failed", message: err.response?.data?.detail || "Could not log expense." });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    setUpdating(true);
+    try {
+      await api.delete(`/orders/${id}/expenses/${expenseId}`);
+      await fetchData();
+      setFeedback({ type: "success", title: "Expense Removed", message: "Expense deleted and totals recalculated." });
+    } catch (err: any) {
+      setFeedback({ type: "error", title: "Operation Failed", message: err.response?.data?.detail || "Could not delete expense." });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleReceiptUpload = async (file: File | null) => {
+    if (!file) return;
+    setUploadingReceipt(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await api.post("/uploads/image", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setExpenseForm((prev) => ({
+        ...prev,
+        receipt_url: res.data.data?.url || "",
+        receipt_filename: file.name,
+      }));
+      setFeedback({ type: "success", title: "Receipt Uploaded", message: file.name });
+    } catch (err: any) {
+      setFeedback({ type: "error", title: "Upload Failed", message: err.response?.data?.detail || "Failed to upload receipt." });
+    } finally {
+      setUploadingReceipt(false);
+    }
   };
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [fetchData]);
 
   useEffect(() => {
     if (!order) return;
@@ -685,7 +802,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         headers: { "Content-Type": "multipart/form-data" }
       });
       await fetchData();
-    } catch (err) {
+    } catch {
       alert("Failed to upload attachment.");
     } finally {
       setUploading(false);
@@ -693,12 +810,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
-      <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F8FC]">
+      <div className="w-12 h-12 border-4 border-[#0044E6] border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
 
-  if (!order) return <div className="p-20 text-white font-black uppercase tracking-widest text-center bg-slate-950 min-h-screen">Order not found.</div>;
+  if (!order) return <div className="p-20 text-[#16233B] font-black uppercase tracking-widest text-center bg-[#F6F8FC] min-h-screen">Order not found.</div>;
 
   const isSampling = order.track_type === "sampling";
   const themeColor = isSampling ? "blue" : "emerald";
@@ -914,7 +1031,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="flex items-center gap-4 flex-wrap">
           <button 
             onClick={() => router.push(getBackUrl())} 
-            className="px-5 py-3 text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-600 rounded-2xl transition-all shadow-md shadow-emerald-600/20 group flex items-center gap-2 active:scale-95 text-xs font-black uppercase tracking-wider"
+            className="px-5 py-3 text-white bg-[#0044E6] hover:bg-[#0036B8] border border-[#0044E6] rounded-2xl transition-all shadow-md shadow-[0_4px_14px_rgba(0,68,230,0.2)] group flex items-center gap-2 active:scale-95 text-xs font-black uppercase tracking-wider"
             title={getBackLabel()}
           >
             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -926,23 +1043,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {order.track_type}
             </span>
             <span className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider border ${
-              order.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+              order.status === 'completed' ? 'bg-[#EBF0FF] text-[#0044E6] border-[#0044E6]/30' :
               order.status === 'delayed' ? 'bg-red-50 text-red-700 border-red-200' :
-              'bg-emerald-50 text-emerald-700 border-emerald-200'
+              'bg-[#EBF0FF] text-[#0044E6] border-[#0044E6]/30'
             }`}>
               {order.status}
             </span>
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
-              className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 transition shadow-sm"
+              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition shadow-xs"
             >
               History
             </button>
             <button
               type="button"
               onClick={() => setReminderModalOpen(true)}
-              className="rounded-full border border-teal-300 bg-teal-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-teal-800 hover:bg-teal-100 hover:border-teal-400 transition shadow-sm flex items-center gap-1.5"
+              className="rounded-full border border-[#0044E6]/30 bg-[#EBF0FF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#0044E6] hover:bg-[#D6E4FF] hover:border-[#0044E6] transition shadow-xs flex items-center gap-1.5"
             >
               <Mail className="w-3.5 h-3.5" /> Email Reminders
             </button>
@@ -951,7 +1068,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <button
                 type="button"
                 onClick={openMoveToBulkModal}
-                className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-100 flex items-center gap-1.5 transition"
+                className="rounded-full border border-[#0044E6]/30 bg-[#EBF0FF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#0044E6] hover:bg-[#D6E4FF] flex items-center gap-1.5 transition"
               >
                 <ArrowUpRight className="w-4 h-4" /> Move to Bulk
               </button>
@@ -961,7 +1078,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <button
                 type="button"
                 onClick={openReorderModal}
-                className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-100 flex items-center gap-1.5 transition"
+                className="rounded-full border border-[#0044E6]/30 bg-[#EBF0FF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#0044E6] hover:bg-[#D6E4FF] flex items-center gap-1.5 transition"
               >
                 <RotateCcw className="w-4 h-4" /> Reorder
               </button>
@@ -984,6 +1101,76 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
+      {/* Sharknits v2.0: Financial Summary & Margin Ledger Banner — Visible to Super Admin Only */}
+      {isSuperAdmin && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Purchase Order</p>
+            <p className="text-2xl font-black text-[#0044E6] mt-1 tracking-tight">{order.po_number || order.order_no}</p>
+            <p className="text-xs font-bold text-slate-600 mt-1 truncate">Style: <strong className="text-slate-900">{order.style_code || order.style_name || "N/A"}</strong></p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200">
+            <p className="text-[10px] font-black uppercase tracking-wider text-blue-800">Order Value / Sale Worth</p>
+            <p className="text-2xl font-black text-slate-900 mt-1 font-mono">
+              ${Number(financialSummary.order_value || order.order_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+            <p className="text-xs font-bold text-blue-700 mt-1">Customer Contract Value</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-900">Total Accumulated Cost</p>
+            <p className="text-2xl font-black text-amber-900 mt-1 font-mono">
+              ${Number(financialSummary.total_cost ?? order.total_cost ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs font-bold text-amber-800">{expenses.length} expense entry{expenses.length === 1 ? "" : "ies"}</span>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpenseForm({
+                      stage_id: currentStage?.id || "",
+                      stage_name: currentStage?.stage_name || "",
+                      amount: "",
+                      description: "",
+                      expense_date: new Date().toISOString().split("T")[0],
+                      receipt_url: "",
+                      receipt_filename: "",
+                    });
+                    setExpenseModalOpen(true);
+                  }}
+                  className="text-[10px] font-black uppercase tracking-wider text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                >
+                  + Add Cost
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${
+            (financialSummary.remaining_margin ?? ((financialSummary.order_value || 0) - (financialSummary.total_cost || 0))) < 0
+              ? "bg-red-50 border-red-300 text-red-700"
+              : "bg-emerald-50 border-emerald-300 text-emerald-800"
+          }`}>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-wider">Remaining Margin</p>
+              {(financialSummary.remaining_margin ?? ((financialSummary.order_value || 0) - (financialSummary.total_cost || 0))) < 0 && (
+                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-200 text-red-900 rounded-full">Deficit Alert</span>
+              )}
+            </div>
+            <p className="text-2xl font-black mt-1 font-mono">
+              ${Number(financialSummary.remaining_margin ?? ((financialSummary.order_value || 0) - (financialSummary.total_cost || 0))).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+            <p className="text-xs font-bold opacity-80 mt-1">
+              {financialSummary.order_value > 0
+                ? `${(((financialSummary.remaining_margin ?? ((financialSummary.order_value || 0) - (financialSummary.total_cost || 0))) / financialSummary.order_value) * 100).toFixed(1)}% margin`
+                : "Margin balance"}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Ex-Factory Date Passed Alert Banner */}
       {isExFactoryPassed && (
         <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/30 rounded-2xl px-6 py-4">
@@ -1005,7 +1192,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <Timer className="w-4 h-4" /> Production Timeline
             </h3>
             <div className="space-y-4">
-              {groupedTimeline.map((item, groupIdx) => {
+              {groupedTimeline.map((item) => {
                 if (item.type === "standalone") {
                   const s = item.s;
                   const idx = item.idx;
@@ -1068,8 +1255,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   // Render a chunk block
                   const chunkCompleted = item.stages.every((p: any) => p.s.status === "completed");
                   const chunkCurrent = item.stages.some((p: any) => p.s.status === "in_progress");
-                  const firstStage = item.stages[0].s;
-                  const chunkTargetDate = firstStage.target_date ? new Date(firstStage.target_date) : null;
                   
                   return (
                     <div key={item.id} className="bg-slate-950/40 border border-slate-850 rounded-[2rem] p-4 space-y-3 relative overflow-hidden">
@@ -1157,12 +1342,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </h3>
             <div className="space-y-6">
               <div>
-                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Target Quantity</p>
-                <p className="text-white font-black text-lg">{order.quantity} Pcs</p>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Target Quantity</p>
+                <p className="text-[#16233B] font-black text-lg">{order.quantity} Pcs</p>
               </div>
               <div>
-                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Category</p>
-                <p className="text-white font-black text-xs uppercase tracking-widest">{order.product_type || "N/A"}</p>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Category</p>
+                <p className="text-[#16233B] font-black text-xs uppercase tracking-widest">{order.product_type || "N/A"}</p>
               </div>
             </div>
           </div>
@@ -1181,7 +1366,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       <Zap className="w-10 h-10" />
                     </div>
                     <div>
-                      <h2 className="text-white font-black text-4xl uppercase tracking-tighter italic">
+                      <h2 className="text-[#16233B] font-black text-4xl uppercase tracking-tighter italic">
                         {currentStage.stage_name.replace(/_/g, ' ')}
                       </h2>
                       <div className="flex items-center gap-4 mt-3">
@@ -1626,20 +1811,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {referenceAttachments.length > 0 && (
             <div className="bg-slate-900/40 border border-slate-800 rounded-[3rem] p-8 shadow-2xl">
-              <h3 className="mb-6 flex items-center gap-3 text-white font-black text-sm uppercase tracking-widest italic">
-                <Paperclip className="h-5 w-5 text-indigo-500" /> Reference Pictures & Requirements
+              <h3 className="mb-6 flex items-center gap-3 text-[#16233B] font-black text-sm uppercase tracking-widest italic">
+                <Paperclip className="h-5 w-5 text-[#0044E6]" /> Reference Pictures &amp; Requirements
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {referenceAttachments.map((attachment: any, index: number) => (
-                  <div key={`${attachment.url}-${index}`} className="overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-950">
-                    <a href={attachment.url} target="_blank" rel="noreferrer" className="block bg-slate-950 text-center">
+                  <div key={`${attachment.url}-${index}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <a href={attachment.url} target="_blank" rel="noreferrer" className="block bg-slate-50 text-center border-b border-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={attachment.url} alt={attachment.requirement || `Reference ${index + 1}`} className="w-full h-auto max-h-[500px] object-contain mx-auto" />
                     </a>
                     <div className="p-5">
-                      <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-600">
+                      <p className="truncate text-[10px] font-black uppercase tracking-widest text-slate-500">
                         {attachment.filename || attachment.url.split("/").pop() || `Picture ${index + 1}`}
                       </p>
-                      <p className="mt-3 text-xs font-bold leading-6 text-slate-300">
+                      <p className="mt-3 text-xs font-bold leading-6 text-slate-700">
                         {attachment.requirement || "No requirement added for this picture."}
                       </p>
                     </div>
@@ -1649,11 +1835,140 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           )}
 
+          {/* Sharknits v2.0: Stage-wise Expense Ledger & Cost Module — Visible to Super Admin Only */}
+          {isSuperAdmin && (
+            <div className="bg-slate-900/40 border border-slate-800 rounded-[3rem] p-8 md:p-10 shadow-2xl space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+                <div>
+                  <h3 className="text-[#16233B] font-black text-xl uppercase tracking-tighter italic flex items-center gap-3">
+                    <span className="p-2 rounded-xl bg-amber-500/20 text-amber-500">💰</span>
+                    Stage-wise Expense Ledger
+                  </h3>
+                  <p className="text-slate-400 text-xs font-medium mt-1">
+                    Itemized production costs by stage. Automatically rolls into Total Order Cost &amp; Margin.
+                  </p>
+                </div>
+
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpenseForm({
+                        stage_id: currentStage?.id || "",
+                        stage_name: currentStage?.stage_name || "",
+                        amount: "",
+                        description: "",
+                        expense_date: new Date().toISOString().split("T")[0],
+                        receipt_url: "",
+                        receipt_filename: "",
+                      });
+                      setExpenseModalOpen(true);
+                    }}
+                    className="px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center gap-2 active:scale-95"
+                  >
+                    <Plus className="w-4 h-4" /> Add Stage Expense
+                  </button>
+                )}
+              </div>
+
+              {/* Stage Cost Breakdown Pills */}
+              {Object.keys(financialSummary.stage_breakdown || {}).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(financialSummary.stage_breakdown || {}).map(([sName, cost]: any) => (
+                    <span
+                      key={sName}
+                      className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-bold text-slate-300 flex items-center gap-2"
+                    >
+                      <span className="text-slate-400 uppercase text-[9px]">{String(sName).replace(/_/g, " ")}:</span>
+                      <strong className="text-amber-400 font-mono">${Number(cost).toFixed(2)}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Expense Table */}
+              {expenses.length === 0 ? (
+                <div className="p-8 text-center bg-slate-950/40 rounded-2xl border border-dashed border-slate-800">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">No expenses recorded for this PO yet.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Click &ldquo;Add Stage Expense&rdquo; above to log the first cost entry.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900 text-slate-400 uppercase tracking-wider text-[9px] font-black border-b border-slate-800">
+                      <tr>
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4">Stage</th>
+                        <th className="py-3 px-4">Description</th>
+                        <th className="py-3 px-4 text-right">Amount</th>
+                        <th className="py-3 px-4 text-center">Receipt</th>
+                        <th className="py-3 px-4 text-right">Logged By</th>
+                        {canManage && <th className="py-3 px-4 text-center">Action</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {expenses.map((exp: any) => (
+                        <tr key={exp.id} className="hover:bg-slate-900/40 transition-colors">
+                          <td className="py-3.5 px-4 font-mono text-slate-300 whitespace-nowrap">{exp.expense_date || "—"}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black text-[9px] uppercase tracking-wider">
+                              {(exp.stage_name || "General").replace(/_/g, " ")}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-200 font-medium max-w-xs truncate">{exp.description || "—"}</td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-amber-400 text-right text-sm">
+                            ${Number(exp.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {exp.receipt_url ? (
+                              <a
+                                href={exp.receipt_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 text-indigo-400 hover:text-indigo-300 text-[10px] font-bold border border-slate-800"
+                              >
+                                <Paperclip className="w-3 h-3" /> View
+                              </a>
+                            ) : (
+                              <span className="text-slate-600">—</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-400 text-right text-[10px]">{exp.creator_name || "Staff"}</td>
+                          {canManage && (
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExpense(exp.id)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                title="Delete expense"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-slate-900/90 font-black border-t border-slate-800">
+                      <tr>
+                        <td colSpan={3} className="py-3.5 px-4 uppercase tracking-wider text-[10px] text-slate-400">Total Accumulated Costs</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-base text-amber-400">
+                          ${Number(financialSummary.total_cost ?? order.total_cost ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </td>
+                        <td colSpan={canManage ? 3 : 2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Documentation Section */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-[3rem] p-10 shadow-2xl">
             <div className="flex items-center justify-between mb-10">
-              <h3 className="text-white font-black text-xl uppercase tracking-tighter italic flex items-center gap-4">
-                <Paperclip className="w-6 h-6 text-indigo-500" /> Phase Documents
+              <h3 className="text-[#16233B] font-black text-xl uppercase tracking-tighter italic flex items-center gap-4">
+                <Paperclip className="w-6 h-6 text-[#0044E6]" /> Phase Documents
               </h3>
               {canManage && (
                 <label className={`cursor-pointer px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${uploading ? 'opacity-50' : ''}`}>
@@ -1937,22 +2252,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             bubble can land out of sight. firstMissingField() reports the missing
             field in a dialog instead. */}
         <form noValidate onSubmit={handleMoveToBulk} className="space-y-6 max-h-[78vh] overflow-y-auto px-1 pr-3 custom-scrollbar">
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4">
-            <p className="text-xs font-bold text-emerald-400">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-xs font-bold text-emerald-800">
               Launch a full bulk production order directly from this sample prototype. All specifications are pre-populated and can be customized before launch.
             </p>
           </div>
 
           {/* Bulk Project / Class Selection */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400">1. Bulk Project Classification</h4>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+            <h4 className="text-xs font-black uppercase tracking-wider text-emerald-700">1. Bulk Project Classification</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Existing Bulk Project</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Existing Bulk Project</label>
                 <select
                   value={moveToBulkData.bulk_class_id}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, bulk_class_id: e.target.value, new_class_name: e.target.value ? "" : moveToBulkData.new_class_name })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 >
                   <option value="">— Select existing project —</option>
                   {bulkClasses.map((bc: any) => (<option key={bc.id} value={bc.id}>{bc.name}</option>))}
@@ -1960,13 +2275,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               {!moveToBulkData.bulk_class_id && (
                 <div>
-                  <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">OR Create New Bulk Project Name</label>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">OR Create New Bulk Project Name</label>
                   <input
                     type="text"
                     value={moveToBulkData.new_class_name}
                     onChange={(e) => setMoveToBulkData({ ...moveToBulkData, new_class_name: e.target.value })}
                     placeholder="e.g. Summer Collection Bulk 2026"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500 placeholder:text-slate-600"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                   />
                 </div>
               )}
@@ -1974,45 +2289,45 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Product Specifications */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400">2. Product Specifications (Pre-Populated)</h4>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+            <h4 className="text-xs font-black uppercase tracking-wider text-emerald-700">2. Product Specifications (Pre-Populated)</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Product Name *</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Product Name *</label>
                 <input
                   required
                   type="text"
                   value={moveToBulkData.product_name}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, product_name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Style Name *</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Style Name *</label>
                 <input
                   required
                   type="text"
                   value={moveToBulkData.style_name}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, style_name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">PO # *</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">PO # *</label>
                 <input
                   required
                   type="text"
                   value={moveToBulkData.order_no}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, order_no: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Priority</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Priority</label>
                 <select
                   value={moveToBulkData.priority}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, priority: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
@@ -2021,34 +2336,34 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Fabric</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Fabric</label>
                 <input
                   type="text"
                   value={moveToBulkData.fabric}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, fabric: e.target.value })}
                   placeholder="e.g. 100% Combed Cotton 180 GSM"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500 placeholder:text-slate-600"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Tech Pack #</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Tech Pack #</label>
                 <input
                   type="text"
                   value={moveToBulkData.tech_pack_no}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, tech_pack_no: e.target.value })}
                   placeholder="e.g. TP-4019"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500 placeholder:text-slate-600"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                 />
               </div>
             </div>
           </div>
 
           {/* Bulk Quantity & Delivery Schedule */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400">3. Bulk Quantity & Delivery Schedule</h4>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+            <h4 className="text-xs font-black uppercase tracking-wider text-emerald-700">3. Bulk Quantity & Delivery Schedule</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Bulk Quantity (Pcs) *</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Bulk Quantity (Pcs) *</label>
                 <input
                   required
                   type="number"
@@ -2056,49 +2371,49 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   placeholder="e.g. 5000"
                   value={moveToBulkData.quantity}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, quantity: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500 placeholder:text-slate-600"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Order Placement Date</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Order Placement Date</label>
                 <input
                   type="date"
                   value={moveToBulkData.order_placement_date}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, order_placement_date: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Ex-Factory Date *</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Ex-Factory Date *</label>
                 <input
                   required
                   type="date"
                   value={moveToBulkData.ex_factory_date}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, ex_factory_date: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
             </div>
           </div>
 
           {/* Vendor and Line Assignments */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400">4. Assigned Vendor & Floor Lines</h4>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+            <h4 className="text-xs font-black uppercase tracking-wider text-emerald-700">4. Assigned Vendor & Floor Lines</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Assigned Vendor *</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Assigned Vendor *</label>
                 <select
                   required
                   value={moveToBulkData.vendor_id}
                   onChange={(e) => setMoveToBulkData({ ...moveToBulkData, vendor_id: e.target.value, floor_assignments: [] })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 >
                   <option value="">Select vendor...</option>
                   {vendors.map((v: any) => (<option key={v.id} value={v.id}>{v.name}</option>))}
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-400">Floors & Lines</label>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Floors & Lines</label>
                 <VendorFloorLineSelector
                   vendorId={moveToBulkData.vendor_id}
                   value={moveToBulkData.floor_assignments}
@@ -2109,14 +2424,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Requirements / Remarks */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-2">
-            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Requirements & Production Remarks</label>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Requirements & Production Remarks</label>
             <textarea
               rows={2}
               value={moveToBulkData.requirements}
               onChange={(e) => setMoveToBulkData({ ...moveToBulkData, requirements: e.target.value })}
               placeholder="Bulk production instructions, specs, special wash care, tolerances..."
-              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500 resize-none placeholder:text-slate-600"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] resize-none placeholder:text-slate-400 shadow-sm"
             />
           </div>
 
@@ -2141,12 +2456,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Predicted Stage Days & SLA Chunks */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-950 p-6 space-y-4">
-            <div className="border-b border-slate-800 pb-3">
-              <h4 className="text-white text-xs font-black uppercase tracking-widest">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+            <div className="border-b border-slate-200 pb-3">
+              <h4 className="text-slate-900 text-xs font-black uppercase tracking-widest">
                 Bulk Stage SLA & Chunks
               </h4>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-0.5">
                 Standard 15-stage sequence. Set target/buffer days or select multiple stages to merge them under unified SLA chunks.
               </p>
             </div>
@@ -2166,12 +2481,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
             <button
               type="button"
               onClick={() => setMoveToBulkDialog(false)}
               disabled={updating}
-              className="rounded-xl border border-slate-800 bg-slate-900 px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-slate-800"
+              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 shadow-sm"
             >
               Cancel
             </button>
@@ -2209,7 +2524,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <select
                   value={reorderData.bulk_class_id}
                   onChange={(e) => setReorderData({ ...reorderData, bulk_class_id: e.target.value, new_class_name: e.target.value ? "" : reorderData.new_class_name })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 >
                   <option value="">— Select existing project —</option>
                   {bulkClasses.map((bc: any) => (<option key={bc.id} value={bc.id}>{bc.name}</option>))}
@@ -2223,7 +2538,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     value={reorderData.new_class_name}
                     onChange={(e) => setReorderData({ ...reorderData, new_class_name: e.target.value })}
                     placeholder="e.g. Autumn Reorder 2026"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 placeholder:text-slate-400 shadow-sm"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                   />
                 </div>
               )}
@@ -2241,7 +2556,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   type="text"
                   value={reorderData.product_name}
                   onChange={(e) => setReorderData({ ...reorderData, product_name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
@@ -2251,7 +2566,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   type="text"
                   value={reorderData.style_name}
                   onChange={(e) => setReorderData({ ...reorderData, style_name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
@@ -2261,7 +2576,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   type="text"
                   value={reorderData.order_no}
                   onChange={(e) => setReorderData({ ...reorderData, order_no: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
@@ -2269,7 +2584,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <select
                   value={reorderData.priority}
                   onChange={(e) => setReorderData({ ...reorderData, priority: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
@@ -2284,7 +2599,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   value={reorderData.fabric}
                   onChange={(e) => setReorderData({ ...reorderData, fabric: e.target.value })}
                   placeholder="e.g. 100% Combed Cotton 180 GSM"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 placeholder:text-slate-400 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                 />
               </div>
               <div>
@@ -2294,7 +2609,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   value={reorderData.tech_pack_no}
                   onChange={(e) => setReorderData({ ...reorderData, tech_pack_no: e.target.value })}
                   placeholder="e.g. TP-4019"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 placeholder:text-slate-400 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                 />
               </div>
             </div>
@@ -2313,7 +2628,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   placeholder="e.g. 5000"
                   value={reorderData.quantity}
                   onChange={(e) => setReorderData({ ...reorderData, quantity: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 placeholder:text-slate-400 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] placeholder:text-slate-400 shadow-sm"
                 />
               </div>
               <div>
@@ -2322,7 +2637,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   type="date"
                   value={reorderData.order_placement_date}
                   onChange={(e) => setReorderData({ ...reorderData, order_placement_date: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
               <div>
@@ -2332,7 +2647,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   type="date"
                   value={reorderData.ex_factory_date}
                   onChange={(e) => setReorderData({ ...reorderData, ex_factory_date: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 />
               </div>
             </div>
@@ -2348,7 +2663,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   required
                   value={reorderData.vendor_id}
                   onChange={(e) => setReorderData({ ...reorderData, vendor_id: e.target.value, floor_assignments: [] })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 shadow-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] shadow-sm"
                 >
                   <option value="">Select vendor...</option>
                   {vendors.map((v: any) => (<option key={v.id} value={v.id}>{v.name}</option>))}
@@ -2373,7 +2688,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               value={reorderData.requirements}
               onChange={(e) => setReorderData({ ...reorderData, requirements: e.target.value })}
               placeholder="Reorder instructions, specs, special wash care, tolerances..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 resize-none placeholder:text-slate-400 shadow-sm"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-900 outline-none focus:border-[#0044E6] resize-none placeholder:text-slate-400 shadow-sm"
             />
           </div>
 
@@ -2434,6 +2749,129 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               className="rounded-xl bg-emerald-600 px-8 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-xl hover:bg-emerald-500 disabled:opacity-50 transition-all flex items-center gap-2"
             >
               {updating ? "Creating Reorder..." : "↻ Create Reorder →"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Sharknits v2.0: Add Stage Expense Modal — Visible to Super Admin Only */}
+      <Modal
+        isOpen={Boolean(isSuperAdmin && expenseModalOpen)}
+        onClose={() => setExpenseModalOpen(false)}
+        title="Log Stage Expense"
+      >
+        <form onSubmit={handleAddExpense} className="space-y-5">
+          <div>
+            <label className="block text-[11px] font-bold text-[#16233B] uppercase tracking-wider mb-1.5">
+              Production Stage
+            </label>
+            <select
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-semibold text-[#16233B] focus:outline-none focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all shadow-xs cursor-pointer"
+              value={expenseForm.stage_name}
+              onChange={(e) => {
+                const sName = e.target.value;
+                const matchStage = stages.find((s) => s.stage_name === sName);
+                setExpenseForm({
+                  ...expenseForm,
+                  stage_name: sName,
+                  stage_id: matchStage ? matchStage.id : "",
+                });
+              }}
+            >
+              <option value="">General Order-Level Cost</option>
+              {stages.map((s) => (
+                <option key={s.id} value={s.stage_name}>
+                  {stageLabel(s.stage_name)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-[#16233B] uppercase tracking-wider mb-1.5">
+                Amount ($) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                required
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="e.g. 250.00"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-semibold text-[#16233B] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all font-mono shadow-xs"
+                value={expenseForm.amount}
+                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-[#16233B] uppercase tracking-wider mb-1.5">
+                Expense Date
+              </label>
+              <input
+                type="date"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-semibold text-[#16233B] focus:outline-none focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all shadow-xs"
+                value={expenseForm.expense_date}
+                onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-[#16233B] uppercase tracking-wider mb-1.5">
+              Cost Description / Purpose
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Extra thread, sample yardage, pressing consumables"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-semibold text-[#16233B] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0044E6] focus:border-[#0044E6] focus:bg-white transition-all shadow-xs"
+              value={expenseForm.description}
+              onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-[#16233B] uppercase tracking-wider mb-1.5">
+              Receipt / Document Attachment (Optional)
+            </label>
+            {expenseForm.receipt_url ? (
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-700 font-semibold truncate max-w-xs">{expenseForm.receipt_filename || "Receipt Attached"}</span>
+                <button
+                  type="button"
+                  onClick={() => setExpenseForm({ ...expenseForm, receipt_url: "", receipt_filename: "" })}
+                  className="text-red-600 hover:text-red-700 text-xs font-bold ml-2 cursor-pointer"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label className={`cursor-pointer w-full p-4 rounded-xl border border-dashed border-slate-300 hover:border-[#0044E6] bg-slate-50 hover:bg-slate-100/70 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 transition-all ${uploadingReceipt ? "opacity-50" : ""}`}>
+                <Upload className="w-4 h-4 text-[#0044E6]" />
+                <span>{uploadingReceipt ? "Uploading..." : "Upload Receipt File"}</span>
+                <input
+                  type="file"
+                  className="hidden"
+                  disabled={uploadingReceipt}
+                  onChange={(e) => handleReceiptUpload(e.target.files?.[0] || null)}
+                />
+              </label>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={() => setExpenseModalOpen(false)}
+              className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 font-bold text-slate-700 text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updating || !expenseForm.amount}
+              className="px-6 py-2.5 rounded-xl bg-[#0044E6] hover:bg-[#0036B8] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {updating ? "Saving..." : "Save Expense"}
             </button>
           </div>
         </form>

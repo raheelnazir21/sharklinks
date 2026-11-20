@@ -22,14 +22,14 @@ export function IndustrialHeading({
   const accent =
     tone === "neutral"
       ? {
-          bar: "from-slate-300 to-slate-600 shadow-slate-500/10",
+          bar: "from-slate-300 to-slate-500 shadow-slate-500/10",
           eyebrow: "text-slate-500",
           highlight: "text-slate-500",
         }
       : {
-          bar: "from-emerald-300 to-teal-500 shadow-emerald-500/20",
-          eyebrow: "text-teal-700",
-          highlight: "text-emerald-500",
+          bar: "from-blue-400 to-blue-700 shadow-blue-600/20",
+          eyebrow: "text-blue-600",
+          highlight: "text-[#0044E6]",
         };
 
   return (
@@ -78,14 +78,14 @@ export function SearchInput({
 }) {
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-teal-600">
+      <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#0044E6]">
         {icon}
       </div>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition focus:border-[#0044E6] focus:bg-white focus:ring-4 focus:ring-blue-100"
       />
     </div>
   );
@@ -107,7 +107,7 @@ export function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-lg shadow-emerald-600/15 transition hover:-translate-y-0.5 hover:bg-emerald-500 active:translate-y-0 disabled:opacity-60 disabled:pointer-events-none"
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#0044E6] px-5 text-sm font-black text-white shadow-lg shadow-[0_4px_14px_rgba(0,68,230,0.2)] transition hover:-translate-y-0.5 hover:bg-[#0036B8] active:translate-y-0 disabled:opacity-60 disabled:pointer-events-none"
     >
       {children}
     </button>
@@ -133,8 +133,8 @@ export function StatusBadge({
           : "neutral"
     : tone;
   const styles = {
-    info: "border-teal-200 bg-teal-50 text-teal-700",
-    success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    info: "border-[#C7D6FF] bg-[#EBF0FF] text-[#0044E6]",
+    success: "border-[#bbf7d0] bg-[#f0fdf4] text-[#16a34a]",
     warning: "border-amber-200 bg-amber-50 text-amber-700",
     danger: "border-red-200 bg-red-50 text-red-700",
     neutral: "border-slate-200 bg-slate-50 text-slate-600",
@@ -175,7 +175,7 @@ export function EmptyState({
 }) {
   return (
     <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-teal-700">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#EBF0FF] text-[#0044E6]">
         {icon || <span className="text-lg font-black">--</span>}
       </div>
       <h3 className="mt-4 text-lg font-black text-slate-950">{title}</h3>
@@ -194,4 +194,4 @@ export function Field({ label, children }: { label: string; children: React.Reac
 }
 
 export const formControlClass =
-  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-950 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100";
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#16233B] outline-none transition focus:border-[#0044E6] focus:bg-white focus:ring-4 focus:ring-blue-100";

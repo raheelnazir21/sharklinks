@@ -56,7 +56,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "Production",
     roles: ["super_admin", "admin", "manager", "qc_officer", "viewer"],
     icon: (
-      <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-5 h-5 text-[#0044E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.691.31a2 2 0 01-1.782 0l-.691-.31a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547V18.5a2 2 0 001.022 1.553l2.387.477a6 6 0 003.86-.517l.691-.31a2 2 0 011.782 0l.691.31a6 6 0 003.86.517l2.387-.477a2 2 0 001.022-1.553V15.428z" />
       </svg>
     ),
@@ -67,7 +67,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "Production",
     roles: ["super_admin", "admin", "manager", "qc_officer", "viewer"],
     icon: (
-      <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-5 h-5 text-[#0044E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
     ),
@@ -78,7 +78,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "Production",
     roles: ["super_admin", "admin", "manager", "qc_officer", "viewer"],
     icon: (
-      <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-5 h-5 text-[#0044E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
       </svg>
     ),
@@ -171,8 +171,8 @@ function formatRelative(value?: string) {
 }
 
 function eventTone(action: string) {
-  if (action.includes("LOGIN")) return "bg-emerald-50 text-emerald-700";
-  if (action.includes("CREATED")) return "bg-teal-50 text-teal-700";
+  if (action.includes("LOGIN")) return "bg-[#EBF0FF] text-[#0044E6]";
+  if (action.includes("CREATED")) return "bg-[#EBF0FF] text-[#0044E6]";
   if (action.includes("UPDATED")) return "bg-blue-50 text-blue-700";
   if (action.includes("DEACTIVATED") || action.includes("REJECT")) return "bg-red-50 text-red-700";
   return "bg-amber-50 text-amber-700";
@@ -189,7 +189,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
         <Link
           href="/activity-logs"
           prefetch={false}
-          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-emerald-700 transition hover:border-emerald-200 hover:bg-emerald-50"
+          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-[#0044E6] transition hover:border-[#C7D6FF] hover:bg-[#EBF0FF]"
         >
           Open
         </Link>
@@ -209,7 +209,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
               <span className="mt-2 h-10 w-px bg-slate-200 last:hidden" />
             </div>
             <div className="min-w-0 flex-1 border-b border-slate-100 pb-3">
-              <p className="truncate text-xs font-black text-slate-800 group-hover:text-emerald-700">
+              <p className="truncate text-xs font-black text-slate-800 group-hover:text-[#0044E6]">
                 {event.action.replaceAll("_", " ")}
               </p>
               <p className="truncate text-[11px] font-semibold text-slate-500">
@@ -218,7 +218,7 @@ function HistorianPanel({ historian }: { historian: HistorianEvent[] }) {
               <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
                 {event.details || "Activity recorded."}
               </p>
-              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[#0044E6]">
                 {formatRelative(event.created_at)}
               </p>
             </div>
@@ -298,134 +298,119 @@ export default function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         ].join(" ")}
       >
-      {/* Brand */}
-      <div className={`flex items-center gap-3 border-b border-slate-200 px-4 py-5 ${collapsed ? "justify-center" : ""}`}>
-        {collapsed ? (
-          <Image
-            src="/cc_logo_icon.png"
-            alt="CC Logo Icon"
-            width={44}
-            height={44}
-            className="h-11 w-11 object-contain"
-            priority
-          />
-        ) : (
-          <div className="flex items-center gap-3 w-full">
+        {/* Brand */}
+        <div className={`flex items-center justify-between border-b border-slate-200 px-3.5 py-4 ${collapsed ? "justify-center" : ""}`}>
+          {collapsed ? (
             <Image
-              src="/cc_logo_icon.png"
-              alt="CC Logo Icon"
-              width={52}
-              height={52}
-              className="h-[52px] w-[52px] object-contain shrink-0"
+              src="/sharknits_logo.png"
+              alt="Sharknits"
+              width={727}
+              height={528}
+              className="h-14 w-auto object-contain"
               priority
             />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[17px] font-black tracking-tight text-slate-900 leading-none">
-                CC Production
-              </span>
-              <span className="text-[14px] font-extrabold text-teal-600 mt-1 leading-none tracking-tight">
-                &amp; QMS
-              </span>
-              <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider leading-none">
-                Cotton to Customer
-              </span>
+          ) : (
+            <div className="flex items-center justify-between w-full gap-2">
+              <Image
+                src="/sharknits_logo.png"
+                alt="Sharknits"
+                width={727}
+                height={528}
+                className="h-16 w-auto max-w-[200px] object-contain object-left"
+                priority
+              />
+              <button
+                onClick={() => setCollapsed(true)}
+                className="rounded-xl border border-slate-200 p-2 text-xs font-black text-slate-500 transition hover:bg-slate-50 shrink-0 cursor-pointer"
+                title="Collapse sidebar"
+              >
+                ‹
+              </button>
             </div>
-          </div>
-        )}
-        {!collapsed && (
+          )}
+        </div>
+        {collapsed && (
           <button
-            onClick={() => setCollapsed(true)}
-            className="ml-auto rounded-xl border border-slate-200 px-2 py-1 text-xs font-black text-slate-500 transition hover:bg-slate-50 shrink-0"
-            title="Collapse sidebar"
+            onClick={() => setCollapsed(false)}
+            className="mx-auto mt-3 rounded-xl border border-slate-200 px-2 py-1 text-xs font-black text-slate-500 transition hover:bg-slate-50"
+            title="Expand sidebar"
           >
-            ‹
+            ›
           </button>
         )}
-      </div>
-      {collapsed && (
-        <button
-          onClick={() => setCollapsed(false)}
-          className="mx-auto mt-3 rounded-xl border border-slate-200 px-2 py-1 text-xs font-black text-slate-500 transition hover:bg-slate-50"
-          title="Expand sidebar"
-        >
-          ›
-        </button>
-      )}
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-        {groupedItems.map(({ group, items }) => (
-          <div key={group}>
-            {!collapsed && <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{group}</p>}
-            <div className="space-y-1">
-              {items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    prefetch={false}
-                    title={collapsed ? item.label : undefined}
-                    className={`group relative flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${
-                      isActive
-                        ? "border border-emerald-100 bg-emerald-50 text-emerald-800 shadow-sm"
+        {/* Navigation */}
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+          {groupedItems.map(({ group, items }) => (
+            <div key={group}>
+              {!collapsed && <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{group}</p>}
+              <div className="space-y-1">
+                {items.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      prefetch={false}
+                      title={collapsed ? item.label : undefined}
+                      className={`group relative flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all duration-200 ${isActive
+                        ? "border border-[#C7D6FF] bg-[#EBF0FF] text-[#0044E6] shadow-sm"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-                    } ${collapsed ? "justify-center" : ""}`}
-                  >
-                    {isActive && <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-emerald-600" />}
-                    <span className={isActive ? "text-emerald-700" : "text-slate-500 group-hover:text-emerald-700"}>
-                      {item.icon}
-                    </span>
-                    {!collapsed && item.label}
-                    {!collapsed && item.href === "/approvals" && (
-                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                    )}
-                  </Link>
-                );
-              })}
+                        } ${collapsed ? "justify-center" : ""}`}
+                    >
+                      {isActive && <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-[#0044E6]" />}
+                      <span className={isActive ? "text-[#0044E6]" : "text-slate-500 group-hover:text-[#0044E6]"}>
+                        {item.icon}
+                      </span>
+                      {!collapsed && item.label}
+                      {!collapsed && item.href === "/approvals" && (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-        {!collapsed && canViewActivity && <HistorianPanel historian={historian} />}
-      </nav>
+          ))}
+          {!collapsed && canViewActivity && <HistorianPanel historian={historian} />}
+        </nav>
 
-      {/* User footer */}
-      <div className="border-t border-slate-200 px-3 py-4 pb-8">
-        {/* Handbook Download Button */}
-        <a
-          href="/Sample-and-Bulk-Order-Handbook.pdf"
-          download="Sample-and-Bulk-Order-Handbook.pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Download Official Operating Handbook (PDF)"
-          className={`mb-3 flex w-full items-center gap-2.5 rounded-xl border border-teal-200/80 bg-teal-50/70 px-3 py-2 text-xs font-black uppercase tracking-wider text-teal-700 transition-all hover:bg-teal-100 hover:border-teal-300 active:scale-95 ${
-            collapsed ? "justify-center" : ""
-          }`}
-        >
-          <BookOpen className="h-4 w-4 text-teal-600 shrink-0" />
-          {!collapsed && <span>Handbook (PDF)</span>}
-        </a>
+        {/* User footer */}
+        <div className="border-t border-slate-200 px-3 py-4 pb-8">
+          {/* Handbook Download Button */}
+          <a
+            href="/Sample-and-Bulk-Order-Handbook.pdf"
+            download="Sample-and-Bulk-Order-Handbook.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Download Official Operating Handbook (PDF)"
+            className={`mb-3 flex w-full items-center gap-2.5 rounded-xl border border-[#C7D6FF] bg-[#EBF0FF] px-3 py-2 text-xs font-black uppercase tracking-wider text-[#0044E6] transition-all hover:bg-[#dbe8ff] hover:border-[#0044E6] active:scale-95 ${collapsed ? "justify-center" : ""
+              }`}
+          >
+            <BookOpen className="h-4 w-4 text-[#0044E6] shrink-0" />
+            {!collapsed && <span>Handbook (PDF)</span>}
+          </a>
 
-        <div className={`mb-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm ${collapsed ? "justify-center" : ""}`}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black uppercase text-emerald-700 ring-1 ring-slate-200">
-            {user?.full_name?.[0] ?? "U"}
+          <div className={`mb-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm ${collapsed ? "justify-center" : ""}`}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black uppercase text-[#0044E6] ring-1 ring-slate-200">
+              {user?.full_name?.[0] ?? "U"}
+            </div>
+            {!collapsed && <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-bold text-slate-950">{user?.full_name}</p>
+              <p className="text-xs capitalize text-slate-500">{user?.role?.replace("_", " ")}</p>
+            </div>}
           </div>
-          {!collapsed && <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-bold text-slate-950">{user?.full_name}</p>
-            <p className="text-xs capitalize text-slate-500">{user?.role?.replace("_", " ")}</p>
-          </div>}
+          <button
+            onClick={logout}
+            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-all duration-150 hover:bg-[#EBF0FF] hover:text-[#0044E6] ${collapsed ? "justify-center" : ""}`}
+            title="Sign out"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            {!collapsed && "Sign Out"}
+          </button>
         </div>
-        <button
-          onClick={logout}
-          className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-all duration-150 hover:bg-emerald-50 hover:text-emerald-700 ${collapsed ? "justify-center" : ""}`}
-          title="Sign out"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          {!collapsed && "Sign Out"}
-        </button>
-      </div>
       </aside>
     </>
   );

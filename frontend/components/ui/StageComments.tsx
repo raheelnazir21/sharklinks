@@ -149,12 +149,12 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handlePost();
               }}
               placeholder="Write a comment… (Ctrl+Enter to post)"
-              className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 pr-14 text-sm font-semibold text-slate-900 resize-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none transition-all placeholder:text-slate-400 leading-relaxed overflow-hidden shadow-sm"
+              className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 pr-14 text-sm font-semibold text-slate-900 resize-none focus:ring-2 focus:ring-[#0044E6]/20 focus:border-[#0044E6] focus:outline-none transition-all placeholder:text-slate-400 leading-relaxed overflow-hidden shadow-sm"
             />
             <button
               onClick={handlePost}
               disabled={posting || !text.trim()}
-              className="absolute right-3 bottom-3 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              className="absolute right-3 bottom-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#0044E6] text-white transition hover:bg-[#0036B8] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
             >
               {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
@@ -190,7 +190,7 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
                 key={comment.id}
                 className={`group flex gap-3 rounded-2xl p-4 transition-all shadow-sm ${
                   isFirst
-                    ? "bg-emerald-50/50 border border-emerald-200"
+                    ? "bg-[#EBF0FF]/50 border border-[#C7D6FF]"
                     : "bg-white border border-slate-200"
                 }`}
               >
@@ -205,7 +205,7 @@ export default function StageComments({ stageId, orderId, disabled = false }: St
                       {comment.author_name}
                     </span>
                     {isFirst && (
-                      <span className="text-xs font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <span className="text-xs font-black uppercase tracking-wider text-[#0044E6] bg-[#dbe8ff]/80 px-2 py-0.5 rounded-full border border-[#C7D6FF]">
                         Latest
                       </span>
                     )}

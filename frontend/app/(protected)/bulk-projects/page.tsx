@@ -214,10 +214,10 @@ export default function BulkProjectsPage() {
                 type="button"
                 onClick={handleExportExcel}
                 disabled={isExportingExcel}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 active:scale-95 disabled:opacity-50"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#C7D6FF] bg-[#EBF0FF] px-4 text-sm font-bold text-[#0044E6] shadow-sm transition hover:bg-[#dbe8ff] active:scale-95 disabled:opacity-50"
                 title="Download Multi-Sheet Excel Workbook with individual tabs per project"
               >
-                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                <FileSpreadsheet className="h-4 w-4 text-[#0044E6]" />
                 {isExportingExcel ? "Exporting..." : "Export Excel (.xlsx)"}
               </button>
               <button
@@ -227,7 +227,7 @@ export default function BulkProjectsPage() {
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
                 title="Download WIP Product Master Table (CSV)"
               >
-                <Download className="h-4 w-4 text-emerald-600" />
+                <Download className="h-4 w-4 text-[#0044E6]" />
                 {isExporting ? "Exporting..." : "Export CSV"}
               </button>
             </div>

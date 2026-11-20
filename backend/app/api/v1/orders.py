@@ -797,6 +797,11 @@ def list_orders(
         {
             "id": str(o.id), 
             "order_no": o.order_no, 
+            "po_number": o.po_number or o.order_no,
+            "style_code": o.style_code or o.style_name,
+            "order_value": float(o.order_value or 0.0) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
+            "total_cost": float(o.total_cost) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
+            "remaining_margin": float(o.remaining_margin) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
             "vendor_id": str(o.vendor_id),
             "vendor_name": o.vendor.name if o.vendor else None,
             "style_name": o.style_name,
@@ -931,6 +936,11 @@ def get_order(
     return success_response(data={
         "id": str(order.id), 
         "order_no": order.order_no,
+        "po_number": order.po_number or order.order_no,
+        "style_code": order.style_code or order.style_name,
+        "order_value": float(order.order_value or 0.0) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
+        "total_cost": float(order.total_cost) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
+        "remaining_margin": float(order.remaining_margin) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
         "vendor_id": str(order.vendor_id),
         "vendor_name": order.vendor.name if order.vendor else None,
         "style_name": order.style_name,
@@ -1003,8 +1013,9 @@ def get_stages(
     db: Session = Depends(get_db),
     current_user: User = Depends(OrderReadAccess),
 ):
-    _assert_order_access(db, order_id, current_user)
+    order = _assert_order_access(db, order_id, current_user)
     stages = StageService.get_stages(db, order_id)
+    expenses = order.expenses if order else []
     return success_response(data=[
         {
             "id": str(s.id), 
@@ -1031,6 +1042,14 @@ def get_stages(
             "condition_cleared_by_name": s.condition_clearer.full_name if s.condition_clearer else None,
             "clearance_attachment_url": s.clearance_attachment_url,
             "clearance_notes": s.clearance_notes,
+            "stage_total_cost": sum(
+                float(e.amount or 0.0)
+                for e in expenses
+                if (
+                    (e.stage_id and str(e.stage_id) == str(s.id))
+                    or (e.stage_name and (e.stage_name == s.stage_name.value or e.stage_name == s.stage_name.name))
+                )
+            ) if (current_user.role and current_user.role.name == RoleEnum.super_admin) else None,
         }
         for s in stages
     ])
@@ -1660,6 +1679,206 @@ def dispatch_zones_report_endpoint(
     return success_response(
         message="Comprehensive 6 Control Zones live report email queued on AWS server."
     )
+
+
+# ─── Sharknits v2.0: Stage Expenses & Financial Ledger Endpoints ──────────
+
+@router.get("/{order_id}/expenses", response_model=dict, summary="Get Order Expenses & Financial Ledger")
+def get_order_expenses(
+    order_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(SuperAdminOnly),
+):
+    order = _assert_order_access(db, order_id, current_user)
+    from app.models.order import StageExpense
+    expenses = db.query(StageExpense).filter(StageExpense.order_id == order_id).order_by(StageExpense.expense_date.desc(), StageExpense.created_at.desc()).all()
+    
+    stage_breakdown = {}
+    for exp in expenses:
+        key = exp.stage_name or "General Order Cost"
+        stage_breakdown[key] = round(stage_breakdown.get(key, 0.0) + float(exp.amount or 0.0), 2)
+
+    total_cost = sum(float(e.amount or 0.0) for e in expenses)
+    order_value = float(order.order_value or 0.0)
+    remaining_margin = order_value - total_cost
+
+    return success_response(data={
+        "order_id": str(order.id),
+        "po_number": order.po_number or order.order_no,
+        "style_code": order.style_code or order.style_name,
+        "order_value": order_value,
+        "total_cost": round(total_cost, 2),
+        "remaining_margin": round(remaining_margin, 2),
+        "stage_breakdown": stage_breakdown,
+        "expenses": [
+            {
+                "id": str(e.id),
+                "order_id": str(e.order_id),
+                "stage_id": str(e.stage_id) if e.stage_id else None,
+                "stage_name": e.stage_name,
+                "amount": float(e.amount or 0.0),
+                "description": e.description,
+                "expense_date": str(e.expense_date) if e.expense_date else None,
+                "receipt_url": e.receipt_url,
+                "receipt_filename": e.receipt_filename,
+                "created_by": str(e.created_by) if e.created_by else None,
+                "creator_name": e.creator.full_name if e.creator else None,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in expenses
+        ],
+    })
+
+
+@router.post("/{order_id}/expenses", response_model=dict, summary="Add Stage Expense")
+def add_order_expense(
+    order_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(SuperAdminOnly),
+):
+    order = _assert_order_access(db, order_id, current_user)
+    from app.models.order import StageExpense
+    from datetime import date as dt_date
+    import uuid
+
+    amount = float(payload.get("amount", 0.0))
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Expense amount must be greater than zero.")
+
+    exp_date = payload.get("expense_date")
+    if exp_date and isinstance(exp_date, str):
+        try:
+            exp_date = dt_date.fromisoformat(exp_date)
+        except ValueError:
+            exp_date = dt_date.today()
+    else:
+        exp_date = dt_date.today()
+
+    expense = StageExpense(
+        id=uuid.uuid4(),
+        order_id=order.id,
+        stage_id=payload.get("stage_id"),
+        stage_name=payload.get("stage_name"),
+        amount=amount,
+        description=payload.get("description"),
+        expense_date=exp_date,
+        receipt_url=payload.get("receipt_url"),
+        receipt_filename=payload.get("receipt_filename"),
+        created_by=current_user.id,
+    )
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+
+    ActivityLogService.record(
+        db,
+        action="EXPENSE_ADDED",
+        entity_type="Order",
+        entity_id=order_id,
+        user=current_user,
+        payload={
+            "details": f"Added expense of ${amount:.2f} for stage '{expense.stage_name or 'General'}'."
+        },
+    )
+
+    return success_response(
+        data={
+            "id": str(expense.id),
+            "amount": expense.amount,
+            "stage_name": expense.stage_name,
+            "total_cost": float(order.total_cost),
+            "remaining_margin": float(order.remaining_margin),
+        },
+        message="Stage expense added successfully."
+    )
+
+
+@router.delete("/{order_id}/expenses/{expense_id}", response_model=dict, summary="Delete Stage Expense")
+def delete_order_expense(
+    order_id: str,
+    expense_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(SuperAdminOnly),
+):
+    order = _assert_order_access(db, order_id, current_user)
+    from app.models.order import StageExpense
+    expense = db.query(StageExpense).filter(
+        StageExpense.id == expense_id,
+        StageExpense.order_id == order_id
+    ).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense entry not found.")
+
+    db.delete(expense)
+    db.commit()
+
+    ActivityLogService.record(
+        db,
+        action="EXPENSE_DELETED",
+        entity_type="Order",
+        entity_id=order_id,
+        user=current_user,
+        payload={"details": f"Deleted expense entry '{expense_id}'."},
+    )
+
+    return success_response(
+        data={
+            "total_cost": float(order.total_cost),
+            "remaining_margin": float(order.remaining_margin),
+        },
+        message="Expense removed successfully."
+    )
+
+
+# ─── Sharknits v2.0: Style Registry Endpoints ──────────────────────────────
+
+@router.get("/styles/list", response_model=dict, summary="List Existing Styles for Reuse")
+def list_styles(
+    q: Optional[str] = Query(None, description="Search term for style code or brand"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(OrderReadAccess),
+):
+    from app.models.order import Style
+    query = db.query(Style)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            (Style.style_code.ilike(term))
+            | (Style.brand_name.ilike(term))
+            | (Style.article_type.ilike(term))
+        )
+    styles = query.order_by(Style.style_code.asc()).limit(100).all()
+    return success_response(data=[
+        {
+            "id": str(s.id),
+            "style_code": s.style_code,
+            "brand_name": s.brand_name,
+            "article_type": s.article_type,
+            "description": s.description,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in styles
+    ])
+
+
+@router.post("/styles/resolve", response_model=dict, summary="Resolve or Register Style Code")
+def resolve_style_endpoint(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(ManagerAccess),
+):
+    from app.services.po_style_service import resolve_or_create_style
+    code = resolve_or_create_style(
+        db,
+        brand_name=payload.get("brand_name"),
+        article_type=payload.get("article_type"),
+        style_code=payload.get("style_code"),
+        description=payload.get("description"),
+    )
+    return success_response(data={"style_code": code}, message="Style resolved successfully.")
+
 
 
 

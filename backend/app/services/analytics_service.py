@@ -50,7 +50,10 @@ class AnalyticsService:
             Order.status == OrderStatus.completed,
             Order.is_active == True,
         ).all()
-        on_time_count = sum(1 for o in completed_orders if o.ex_factory_date and o.updated_at.date() <= o.ex_factory_date)
+        on_time_count = sum(
+            1 for o in completed_orders 
+            if o.ex_factory_date and (getattr(o, "created_at", None) and o.created_at.date() <= o.ex_factory_date)
+        )
         on_time_rate = round((on_time_count / len(completed_orders)) * 100, 2) if completed_orders else 0.0
 
         return {

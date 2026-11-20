@@ -105,6 +105,26 @@ class OrderService:
             raise HTTPException(status_code=400, detail="Selected vendor is not active or does not exist.")
         data["vendor_id"] = vendor.id
         data["created_by"] = user_id
+
+        # Sharknits v2.0: Auto-generate PO number (SK100, SK101, etc.)
+        from app.services.po_style_service import generate_next_po_number, resolve_or_create_style
+        if not data.get("po_number"):
+            data["po_number"] = generate_next_po_number(db, prefix="SK")
+        if not data.get("order_no"):
+            data["order_no"] = data["po_number"]
+
+        # Sharknits v2.0: Resolve or auto-generate Style Code (e.g. DZ_BJ)
+        brand_cand = data.get("style_name") or (vendor.name if vendor else "Sharknits")
+        article_cand = data.get("product_name") or data.get("product_type") or "Article"
+        data["style_code"] = resolve_or_create_style(
+            db,
+            brand_name=brand_cand,
+            article_type=article_cand,
+            style_code=data.get("style_code"),
+        )
+        if not data.get("style_name") and data.get("style_code"):
+            data["style_name"] = data["style_code"]
+
         order = OrderRepository.create(db, data)
         
         # ─── 1. Initialize Sequential Stages ─────────────────────────────────────
@@ -704,19 +724,17 @@ class StageService:
         return [
             (1, StageName.customer_order),
             (2, StageName.pp_sample_development),
-            (3, StageName.small_vet_dying),
-            (4, StageName.full_flag_dying),
-            (5, StageName.sublimation),
-            (6, StageName.bulk_fabric_cutting),
-            (7, StageName.bulk_embellishment),
-            (8, StageName.stitching),
-            (9, StageName.end_line_qc),
-            (10, StageName.washing),
-            (11, StageName.pressing),
-            (12, StageName.finishing),
-            (13, StageName.packing),
-            (14, StageName.final_random_inspection),
-            (15, StageName.shipment),
+            (3, StageName.full_flag_dying),
+            (4, StageName.sublimation),
+            (5, StageName.bulk_fabric_cutting),
+            (6, StageName.bulk_embellishment),
+            (7, StageName.stitching),
+            (8, StageName.washing),
+            (9, StageName.pressing),
+            (10, StageName.finishing),
+            (11, StageName.packing),
+            (12, StageName.final_random_inspection),
+            (13, StageName.shipment),
         ]
 
     @staticmethod

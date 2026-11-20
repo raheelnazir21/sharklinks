@@ -26,7 +26,7 @@ function NotifIcon({ type }: { type: string }) {
     return <Clock className="h-3.5 w-3.5 text-amber-500" />;
   }
   if (type === "order_created" || type === "class_created") {
-    return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+    return <CheckCircle2 className="h-3.5 w-3.5 text-[#0044E6]" />;
   }
   return <Info className="h-3.5 w-3.5 text-sky-500" />;
 }
@@ -60,8 +60,8 @@ function parseNotifLines(n: AppNotification): {
   if (n.type === "ex_factory_passed") { tag = "ZONE 1 — EX-FACTORY"; tagColor = "bg-red-100 text-red-700"; }
   else if (n.type === "stage_overdue") { tag = "ZONE 2 — STAGE DELAYED"; tagColor = "bg-orange-100 text-orange-700"; }
   else if (n.type === "ex_factory_approaching") { tag = "ZONE 3 — APPROACHING"; tagColor = "bg-amber-100 text-amber-700"; }
-  else if (n.type === "order_created") { tag = "NEW ORDER"; tagColor = "bg-emerald-100 text-emerald-700"; }
-  else if (n.type === "class_created") { tag = "NEW CLASS"; tagColor = "bg-teal-100 text-teal-700"; }
+  else if (n.type === "order_created") { tag = "NEW ORDER"; tagColor = "bg-[#EBF0FF] text-[#0044E6]"; }
+  else if (n.type === "class_created") { tag = "NEW CLASS"; tagColor = "bg-[#dbe8ff] text-[#0044E6]"; }
   else if (n.type === "pre_order_assigned") { tag = "ORDER ASSIGNED"; tagColor = "bg-blue-100 text-blue-700"; }
   else if (n.type === "pre_order_reminder") { tag = "REMINDER"; tagColor = "bg-orange-100 text-orange-700"; }
   else if (n.type === "pre_order_escalation") { tag = "ESCALATION"; tagColor = "bg-red-100 text-red-700"; }
@@ -181,7 +181,7 @@ export function NotificationBell() {
                 <button
                   type="button"
                   onClick={markAllRead}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm"
+                  className="rounded-lg border border-[#C7D6FF] bg-[#EBF0FF] px-3 py-1.5 text-[11px] font-bold text-[#0044E6] hover:bg-[#dbe8ff] shadow-sm"
                 >
                   Clear all
                 </button>
@@ -200,7 +200,7 @@ export function NotificationBell() {
           <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-100">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EBF0FF] text-[#0044E6]">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <p className="text-sm font-bold text-slate-700">All caught up!</p>
@@ -251,7 +251,7 @@ export function NotificationBell() {
                       {line3 && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{line3}</p>}
 
                       {/* Line 4: Date */}
-                      {line4 && <p className="text-[11px] text-emerald-600 font-bold mt-1">{line4}</p>}
+                      {line4 && <p className="text-[11px] text-[#0044E6] font-bold mt-1">{line4}</p>}
                     </div>
 
                     {/* Mark read */}
@@ -259,7 +259,7 @@ export function NotificationBell() {
                       type="button"
                       onClick={() => markRead(n.id)}
                       title="Mark as read"
-                      className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
+                      className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-[#EBF0FF] text-[#0044E6] hover:bg-emerald-100 transition"
                     >
                       <Check className="w-4 h-4 stroke-[2.5]" />
                     </button>
@@ -344,7 +344,7 @@ export function NotificationToasts() {
             {/* Auto-dismiss progress bar */}
             <div className="h-0.5 w-full overflow-hidden rounded-t-xl bg-slate-100">
               <div
-                className="h-full bg-emerald-400 origin-left"
+                className="h-full bg-[#0044E6] origin-left"
                 style={{
                   animation: toast.visible ? `shrink ${TOAST_DURATION}ms linear forwards` : "none",
                 }}

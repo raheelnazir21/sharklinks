@@ -27,8 +27,8 @@ const TYPE_CONFIG: Record<
 > = {
   order: {
     icon: <Package className="h-4 w-4" />,
-    color: "text-teal-700",
-    bg: "bg-teal-50",
+    color: "text-[#0044E6]",
+    bg: "bg-[#EBF0FF]",
   },
   vendor: {
     icon: <Building2 className="h-4 w-4" />,
@@ -37,8 +37,8 @@ const TYPE_CONFIG: Record<
   },
   sample: {
     icon: <FlaskConical className="h-4 w-4" />,
-    color: "text-emerald-700",
-    bg: "bg-emerald-50",
+    color: "text-[#0044E6]",
+    bg: "bg-[#EBF0FF]",
   },
   bulk: {
     icon: <Layers className="h-4 w-4" />,
@@ -208,7 +208,7 @@ function SearchResults({
                   onClick={() => navigate(result)}
                   onMouseEnter={() => setActiveIdx(flatIdx)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
-                    isActive ? "bg-emerald-50" : "hover:bg-slate-50"
+                    isActive ? "bg-[#EBF0FF]" : "hover:bg-slate-50"
                   }`}
                 >
                   <span
@@ -221,7 +221,7 @@ function SearchResults({
                     <p className="truncate text-xs text-slate-500">{result.sublabel}</p>
                   </div>
                   {isActive && (
-                    <span className="shrink-0 text-xs font-black text-emerald-600">↵</span>
+                    <span className="shrink-0 text-xs font-black text-[#0044E6]">↵</span>
                   )}
                 </button>
               );
@@ -271,7 +271,7 @@ function DesktopSearch() {
     <div className="relative">
       <div className="relative flex items-center">
         {loading ? (
-          <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-emerald-500" />
+          <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[#0044E6]" />
         ) : (
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         )}
@@ -285,7 +285,7 @@ function DesktopSearch() {
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder="Search orders, vendors, projects…"
           autoComplete="off"
-          className="h-10 w-72 rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-8 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-50"
+          className="h-10 w-72 rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-8 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#0044E6] focus:bg-white focus:ring-4 focus:ring-[#0044E6]/20"
         />
         {query && (
           <button
@@ -380,7 +380,7 @@ function MobileSearch() {
         <div className="fixed inset-0 z-50 flex flex-col bg-white">
           <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
             {loading ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-500" />
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#0044E6]" />
             ) : (
               <Search className="h-4 w-4 shrink-0 text-slate-400" />
             )}
@@ -402,7 +402,7 @@ function MobileSearch() {
             ) : (
               <button
                 onClick={closeOverlay}
-                className="shrink-0 text-sm font-bold text-emerald-700"
+                className="shrink-0 text-sm font-bold text-[#0044E6]"
               >
                 Cancel
               </button>

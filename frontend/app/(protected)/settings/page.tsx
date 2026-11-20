@@ -99,8 +99,8 @@ export default function SettingsPage() {
           {/* ── Profile Tab ─────────────────────────────────────── */}
           {activeTab === "profile" && (
             <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-white font-semibold mb-6 flex items-center gap-2">
-                <User className="w-4 h-4 text-indigo-400" /> Account Profile
+              <h3 className="text-[#16233B] font-semibold mb-6 flex items-center gap-2">
+                <User className="w-4 h-4 text-[#0044E6]" /> Account Profile
               </h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -108,7 +108,7 @@ export default function SettingsPage() {
                     <label className="block text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">
                       Full Name
                     </label>
-                    <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-white text-sm">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-[#16233B] text-sm font-medium">
                       {user?.full_name}
                     </div>
                   </div>
@@ -116,7 +116,7 @@ export default function SettingsPage() {
                     <label className="block text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">
                       Email Address
                     </label>
-                    <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-white text-sm">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-[#16233B] text-sm font-medium">
                       {user?.email}
                     </div>
                   </div>
@@ -125,7 +125,7 @@ export default function SettingsPage() {
                   <label className="block text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">
                     Current Role
                   </label>
-                  <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-indigo-400 text-sm font-semibold capitalize inline-flex items-center gap-2">
+                  <div className="bg-[#EBF0FF] border border-[#C7D6FF] rounded-lg px-4 py-2.5 text-[#0044E6] text-sm font-semibold capitalize inline-flex items-center gap-2">
                     <Shield className="w-3.5 h-3.5" />
                     {user?.role?.replace(/_/g, " ")}
                   </div>
@@ -137,12 +137,12 @@ export default function SettingsPage() {
           {/* ── Security Tab ─────────────────────────────────────── */}
           {activeTab === "security" && (
             <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
-              <h3 className="text-white font-semibold mb-1 flex items-center gap-2">
-                <Key className="w-4 h-4 text-indigo-400" /> Change Password
+              <h3 className="text-[#16233B] font-semibold mb-1 flex items-center gap-2">
+                <Key className="w-4 h-4 text-[#0044E6]" /> Change Password
               </h3>
               <p className="text-slate-500 text-sm mb-6">
                 Use this if you know your current password. If you forgot it, use the{" "}
-                <a href="/forgot-password" className="text-indigo-400 hover:underline">
+                <a href="/forgot-password" className="text-[#0044E6] hover:underline font-semibold">
                   Forgot Password
                 </a>{" "}
                 page instead.
@@ -255,13 +255,13 @@ export default function SettingsPage() {
 
           {/* Danger Zone — always visible */}
           <div className="bg-slate-800/40 backdrop-blur-md border border-red-500/20 rounded-2xl p-6">
-            <h3 className="text-white font-semibold mb-2">Danger Zone</h3>
-            <p className="text-slate-400 text-sm mb-4">Sign out of your account on this device.</p>
+            <h3 className="text-[#16233B] font-semibold mb-2">Danger Zone</h3>
+            <p className="text-slate-500 text-sm mb-4">Sign out of your account on this device.</p>
             <button
               onClick={logout}
-              className="flex items-center gap-2 px-6 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 rounded-xl text-sm font-bold transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-xl text-sm font-bold transition-all"
             >
-              <LogOut className="w-4 h-4" /> Sign Out from Textile QC
+              <LogOut className="w-4 h-4" /> Sign Out
             </button>
           </div>
         </div>

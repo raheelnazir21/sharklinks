@@ -19,29 +19,29 @@ import {
 const FEATURES = [
   {
     Icon: TrendingUp,
-    color: "#14B8A6",
-    bg: "#F0FDFA",
+    color: "#0044E6",
+    bg: "#EBF0FF",
     title: "Production Planning & Tracking",
     desc: "Real-time visibility from planning to delivery",
   },
   {
     Icon: ShieldCheck,
-    color: "#22C55E",
-    bg: "#F0FDF4",
+    color: "#0044E6",
+    bg: "#EBF0FF",
     title: "Quality Management System",
     desc: "Built-in QC, QA and audit at every step",
   },
   {
     Icon: BarChart3,
-    color: "#14B8A6",
-    bg: "#F0FDFA",
+    color: "#0044E6",
+    bg: "#EBF0FF",
     title: "Analytics & Performance Intelligence",
     desc: "Powerful dashboards and actionable insights",
   },
   {
     Icon: Users2,
-    color: "#22C55E",
-    bg: "#F0FDF4",
+    color: "#0044E6",
+    bg: "#EBF0FF",
     title: "Team & Workflow Management",
     desc: "Secure roles, approvals and collaboration",
   },
@@ -103,9 +103,9 @@ export default function LoginPage() {
       {/* ── Bottom Layered Waves ── */}
       <div className="absolute bottom-0 left-0 w-full z-[2] pointer-events-none overflow-hidden leading-[0]">
         <svg viewBox="0 0 1440 280" className="w-full h-auto min-h-[22vh] max-h-[32vh]" preserveAspectRatio="none">
-          <path fill="#22C55E" fillOpacity="0.75" d="M0,192L48,181.3C96,171,192,149,288,149.3C384,149,480,171,576,192C672,213,768,235,864,224C960,213,1056,171,1152,154.7C1248,139,1344,149,1392,154.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
-          <path fill="#0D9488" fillOpacity="0.95" d="M0,224L48,229.3C96,235,192,245,288,229.3C384,213,480,171,576,160C672,149,768,171,864,186.7C960,203,1056,213,1152,208C1248,203,1344,181,1392,170.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
-          <path fill="#0F172A" d="M0,288L48,272C96,256,192,224,288,218.7C384,213,480,235,576,234.7C672,235,768,213,864,186.7C960,160,1056,128,1152,133.3C1248,139,1344,181,1392,202.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
+          <path fill="#0044E6" fillOpacity="0.75" d="M0,192L48,181.3C96,171,192,149,288,149.3C384,149,480,171,576,192C672,213,768,235,864,224C960,213,1056,171,1152,154.7C1248,139,1344,149,1392,154.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
+          <path fill="#0036B8" fillOpacity="0.95" d="M0,224L48,229.3C96,235,192,245,288,229.3C384,213,480,171,576,160C672,149,768,171,864,186.7C960,203,1056,213,1152,208C1248,203,1344,181,1392,170.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
+          <path fill="#16233B" d="M0,288L48,272C96,256,192,224,288,218.7C384,213,480,235,576,234.7C672,235,768,213,864,186.7C960,160,1056,128,1152,133.3C1248,139,1344,181,1392,202.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
         </svg>
       </div>
 
@@ -118,25 +118,25 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="mb-16">
             <Image
-              src="/cc_logo.png"
-              alt="CC Production & QMS"
-              width={800}
-              height={200}
-              className="w-full max-w-[800px] h-auto object-contain object-left mix-blend-multiply"
+              src="/sharknits_logo.png"
+              alt="Sharknits WIP & Production Management"
+              width={727}
+              height={528}
+              className="w-auto h-20 max-w-[280px] object-contain object-left"
               priority
             />
           </div>
 
           {/* Hero Content */}
           <div className="flex flex-col justify-center max-w-[880px]">
-            <h1 className="text-[30px] lg:text-[38px] xl:text-[44px] font-black text-[#0F172A] leading-[1.1] tracking-tight mb-5">
+            <h1 className="text-[30px] lg:text-[38px] xl:text-[44px] font-black text-[#16233B] leading-[1.1] tracking-tight mb-5">
               Manufacturing Excellence.<br />
-              <span className="bg-gradient-to-r from-teal-600 to-teal-400 bg-clip-text text-transparent pb-2">
-                Powered by Intelligence.
+              <span className="bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent pb-2">
+                Sharknits Production & WIP.
               </span>
             </h1>
 
-            <div className="w-[50px] h-[3px] bg-teal-500 mb-6 rounded-full" />
+            <div className="w-[50px] h-[3px] bg-[#0044E6] mb-6 rounded-full" />
 
             <p className="text-slate-600 text-[16px] lg:text-[18px] font-medium leading-relaxed mb-8 max-w-[500px]">
               Complete Manufacturing, Quality Control<br />
@@ -186,18 +186,18 @@ export default function LoginPage() {
 
             {/* Card Header & Logo */}
             <div className="flex flex-col items-center mb-8">
-              <div className="mb-8 flex justify-center w-full px-2">
+              <div className="mb-6 flex justify-center w-full px-2">
                 <Image
-                  src="/cc_logo_icon.png"
-                  alt="CC Production & QMS"
-                  width={120}
-                  height={120}
-                  className="w-[96px] h-[96px] object-contain mix-blend-multiply"
+                  src="/sharknits_logo.png"
+                  alt="Sharknits"
+                  width={727}
+                  height={528}
+                  className="w-auto h-16 object-contain"
                   priority
                 />
               </div>
 
-              <h2 className="text-[26px] font-black text-[#0F172A] tracking-tight mb-1">Welcome Back</h2>
+              <h2 className="text-[26px] font-black text-[#16233B] tracking-tight mb-1">Welcome Back</h2>
               <p className="text-slate-500 text-[13.5px] font-medium">Sign in to your account to continue</p>
             </div>
 
@@ -223,7 +223,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="you@company.com"
-                    className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-[14px] text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all placeholder:text-slate-400 shadow-sm"
+                    className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-[14px] text-slate-900 focus:outline-none focus:border-[#0044E6] focus:ring-1 focus:ring-[#0044E6]/20 transition-all placeholder:text-slate-400 shadow-sm"
                   />
                 </div>
               </div>
@@ -232,7 +232,7 @@ export default function LoginPage() {
               <div className="flex flex-col gap-1.5 mt-1">
                 <div className="flex justify-between items-center">
                   <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
-                  <Link href="/forgot-password" className="text-[11.5px] font-bold text-teal-600 hover:text-teal-700 transition-colors">Forgot password?</Link>
+                  <Link href="/forgot-password" className="text-[11.5px] font-bold text-[#0044E6] hover:text-[#0036B8] transition-colors">Forgot password?</Link>
                 </div>
                 <div className="relative">
                   <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -242,9 +242,9 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-11 text-[14px] text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all placeholder:text-slate-400 shadow-sm"
+                    className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-11 text-[14px] text-slate-900 focus:outline-none focus:border-[#0044E6] focus:ring-1 focus:ring-[#0044E6]/20 transition-all placeholder:text-slate-400 shadow-sm"
                   />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors">
+                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0044E6] transition-colors">
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
@@ -256,7 +256,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-[15px] h-[15px] rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  className="w-[15px] h-[15px] rounded border-slate-300 text-[#0044E6] focus:ring-[#0044E6]/20"
                 />
                 <span className="text-[13px] text-slate-600 font-medium group-hover:text-slate-900 transition-colors">Remember me</span>
               </label>
@@ -265,7 +265,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-3 bg-gradient-to-r from-teal-500 to-green-500 text-white font-bold text-[14.5px] py-3.5 rounded-xl shadow-[0_6px_20px_rgba(20,184,166,0.25)] hover:shadow-[0_8px_25px_rgba(20,184,166,0.35)] hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full mt-3 bg-gradient-to-r from-[#0044E6] to-[#0036B8] text-white font-bold text-[14.5px] py-3.5 rounded-xl shadow-[0_6px_20px_rgba(0,68,230,0.25)] hover:shadow-[0_8px_25px_rgba(0,68,230,0.35)] hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Signing in..." : (
                   <>
@@ -301,7 +301,7 @@ export default function LoginPage() {
 
             {/* Create Account Link */}
             <p className="text-center mt-6 text-[13px] text-slate-500 font-medium">
-              New to the system? <Link href="/signup" className="text-teal-600 font-bold hover:text-teal-700 transition-colors">Create an account</Link>
+              New to the system? <Link href="/signup" className="text-[#0044E6] font-bold hover:text-[#0036B8] transition-colors">Create an account</Link>
             </p>
 
           </div>

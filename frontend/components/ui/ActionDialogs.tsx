@@ -31,7 +31,7 @@ export function ConfirmDialog({
       ? "bg-red-600 hover:bg-red-500 shadow-red-600/20"
       : tone === "warning"
         ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/20"
-        : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20";
+        : "bg-[#0044E6] hover:bg-[#0036B8] shadow-[0_4px_14px_rgba(0,68,230,0.2)]";
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
@@ -130,7 +130,7 @@ export function FeedbackDialog({
         >
           <X className="h-4 w-4" />
         </button>
-        <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${isSuccess ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+        <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${isSuccess ? "bg-[#EBF0FF] text-[#0044E6]" : "bg-red-50 text-red-700"}`}>
           {isSuccess ? <CheckCircle2 className="h-7 w-7" /> : <XCircle className="h-7 w-7" />}
         </div>
         <h3 className="mt-5 text-xl font-black text-slate-950">{title}</h3>

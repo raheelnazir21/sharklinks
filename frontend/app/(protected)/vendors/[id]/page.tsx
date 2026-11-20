@@ -178,7 +178,7 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-8 pb-20">
       {/* Back */}
-      <Link href="/vendors" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-95">
+      <Link href="/vendors" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-[0_4px_14px_rgba(0,68,230,0.2)] active:scale-95">
         <ChevronLeft className="w-4 h-4" /> Back to Vendors
       </Link>
 
@@ -485,20 +485,20 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
                     {order.status?.replace("_", " ")}
                   </span>
                 </div>
-                <h3 className="text-white font-black text-lg uppercase tracking-tighter mb-1">
+                <h3 className="text-[#16233B] font-black text-lg uppercase tracking-tighter mb-1">
                   {activeTab === "sampling" ? (order.product_name || "Unnamed") : (order.style_name || "Unnamed")}
                 </h3>
                 <p className={`text-${themeColor}-500 text-[10px] font-black uppercase tracking-widest mb-5`}>
                   {activeTab === "sampling" ? order.product_type : `PO: ${order.order_no}`}
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  <div className="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
-                    <p className="text-slate-600 font-black uppercase tracking-widest mb-1">Deadline</p>
-                    <p className="text-white font-bold">{order.ex_factory_date || "TBD"}</p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-slate-500 font-black uppercase tracking-widest mb-1">Deadline</p>
+                    <p className="text-[#16233B] font-bold">{order.ex_factory_date || "TBD"}</p>
                   </div>
-                  <div className="p-3 bg-slate-950/50 rounded-xl border border-slate-800">
-                    <p className="text-slate-600 font-black uppercase tracking-widest mb-1">Qty</p>
-                    <p className="text-white font-bold">{order.quantity || "—"} Pcs</p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-slate-500 font-black uppercase tracking-widest mb-1">Qty</p>
+                    <p className="text-[#16233B] font-bold">{order.quantity || "—"} Pcs</p>
                   </div>
                 </div>
               </Link>

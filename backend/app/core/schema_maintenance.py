@@ -158,6 +158,12 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN delay_capa TEXT"))
             if "recovery_date" not in order_cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN recovery_date DATE"))
+            if "po_number" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN po_number VARCHAR(50)"))
+            if "style_code" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN style_code VARCHAR(100)"))
+            if "order_value" not in order_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN order_value FLOAT DEFAULT 0.0"))
             
             # --- Chunks schema updates for SQLite ---
             # Check if production_stage_chunks exists
@@ -290,6 +296,39 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 )
             """))
 
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS po_sequences (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    prefix VARCHAR(10) NOT NULL,
+                    next_val INTEGER NOT NULL DEFAULT 100
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS styles (
+                    id VARCHAR(36) PRIMARY KEY,
+                    style_code VARCHAR(100) NOT NULL UNIQUE,
+                    brand_name VARCHAR(200),
+                    article_type VARCHAR(200),
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS stage_expenses (
+                    id VARCHAR(36) PRIMARY KEY,
+                    order_id VARCHAR(36) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                    stage_id VARCHAR(36),
+                    stage_name VARCHAR(100),
+                    amount FLOAT NOT NULL DEFAULT 0.0,
+                    description TEXT,
+                    expense_date DATE,
+                    receipt_url VARCHAR(500),
+                    receipt_filename VARCHAR(255),
+                    created_by VARCHAR(36),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+
             for old_name, new_name in legacy_stage_names.items():
 
 
@@ -413,6 +452,43 @@ def ensure_runtime_schema(engine: Engine) -> None:
                 SET is_read = TRUE
                 FROM ranked_notifs r
                 WHERE n.id = r.id AND r.rn > 1;
+            """))
+
+            conn.execute(text("ALTER TABLE IF EXISTS orders ADD COLUMN IF NOT EXISTS po_number VARCHAR(50)"))
+            conn.execute(text("ALTER TABLE IF EXISTS orders ADD COLUMN IF NOT EXISTS style_code VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE IF EXISTS orders ADD COLUMN IF NOT EXISTS order_value DOUBLE PRECISION DEFAULT 0.0"))
+
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS po_sequences (
+                    id SERIAL PRIMARY KEY,
+                    prefix VARCHAR(10) NOT NULL,
+                    next_val INTEGER NOT NULL DEFAULT 100
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS styles (
+                    id UUID PRIMARY KEY,
+                    style_code VARCHAR(100) NOT NULL UNIQUE,
+                    brand_name VARCHAR(200),
+                    article_type VARCHAR(200),
+                    description TEXT,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc')
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS stage_expenses (
+                    id UUID PRIMARY KEY,
+                    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                    stage_id UUID REFERENCES production_stages(id) ON DELETE SET NULL,
+                    stage_name VARCHAR(100),
+                    amount DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                    description TEXT,
+                    expense_date DATE,
+                    receipt_url VARCHAR(500),
+                    receipt_filename VARCHAR(255),
+                    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc')
+                )
             """))
 
             for old_name, new_name in legacy_stage_names.items():

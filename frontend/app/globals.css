@@ -1,156 +1,232 @@
 @import "tailwindcss";
 
+/* ============================================================
+   SHARKNITS BRAND DESIGN SYSTEM
+   Primary Blue:   #0044E6  (Sharknits Blue)
+   Foreground:     #16233B  (Dark Charcoal / Near-black)
+   Background:     #FFFFFF, #F6F8FC (Light Grey)
+   Cards/Tables:   #FFFFFF with #E8EDF5 borders
+   Semantic Red:   #DC2626  (errors / negative margin)
+   Semantic Amber: #D97706  (warnings)
+   Semantic Green: #16A34A  (success states only)
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core brand palette */
+  --sn-blue:          #0044E6;
+  --sn-blue-hover:    #0036B8;
+  --sn-blue-light:    #EBF0FF;
+  --sn-blue-mid:      #C7D6FF;
+  --sn-dark:          #16233B;
+  --sn-bg:            #F6F8FC;
+  --sn-surface:       #FFFFFF;
+  --sn-border:        #E2E8F0;
+  --sn-border-strong: #CBD5E1;
+
+  /* Text scale */
+  --sn-text-primary:   #16233B;
+  --sn-text-secondary: #475569;
+  --sn-text-muted:     #94A3B8;
+
+  /* Semantic (keep minimal, no brand re-mapping) */
+  --sn-danger:        #DC2626;
+  --sn-danger-light:  #FEF2F2;
+  --sn-warning:       #D97706;
+  --sn-warning-light: #FFFBEB;
+  --sn-success:       #16A34A;
+  --sn-success-light: #F0FDF4;
+
+  /* Legacy aliases so existing --background / --foreground references keep working */
+  --background: var(--sn-bg);
+  --foreground: var(--sn-dark);
+  --primary: var(--sn-blue);
+  --primary-hover: var(--sn-blue-hover);
+  --sharknits-blue: var(--sn-blue);
+  --sharknits-dark: var(--sn-dark);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--sn-bg);
+  --color-foreground: var(--sn-dark);
   --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
-html {
-  font-size: 16px;
-}
+/* ============================================================
+   BASE RESET
+   ============================================================ */
+html { font-size: 16px; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  /* Inter — professional, highly legible, used by Linear / Vercel / Notion */
+  background: var(--sn-bg);
+  color: var(--sn-dark);
   font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 15px;
   line-height: 1.6;
   letter-spacing: -0.01em;
-  /* Crisp, readable text rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Tabular numbers throughout — essential for dashboards */
   font-feature-settings: 'tnum' 1, 'ss01' 1, 'kern' 1;
 }
 
-/* ==========================================================================
-   GLOBAL READABILITY & FONT SIZE ELEVATION
-   Prevents unreadable microscopic fonts across the entire tool
-   ========================================================================== */
-
-/* Elevate tiny 7px, 8px, 9px text to at least 12px-13px */
+/* ============================================================
+   TYPOGRAPHY SCALE — Minimum readable sizes
+   ============================================================ */
 .text-\[7px\], [class*="text-[7px]"],
 .text-\[8px\], [class*="text-[8px]"],
 .text-\[9px\], [class*="text-[9px]"] {
   font-size: 12.5px !important;
   line-height: 1.35 !important;
 }
-
-/* Elevate 10px and 11px to 13.5px */
 .text-\[10px\], [class*="text-[10px]"],
 .text-\[11px\], [class*="text-[11px]"] {
   font-size: 13.5px !important;
   line-height: 1.4 !important;
 }
+.text-xs  { font-size: 14px !important; line-height: 1.45 !important; }
+.text-sm  { font-size: 15px !important; line-height: 1.5 !important;  }
+.text-base{ font-size: 16.5px !important; line-height: 1.55 !important; }
 
-/* Elevate text-xs (normally 12px) to 14px */
-.text-xs {
-  font-size: 14px !important;
-  line-height: 1.45 !important;
-}
-
-/* Elevate text-sm (normally 14px) to 15px */
-.text-sm {
-  font-size: 15px !important;
-  line-height: 1.5 !important;
-}
-
-/* Elevate text-base (normally 16px) to 16.5px */
-.text-base {
-  font-size: 16.5px !important;
-  line-height: 1.55 !important;
-}
-
-/* Prevent ultra-spread-out letter spacing from ruining label legibility */
-[class*="tracking-[0.3em]"],
-[class*="tracking-[0.28em]"],
-[class*="tracking-[0.26em]"],
-[class*="tracking-[0.25em]"],
-[class*="tracking-[0.22em]"],
-[class*="tracking-[0.2em]"],
+[class*="tracking-[0.3em]"], [class*="tracking-[0.28em]"],
+[class*="tracking-[0.26em]"], [class*="tracking-[0.25em]"],
+[class*="tracking-[0.22em]"], [class*="tracking-[0.2em]"],
 [class*="tracking-widest"] {
   letter-spacing: 0.05em !important;
 }
 
-/* Form controls legibility */
-input, select, textarea {
-  font-size: 14px !important;
-}
+input, select, textarea { font-size: 14px !important; }
+label { font-size: 13px !important; letter-spacing: 0.03em !important; }
 
-/* Ensure strong contrast on form labels in both light and dark modes */
-label {
-  font-size: 13px !important;
+/* ============================================================
+   HEADINGS
+   ============================================================ */
+h1, .heading-1 { font-size: clamp(2.2rem, 3.8vw, 3.85rem) !important; font-weight: 900 !important; letter-spacing: -0.025em !important; line-height: 1.1 !important; }
+h2, .heading-2 { font-size: clamp(1.65rem, 2.7vw, 2.6rem)  !important; font-weight: 900 !important; letter-spacing: -0.02em  !important; line-height: 1.15 !important; }
+h3, .heading-3 { font-size: clamp(1.3rem, 2vw, 1.8rem)     !important; font-weight: 800 !important; letter-spacing: -0.015em !important; line-height: 1.25 !important; }
+h4, .heading-4 { font-size: 1.15rem !important; font-weight: 800 !important; letter-spacing: -0.01em !important; }
+
+/* ============================================================
+   BUTTONS — shared transition base
+   ============================================================ */
+button, [role="button"], .btn {
+  font-weight: 800 !important;
   letter-spacing: 0.03em !important;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.light-ui label {
-  color: #334155 !important;
+/* ============================================================
+   SN-BUTTON PRIMITIVES
+   Usage: className="sn-btn-primary"  or  "sn-btn-secondary"
+   ============================================================ */
+.sn-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--sn-blue);
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 14px rgba(0,68,230,0.22);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sn-btn-primary:hover  { background: var(--sn-blue-hover); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,68,230,0.3); }
+.sn-btn-primary:active { transform: translateY(0); }
+.sn-btn-primary:disabled { opacity: 0.6; pointer-events: none; }
+
+.sn-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  color: var(--sn-blue);
+  border: 1.5px solid var(--sn-blue-mid);
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sn-btn-secondary:hover  { background: var(--sn-blue-light); border-color: var(--sn-blue); }
+.sn-btn-secondary:disabled { opacity: 0.6; pointer-events: none; }
+
+/* ============================================================
+   SN-INPUT PRIMITIVE
+   ============================================================ */
+.sn-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--sn-border);
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sn-dark);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sn-input:focus {
+  border-color: var(--sn-blue);
+  box-shadow: 0 0 0 3px rgba(0,68,230,0.1);
+}
+.sn-input::placeholder { color: var(--sn-text-muted); }
+
+/* ============================================================
+   SN-CARD PRIMITIVE
+   ============================================================ */
+.sn-card {
+  background: #ffffff;
+  border: 1px solid var(--sn-border);
+  border-radius: 1rem;
+  box-shadow: 0 1px 4px rgba(22,35,59,0.05);
 }
 
-/* ==========================================================================
-   BUBBLE HEADINGS & BUBBLE BUTTONS SYSTEM
-   Provides large, tactile, high-contrast professional bubble styling
-   ========================================================================== */
+/* ============================================================
+   SN-BADGE PRIMITIVES
+   ============================================================ */
+.sn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.sn-badge-blue    { background: var(--sn-blue-light); color: var(--sn-blue);    border-color: var(--sn-blue-mid); }
+.sn-badge-success { background: var(--sn-success-light); color: var(--sn-success); border-color: #bbf7d0; }
+.sn-badge-warning { background: var(--sn-warning-light); color: var(--sn-warning); border-color: #fde68a; }
+.sn-badge-danger  { background: var(--sn-danger-light);  color: var(--sn-danger);  border-color: #fecaca; }
+.sn-badge-neutral { background: #F1F5F9; color: #475569; border-color: #E2E8F0; }
 
-/* Bubble-style prominent headings */
-h1, .heading-1 {
-  font-size: clamp(2.2rem, 3.8vw, 3.85rem) !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.025em !important;
-  line-height: 1.1 !important;
+/* ============================================================
+   GLOBAL UTILITY — Sharknits active-state indicator
+   Used by sidebar nav links
+   ============================================================ */
+.sn-nav-active {
+  background: var(--sn-blue-light) !important;
+  color: var(--sn-blue) !important;
+  border-color: var(--sn-blue-mid) !important;
+}
+.sn-nav-active-bar {
+  background: var(--sn-blue) !important;
 }
 
-h2, .heading-2 {
-  font-size: clamp(1.65rem, 2.7vw, 2.6rem) !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.15 !important;
-}
-
-h3, .heading-3 {
-  font-size: clamp(1.3rem, 2vw, 1.8rem) !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.015em !important;
-  line-height: 1.25 !important;
-}
-
-h4, .heading-4 {
-  font-size: 1.15rem !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.01em !important;
-}
-
-/* Professional bubble-style buttons across the tool */
-button,
-[role="button"],
-.btn-bubble {
-  font-weight: 800 !important;
-  letter-spacing: 0.04em !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Rounded-full bubble buttons */
-button.rounded-full,
-a.rounded-full {
-  font-weight: 900 !important;
-  letter-spacing: 0.05em !important;
-}
-
-/* Numbers and data always tabular so columns align */
-.font-mono, code, kbd, samp, pre {
-  font-feature-settings: 'tnum' 1, 'zero' 1;
-}
-
-/* Light-theme compatibility for older dark dashboard components. */
+/* ============================================================
+   LIGHT-UI OVERRIDES (legacy dark dashboard compat layer)
+   Maps old dark Tailwind classes → white card equivalents
+   ============================================================ */
 .light-ui .bg-slate-950,
 .light-ui .bg-slate-950\/30,
 .light-ui .bg-slate-950\/40,
@@ -184,41 +260,42 @@ a.rounded-full {
   border-color: #e2e8f0 !important;
 }
 
-.light-ui .text-white {
-  color: #0f172a !important;
+/* In light UI, standard text and headings must be dark charcoal #16233B */
+.light-ui .text-white { 
+  color: #16233B !important; 
 }
 
-/* Exception: preserve white text inside intentionally dark panels */
+/* Explicit exceptions: elements with dark or colored backgrounds MUST stay crisp white */
+.light-ui [class*="bg-[#0044E6]"],
+.light-ui [class*="bg-[#0044E6]"] *,
+.light-ui [class*="bg-[#16233B]"],
+.light-ui [class*="bg-[#16233B]"] *,
 .light-ui .dark-panel,
-.light-ui .dark-panel * {
-  color: inherit;
-}
-.light-ui .dark-panel .text-white {
+.light-ui .dark-panel *,
+.light-ui button.text-white,
+.light-ui a.text-white,
+.light-ui [role="button"].text-white,
+.light-ui .bg-blue-600.text-white,
+.light-ui .bg-blue-600 .text-white,
+.light-ui .bg-emerald-600.text-white,
+.light-ui .bg-emerald-600 .text-white,
+.light-ui .bg-emerald-500.text-white,
+.light-ui .bg-emerald-500 .text-white,
+.light-ui .bg-red-600.text-white,
+.light-ui .bg-red-600 .text-white,
+.light-ui .bg-red-500.text-white,
+.light-ui .bg-red-500 .text-white,
+.light-ui .bg-amber-600.text-white,
+.light-ui .bg-amber-600 .text-white,
+.light-ui .bg-amber-500.text-white,
+.light-ui .bg-amber-500 .text-white,
+.light-ui .bg-slate-900.text-white,
+.light-ui .bg-slate-900 .text-white,
+.light-ui .bg-slate-950.text-white,
+.light-ui .bg-slate-950 .text-white,
+.light-ui [class*="gradient"].text-white,
+.light-ui [class*="gradient"] .text-white {
   color: #ffffff !important;
-}
-.light-ui .dark-panel .text-white\/80 {
-  color: rgba(255,255,255,0.8) !important;
-}
-.light-ui .dark-panel .text-white\/70 {
-  color: rgba(255,255,255,0.7) !important;
-}
-.light-ui .dark-panel .text-emerald-300 {
-  color: #6ee7b7 !important;
-}
-.light-ui .dark-panel .text-red-200,
-.light-ui .dark-panel .text-red-300\/80 {
-  color: #fecaca !important;
-}
-.light-ui .dark-panel .text-green-100,
-.light-ui .dark-panel .text-green-200\/80 {
-  color: #dcfce7 !important;
-}
-.light-ui .dark-panel .text-yellow-100,
-.light-ui .dark-panel .text-yellow-200\/80 {
-  color: #fef9c3 !important;
-}
-.light-ui .dark-panel .text-emerald-100 {
-  color: #d1fae5 !important;
 }
 
 .light-ui button.text-white,
@@ -227,55 +304,102 @@ a.rounded-full {
   color: #ffffff !important;
 }
 
-.light-ui .bg-indigo-600,
-.light-ui .bg-indigo-500,
-.light-ui .bg-violet-600,
-.light-ui .bg-violet-500,
-.light-ui .bg-purple-600,
-.light-ui .bg-purple-500,
-.light-ui .bg-blue-600,
-.light-ui .bg-blue-500,
-.light-ui .bg-rose-600,
-.light-ui .bg-rose-500,
-.light-ui .bg-red-600,
-.light-ui .bg-red-500,
-.light-ui .bg-sky-600,
-.light-ui .bg-sky-500 {
-  color: #ffffff !important;
-}
-
+/* Legacy indigo/violet/purple → SN Blue remapping */
 .light-ui .bg-indigo-600,
 .light-ui .bg-indigo-500,
 .light-ui .bg-violet-600,
 .light-ui .bg-violet-500,
 .light-ui .bg-purple-600,
 .light-ui .bg-purple-500 {
-  background-color: #059669 !important;
+  background-color: var(--sn-blue) !important;
+  color: #ffffff !important;
 }
-
 .light-ui .bg-indigo-50,
 .light-ui .bg-violet-50,
 .light-ui .bg-purple-50 {
-  background-color: #ecfeff !important;
+  background-color: var(--sn-blue-light) !important;
 }
-
 .light-ui .text-indigo-700,
 .light-ui .text-indigo-600,
 .light-ui .text-violet-700,
 .light-ui .text-violet-600,
 .light-ui .text-purple-700,
 .light-ui .text-purple-600 {
-  color: #047857 !important;
+  color: var(--sn-blue) !important;
 }
-
 .light-ui .border-indigo-200,
 .light-ui .border-violet-200,
 .light-ui .border-purple-200 {
-  border-color: #a7f3d0 !important;
+  border-color: var(--sn-blue-mid) !important;
 }
 
-.light-ui input,
-.light-ui select,
-.light-ui textarea {
-  color: #0f172a;
+.light-ui input, 
+.light-ui select, 
+.light-ui textarea { 
+  color: #16233B !important; 
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+.light-ui input::placeholder,
+.light-ui textarea::placeholder {
+  color: #94a3b8 !important;
+}
+.light-ui input:focus, 
+.light-ui select:focus, 
+.light-ui textarea:focus { 
+  border-color: #0044E6 !important; 
+  box-shadow: 0 0 0 3px rgba(0, 68, 230, 0.15) !important;
+  background-color: #ffffff !important;
+}
+
+/* ============================================================
+   GLOBAL: Replace emerald/teal "primary" with SN Blue
+   These !important rules ensure the brand colour lands on
+   components that still use Tailwind emerald/teal utility names.
+   ============================================================ */
+
+/* Active / selected state pills → SN Blue */
+.bg-emerald-50       { background-color: var(--sn-blue-light) !important; }
+.bg-emerald-100      { background-color: #dbe8ff !important; }
+.border-emerald-100  { border-color: var(--sn-blue-mid) !important; }
+.border-emerald-200  { border-color: var(--sn-blue-mid) !important; }
+.text-emerald-800    { color: var(--sn-blue) !important; }
+.text-emerald-700    { color: var(--sn-blue) !important; }
+.text-emerald-600    { color: var(--sn-blue) !important; }
+.text-emerald-500    { color: var(--sn-blue) !important; }
+.bg-emerald-600      { background-color: var(--sn-blue) !important; }
+.bg-emerald-500      { background-color: var(--sn-blue) !important; }
+.hover\:bg-emerald-500:hover { background-color: var(--sn-blue-hover) !important; }
+.hover\:bg-emerald-50:hover  { background-color: var(--sn-blue-light) !important; }
+.hover\:text-emerald-700:hover { color: var(--sn-blue) !important; }
+.shadow-emerald-600\/15 { box-shadow: 0 4px 14px rgba(0,68,230,0.18) !important; }
+.focus\:border-emerald-300:focus { border-color: var(--sn-blue) !important; }
+.focus\:ring-emerald-100:focus   { --tw-ring-color: rgba(0,68,230,0.1) !important; }
+.focus\:ring-4:focus             { box-shadow: 0 0 0 3px rgba(0,68,230,0.1) !important; }
+
+/* Teal → SN Blue (non-semantic usage) */
+.bg-teal-50          { background-color: var(--sn-blue-light) !important; }
+.bg-teal-100         { background-color: #dbe8ff !important; }
+.border-teal-200     { border-color: var(--sn-blue-mid) !important; }
+.border-teal-200\/80 { border-color: rgba(199,214,255,0.8) !important; }
+.border-teal-300     { border-color: var(--sn-blue) !important; }
+.text-teal-700       { color: var(--sn-blue) !important; }
+.text-teal-600       { color: var(--sn-blue) !important; }
+.hover\:bg-teal-100:hover   { background-color: #dbe8ff !important; }
+.hover\:border-teal-300:hover { border-color: var(--sn-blue) !important; }
+.hover\:text-teal-700:hover   { color: var(--sn-blue) !important; }
+.focus\:border-teal-500:focus { border-color: var(--sn-blue) !important; }
+.focus\:ring-teal-500:focus   { box-shadow: 0 0 0 3px rgba(0,68,230,0.12) !important; }
+.text-teal-600.shrink-0       { color: var(--sn-blue) !important; }
+
+/* Gradient bars in headings → blue */
+.from-emerald-300 { --tw-gradient-from: #93b4ff !important; }
+.to-teal-500      { --tw-gradient-to: var(--sn-blue) !important; }
+
+/* Nav active bar pill */
+.bg-emerald-600.absolute { background-color: var(--sn-blue) !important; }
+
+/* Numbers and data always tabular */
+.font-mono, code, kbd, samp, pre {
+  font-feature-settings: 'tnum' 1, 'zero' 1;
 }

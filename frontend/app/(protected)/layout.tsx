@@ -19,13 +19,13 @@ export default function ProtectedLayout({
   return (
     <SidebarProvider>
       <HeaderProvider>
-        <div className="light-ui min-h-screen bg-[#f7faf9] text-slate-950">
+        <div className="light-ui min-h-screen bg-[#F6F8FC] text-[#16233B]">
           {/* Fixed sidebar — stays locked while content scrolls */}
           <Sidebar />
           {/* Reactive main area — shifts when sidebar collapses */}
           <MainContent>
             <Header title="Dashboard" />
-            <main className="flex-1 bg-[#f7faf9] p-6">{children}</main>
+            <main className="flex-1 bg-[#F6F8FC] p-6">{children}</main>
           </MainContent>
           {/* Global toast popups — renders above everything */}
           <NotificationToasts />

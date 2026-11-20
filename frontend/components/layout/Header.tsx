@@ -30,7 +30,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const { headerConfig } = useHeader();
   
   const heading = headerConfig || (title === "Dashboard" ? getPageHeading(pathname) : {
-    eyebrow: "Textile QC",
+    eyebrow: "Sharknits WIP",
     title,
     highlight: "",
     subtitle: subtitle || "Production and quality control workspace.",
@@ -77,9 +77,9 @@ export default function Header({ title, subtitle }: HeaderProps) {
           target="_blank"
           rel="noopener noreferrer"
           title="Download Official Operating Handbook (PDF)"
-          className="flex h-9 items-center gap-2 rounded-xl border border-teal-200 bg-teal-50/80 px-3 text-xs font-black uppercase tracking-wider text-teal-700 transition hover:bg-teal-100 hover:border-teal-300 active:scale-95 md:h-10 shrink-0"
+          className="flex h-9 items-center gap-2 rounded-xl border border-[#C7D6FF] bg-[#EBF0FF] px-3 text-xs font-black uppercase tracking-wider text-[#0044E6] transition hover:bg-[#dbe8ff] hover:border-[#0044E6] active:scale-95 md:h-10 shrink-0"
         >
-          <BookOpen className="h-4 w-4 text-teal-600 shrink-0" />
+          <BookOpen className="h-4 w-4 text-[#0044E6] shrink-0" />
           <span className="hidden xl:inline">Handbook</span>
         </a>
 
@@ -143,7 +143,7 @@ function getPageHeading(pathname: string) {
     subtitle: "Configure defect codes and categories for each QC stage",
   };
   if (pathname.startsWith("/qc-reports")) return {
-    eyebrow: "Textile Quality Command Center",
+    eyebrow: "Sharknits Quality Command Center",
     title: "Quality",
     highlight: "Management",
     subtitle: "Inspection reports, defect master, printing and manual forms",

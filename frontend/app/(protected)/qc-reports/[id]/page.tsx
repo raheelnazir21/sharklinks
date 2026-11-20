@@ -123,7 +123,7 @@ export default function QCReportDetailPage({ params }: { params: Promise<{ id: s
     <div className="max-w-6xl mx-auto space-y-10 pb-20">
       {/* Action Bar */}
       <div className="flex items-center justify-between">
-        <Link href="/qc-reports" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-95">
+        <Link href="/qc-reports" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-[0_4px_14px_rgba(0,68,230,0.2)] active:scale-95">
           <ChevronLeft className="w-4 h-4" /> Back to QC Reports
         </Link>
         <div className="flex gap-3">

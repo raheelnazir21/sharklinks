@@ -142,12 +142,12 @@ function OrderMiniCard({ order }: { order: TrackingOrder }) {
         order.is_delayed
           ? "bg-rose-500/10 border-rose-500/30"
           : order.track_type === "bulk"
-            ? "bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50"
+            ? "bg-[#EBF0FF] border-[#C7D6FF] hover:border-[#0044E6]"
             : "bg-blue-500/10 border-blue-500/20 hover:border-blue-400/50"
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={`text-[8px] font-black uppercase tracking-widest ${order.track_type === "bulk" ? "text-emerald-300" : "text-blue-300"}`}>
+        <span className={`text-[8px] font-black uppercase tracking-widest ${order.track_type === "bulk" ? "text-[#0044E6]" : "text-blue-300"}`}>
           {order.track_type === "bulk" ? "Bulk" : "Sample"}
         </span>
         {order.is_delayed && <span className="text-[8px] font-black text-rose-300 uppercase">{order.delay_days}d late</span>}
@@ -174,7 +174,7 @@ function StagePipeline({ orders, trackType }: { orders: TrackingOrder[]; trackTy
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className={`text-[10px] font-black uppercase tracking-widest ${trackType === "bulk" ? "text-emerald-300" : "text-blue-300"}`}>
+        <p className={`text-[10px] font-black uppercase tracking-widest ${trackType === "bulk" ? "text-[#0044E6]" : "text-blue-300"}`}>
           {trackType === "bulk" ? "Bulk Flow" : "Sample Flow"}
         </p>
         <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{trackOrders.length} products</span>
@@ -362,11 +362,11 @@ export default function TrackingDashboardPage() {
       <div className="grid grid-cols-2 xl:grid-cols-6 gap-4">
         {[
           { label: "Total Orders", value: data.summary.total_orders, icon: <Package className="w-5 h-5" />, tone: "text-white" },
-          { label: "Bulk", value: data.summary.bulk_orders, icon: <Layers className="w-5 h-5" />, tone: "text-emerald-400" },
+          { label: "Bulk", value: data.summary.bulk_orders, icon: <Layers className="w-5 h-5" />, tone: "text-[#0044E6]" },
           { label: "Samples", value: data.summary.sample_orders, icon: <Shirt className="w-5 h-5" />, tone: "text-blue-400" },
           { label: "Delayed", value: data.summary.delayed_orders, icon: <AlertTriangle className="w-5 h-5" />, tone: "text-rose-400" },
           { label: "In Progress", value: data.summary.in_progress_orders, icon: <Factory className="w-5 h-5" />, tone: "text-amber-400" },
-          { label: "Completed", value: data.summary.completed_orders, icon: <CheckCircle2 className="w-5 h-5" />, tone: "text-emerald-300" },
+          { label: "Completed", value: data.summary.completed_orders, icon: <CheckCircle2 className="w-5 h-5" />, tone: "text-[#0044E6]" },
         ].map((item) => (
           <div key={item.label} className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
             <div className={`mb-5 ${item.tone}`}>{item.icon}</div>
@@ -394,8 +394,8 @@ export default function TrackingDashboardPage() {
                   <div className="p-6 border-b border-slate-800 bg-slate-900/70 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <Package className="w-5 h-5 text-indigo-300" />
-                        <h2 className="text-xl font-black text-white uppercase tracking-tight truncate">{product.product_name}</h2>
+                        <Package className="w-5 h-5 text-[#0044E6]" />
+                        <h2 className="text-xl font-black text-[#16233B] uppercase tracking-tight truncate">{product.product_name}</h2>
                       </div>
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         {product.orders.length} placements • Qty {product.total_quantity}
@@ -415,7 +415,7 @@ export default function TrackingDashboardPage() {
                             <div className="flex flex-wrap items-center gap-2 mb-3">
                               <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
                                 order.track_type === "bulk"
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  ? "bg-[#EBF0FF] text-[#0044E6] border-[#C7D6FF]"
                                   : "bg-blue-500/10 text-blue-400 border-blue-500/20"
                               }`}>
                                 {order.track_type}
@@ -429,7 +429,7 @@ export default function TrackingDashboardPage() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-white text-sm font-black uppercase truncate">
+                            <p className="text-[#16233B] text-sm font-black uppercase truncate">
                               {order.vendor_name} / {order.floor_name} / {order.line_name}
                             </p>
                             <p className="text-slate-500 text-[10px] font-bold uppercase mt-1">
@@ -464,7 +464,7 @@ export default function TrackingDashboardPage() {
                     <Building2 className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight">{vendor.vendor_name}</h2>
+                    <h2 className="text-xl font-black text-[#16233B] uppercase tracking-tight">{vendor.vendor_name}</h2>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                       {vendor.total_orders} orders • {vendor.bulk_orders} bulk • {vendor.sample_orders} samples
                     </p>
@@ -483,7 +483,7 @@ export default function TrackingDashboardPage() {
                     <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Factory className="w-4 h-4 text-slate-500" />
-                        <h3 className="text-white text-sm font-black uppercase tracking-widest">{floor.floor_name}</h3>
+                        <h3 className="text-[#16233B] text-sm font-black uppercase tracking-widest">{floor.floor_name}</h3>
                       </div>
                       <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{floor.total_orders} placements</span>
                     </div>
@@ -493,7 +493,7 @@ export default function TrackingDashboardPage() {
                         <div key={`${floor.floor_id || floor.floor_name}-${line.line_id || line.line_name}`} className="bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden">
                           <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
                             <div>
-                              <p className="text-white text-sm font-black uppercase">{line.line_name}</p>
+                              <p className="text-[#16233B] text-sm font-black uppercase">{line.line_name}</p>
                               <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
                                 {line.bulk_orders} bulk • {line.sample_orders} sample
                               </p>
@@ -521,7 +521,7 @@ export default function TrackingDashboardPage() {
                                       <div className="flex flex-wrap items-center gap-2 mb-2">
                                         <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
                                           order.track_type === "bulk"
-                                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                            ? "bg-[#EBF0FF] text-[#0044E6] border-[#C7D6FF]"
                                             : "bg-blue-500/10 text-blue-400 border-blue-500/20"
                                         }`}>
                                           {order.track_type === "bulk" ? "Bulk" : "Sample"}

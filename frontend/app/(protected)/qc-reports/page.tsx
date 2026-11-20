@@ -354,15 +354,15 @@ export default function QCReportsDashboard() {
         <div className="bg-slate-800/30 border border-slate-700/50 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col min-h-[600px]">
           <div className="p-8 border-b border-slate-700/50 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900/30">
             <div className="flex items-center gap-6">
-              <h2 className="text-white font-black text-sm uppercase tracking-widest flex items-center gap-3">
-                <Layers className="w-5 h-5 text-indigo-400" /> Defects Log
+              <h2 className="text-[#16233B] font-black text-sm uppercase tracking-widest flex items-center gap-3">
+                <Layers className="w-5 h-5 text-[#0044E6]" /> Defects Log
               </h2>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
                   placeholder="Search logs..." 
-                  className="bg-slate-950 border border-slate-800 rounded-2xl py-3 pl-11 pr-4 text-[10px] font-black text-white w-80 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 uppercase tracking-widest"
+                  className="bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-[10px] font-bold text-[#16233B] w-80 focus:outline-none focus:ring-2 focus:ring-[#0044E6]/40 uppercase tracking-widest"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -453,14 +453,14 @@ export default function QCReportsDashboard() {
                             ))}
                           </div>
                         ) : col.id === "date" ? (
-                          <span className="text-white font-black text-[11px] italic tracking-tighter">{log[col.id]}</span>
+                          <span className="text-[#16233B] font-bold text-[11px] italic tracking-tighter">{log[col.id]}</span>
                         ) : (
-                          <span className="text-slate-400 font-bold text-[10px] uppercase tracking-tight">{log[col.id] || "---"}</span>
+                          <span className="text-slate-600 font-medium text-[10px] uppercase tracking-tight">{log[col.id] || "---"}</span>
                         )}
                       </td>
                     ))}
-                    <td className="px-8 py-5 text-right sticky right-0 bg-slate-900/50 backdrop-blur-sm">
-                       <Link href={`/qc-reports/${log.report_id}`} className="p-2.5 bg-slate-800 text-slate-500 hover:text-white rounded-xl border border-slate-700 transition-all inline-block shadow-inner">
+                    <td className="px-8 py-5 text-right sticky right-0 bg-white/80 backdrop-blur-sm">
+                       <Link href={`/qc-reports/${log.report_id}`} className="p-2.5 bg-slate-100 text-slate-600 hover:text-[#0044E6] rounded-xl border border-slate-200 transition-all inline-block shadow-inner">
                          <Eye className="w-3.5 h-3.5" />
                        </Link>
                     </td>
@@ -471,10 +471,10 @@ export default function QCReportsDashboard() {
           </div>
 
           {/* Pagination */}
-          <div className="p-8 bg-slate-900/50 border-t border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="p-8 bg-slate-50 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
-              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
-                Showing <span className="text-white">{(page - 1) * limit + 1} - {Math.min(page * limit, totalLogs)}</span> of {totalLogs} records
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                Showing <span className="text-[#16233B] font-black">{(page - 1) * limit + 1} - {Math.min(page * limit, totalLogs)}</span> of {totalLogs} records
               </p>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Rows per page:</span>

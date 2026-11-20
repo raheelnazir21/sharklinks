@@ -106,11 +106,11 @@ export default function ForgotPasswordPage() {
           {/* Logo */}
           <div className="mb-16">
             <Image 
-              src="/cc_logo.png" 
-              alt="CC Production & QMS" 
-              width={800} 
-              height={200} 
-              className="w-full max-w-[800px] h-auto object-contain object-left mix-blend-multiply" 
+              src="/sharknits_logo.png" 
+              alt="Sharknits" 
+              width={727} 
+              height={528} 
+              className="w-auto h-20 max-w-[280px] object-contain object-left" 
               priority 
             />
           </div>
@@ -119,12 +119,12 @@ export default function ForgotPasswordPage() {
           <div className="flex flex-col justify-center max-w-[880px]">
             <h1 className="text-[30px] lg:text-[38px] xl:text-[44px] font-black text-[#0F172A] leading-[1.1] tracking-tight mb-5">
               Manufacturing Excellence.<br />
-              <span className="bg-gradient-to-r from-teal-600 to-teal-400 bg-clip-text text-transparent pb-2">
+              <span className="bg-gradient-to-r from-[#0044E6] to-[#4477FF] bg-clip-text text-transparent pb-2">
                 Powered by Intelligence.
               </span>
             </h1>
             
-            <div className="w-[50px] h-[3px] bg-teal-500 mb-6 rounded-full" />
+            <div className="w-[50px] h-[3px] bg-[#0044E6] mb-6 rounded-full" />
             
             <p className="text-slate-600 text-[16px] lg:text-[18px] font-medium leading-relaxed mb-8 max-w-[500px]">
               Complete Manufacturing, Quality Control<br />
@@ -174,13 +174,13 @@ export default function ForgotPasswordPage() {
             
             {/* Card Header & Logo */}
             <div className="flex flex-col items-center mb-6">
-              <div className="mb-8 flex justify-center w-full px-2">
+              <div className="mb-6 flex justify-center w-full px-2">
                 <Image 
-                  src="/cc_logo.png" 
-                  alt="CC Production & QMS" 
-                  width={400} 
-                  height={100} 
-                  className="w-[90%] max-w-[360px] h-auto object-contain mix-blend-multiply" 
+                  src="/sharknits_logo.png" 
+                  alt="Sharknits" 
+                  width={727} 
+                  height={528} 
+                  className="w-auto h-16 object-contain" 
                   priority
                 />
               </div>
@@ -226,7 +226,7 @@ export default function ForgotPasswordPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         placeholder="you@company.com" 
-                        className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-[14px] text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all placeholder:text-slate-400 shadow-sm" 
+                        className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-[14px] text-slate-900 focus:outline-none focus:border-[#0044E6] focus:ring-1 focus:ring-[#0044E6]/20 transition-all placeholder:text-slate-400 shadow-sm" 
                       />
                     </div>
                   </div>
@@ -235,7 +235,7 @@ export default function ForgotPasswordPage() {
                   <button 
                     type="submit" 
                     disabled={loading}
-                    className="w-full mt-3 bg-gradient-to-r from-teal-500 to-green-500 text-white font-bold text-[14.5px] py-3.5 rounded-xl shadow-[0_6px_20px_rgba(20,184,166,0.25)] hover:shadow-[0_8px_25px_rgba(20,184,166,0.35)] hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full mt-3 bg-gradient-to-r from-[#0044E6] to-[#0036B8] text-white font-bold text-[14.5px] py-3.5 rounded-xl shadow-[0_6px_20px_rgba(0,68,230,0.25)] hover:shadow-[0_8px_25px_rgba(0,68,230,0.35)] hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {loading ? "Submitting..." : (
                       <>
@@ -251,7 +251,7 @@ export default function ForgotPasswordPage() {
 
             {/* Login Link */}
             <p className="text-center mt-8 text-[13px] text-slate-500 font-medium">
-              Remembered it? <Link href="/login" className="text-teal-600 font-bold hover:text-teal-700 transition-colors">Sign in</Link>
+              Remembered it? <Link href="/login" className="text-[#0044E6] font-bold hover:text-[#0036B8] transition-colors">Sign in</Link>
             </p>
 
           </div>

@@ -52,21 +52,28 @@ from app.services.email_service import (  # type: ignore # noqa: E402
 from app.core.config import settings  # type: ignore # noqa: E402
 
 
+EXCLUDED_EMAILS = {
+    "david@cottoncollective.org",
+    "casey@domesticconception.com",
+}
+
+
 def get_super_admin_emails(db) -> list[str]:
-    """Retrieves all active Super Admin emails from DB (including Casey), ensuring standard fallbacks are present."""
+    """Retrieves all active Super Admin emails from DB, ensuring standard fallbacks are present and excluding Casey & David."""
     super_admins = db.query(User).join(Role).filter(
         Role.name == RoleEnum.super_admin,
         User.is_active == True
     ).all()
-    emails = [u.email.strip() for u in super_admins if u.email and "@" in u.email]
+    emails = [
+        u.email.strip() for u in super_admins
+        if u.email and "@" in u.email and u.email.strip().lower() not in EXCLUDED_EMAILS
+    ]
     for fallback in [
         "faisalaslam1038@gmail.com",
         "qc@cottoncollective.org",
         "raheel.safelife@gmail.com",
-        "david@cottoncollective.org",
-        "casey@domesticconception.com",
     ]:
-        if fallback not in emails:
+        if fallback not in emails and fallback.lower() not in EXCLUDED_EMAILS:
             emails.append(fallback)
     return list(dict.fromkeys(emails))
 

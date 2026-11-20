@@ -191,7 +191,7 @@ const SAMPLE_STAGES = [
   { id: "sample_completed", label: "Done" },
 ];
 
-const PIE_COLORS = ["#0f766e", "#059669", "#f59e0b", "#dc2626", "#111827"];
+const PIE_COLORS = ["#0044E6", "#0036B8", "#4477FF", "#F59E0B", "#DC2626"];
 const CARD_MOTION = {
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },
@@ -283,13 +283,13 @@ function MetricCard({
     <motion.div
       {...CARD_MOTION}
       whileHover={{ y: -4, transition: { duration: 0.18 } }}
-      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/[0.04] transition hover:border-emerald-200 hover:shadow-xl hover:shadow-slate-950/[0.08]"
+      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/[0.04] transition hover:border-[#C7D6FF] hover:shadow-xl hover:shadow-slate-950/[0.08]"
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-transparent opacity-70" />
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4477FF] via-[#0044E6] to-transparent opacity-70" />
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
-          <p className={`mt-2 text-[10px] font-black uppercase tracking-wider ${critical ? "text-red-600" : "text-emerald-700"}`}>
+          <p className={`mt-2 text-[10px] font-black uppercase tracking-wider ${critical ? "text-red-600" : "text-[#0044E6]"}`}>
             {trend}
           </p>
         </div>
@@ -309,12 +309,12 @@ function ChartCard({ title, icon, children }: { title: string; icon: React.React
     >
       <div className="mb-5 flex items-center justify-between gap-4">
         <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-950">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EBF0FF] text-[#0044E6] ring-1 ring-[#C7D6FF]">
             {icon}
           </span>
           {title}
         </h3>
-        <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+        <span className="h-2 w-2 rounded-full bg-[#EBF0FF]0 shadow-[0_0_0_4px_rgba(0,68,230,0.15)]" />
       </div>
       {children}
     </motion.section>
@@ -409,7 +409,7 @@ function FourWeekProductionTrend({
               onClick={() => setMode(tab.key)}
               className={`rounded-xl border px-4 py-2 text-xs font-black transition ${
                 mode === tab.key
-                  ? "border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-600/15"
+                  ? "border-[#0044E6] bg-[#0044E6] text-white shadow-lg shadow-[0_4px_14px_rgba(0,68,230,0.2)]"
                   : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
               }`}
             >
@@ -419,7 +419,7 @@ function FourWeekProductionTrend({
           <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700">
             <CalendarDays className="h-4 w-4" /> 4 Weeks
           </button>
-          <button type="button" onClick={exportTrend} className="inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-700">
+          <button type="button" onClick={exportTrend} className="inline-flex items-center gap-2 rounded-xl border border-[#C7D6FF] bg-[#EBF0FF] px-4 py-2 text-xs font-black text-[#0044E6]">
             <Download className="h-4 w-4" /> Export
           </button>
         </div>
@@ -437,8 +437,8 @@ function FourWeekProductionTrend({
           >
             <defs>
               <linearGradient id="productionFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#059669" stopOpacity={0.18} />
-                <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                <stop offset="5%" stopColor="#0044E6" stopOpacity={0.18} />
+                <stop offset="95%" stopColor="#0044E6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -458,7 +458,7 @@ function FourWeekProductionTrend({
                 return item ? `${item.week} (${item.range})` : "";
               }}
             />
-            {showProduction && <Area yAxisId="left" type="monotone" dataKey="production" stroke="#059669" fill="url(#productionFill)" strokeWidth={3} name="Production (Pcs)" />}
+            {showProduction && <Area yAxisId="left" type="monotone" dataKey="production" stroke="#0044E6" fill="url(#productionFill)" strokeWidth={3} name="Production (Pcs)" />}
             {showDhu && <Line yAxisId="right" type="monotone" dataKey="dhu" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} name="DHU (%)" />}
             {showFpy && <Line yAxisId="right" type="monotone" dataKey="fpy" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 3 }} name="FPY (%)" />}
             {showDelay && <Line yAxisId="left" type="monotone" dataKey="delayed" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} name="Delayed Orders" />}
@@ -470,17 +470,17 @@ function FourWeekProductionTrend({
         <div className="p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Production</p>
           <p className="mt-2 text-xl font-black text-slate-950">{totals.production.toLocaleString()} Pcs</p>
-          <p className="mt-1 text-xs font-black text-emerald-700">↑ live from orders</p>
+          <p className="mt-1 text-xs font-black text-[#0044E6]">↑ live from orders</p>
         </div>
         <div className="p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Avg DHU%</p>
           <p className="mt-2 text-xl font-black text-slate-950">{avgDhu}%</p>
-          <p className="mt-1 text-xs font-black text-emerald-700">{weeksWithDhu.length ? "live from QC" : "no QC data yet"}</p>
+          <p className="mt-1 text-xs font-black text-[#0044E6]">{weeksWithDhu.length ? "live from QC" : "no QC data yet"}</p>
         </div>
         <div className="p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Avg FPY%</p>
           <p className="mt-2 text-xl font-black text-slate-950">{avgFpy}%</p>
-          <p className="mt-1 text-xs font-black text-emerald-700">{weeksWithFpy.length ? "live from QC" : "no QC data yet"}</p>
+          <p className="mt-1 text-xs font-black text-[#0044E6]">{weeksWithFpy.length ? "live from QC" : "no QC data yet"}</p>
         </div>
         <div className="p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Delayed</p>
@@ -517,7 +517,7 @@ function FourWeekProductionTrend({
                 {selectedDatum.orders.map((order) => (
                   <tr key={order.order_id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-bold text-slate-950">
-                      <Link href={`/orders/${order.order_id}`} className="hover:text-emerald-700">
+                      <Link href={`/orders/${order.order_id}`} className="hover:text-[#0044E6]">
                         {order.product_name || order.style_name || "Unnamed Order"}
                       </Link>
                       <p className="mt-0.5 text-xs font-semibold text-slate-500">{order.order_no || order.class_name || "No PO"}</p>
@@ -530,7 +530,7 @@ function FourWeekProductionTrend({
                     <td className="px-4 py-3 font-black text-slate-950">{toNumber(order.quantity).toLocaleString()}</td>
                     <td className="px-4 py-3 text-slate-600">{order.stage_label || order.stage_name || "Start"}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${order.is_delayed ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${order.is_delayed ? "bg-red-50 text-red-700" : "bg-[#EBF0FF] text-[#0044E6]"}`}>
                         {order.is_delayed ? `${order.delay_days || 0} days late` : "On track"}
                       </span>
                     </td>
@@ -550,7 +550,7 @@ function FourWeekProductionTrend({
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="flex h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-white to-slate-50 text-center">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#EBF0FF] text-[#0044E6] ring-1 ring-[#C7D6FF]">
         <Factory className="h-4 w-4" />
       </div>
       <p className="text-sm font-bold text-slate-500">{label}</p>
@@ -561,7 +561,7 @@ function EmptyState({ label }: { label: string }) {
 
 function SparkBars({ status }: { status: "pass" | "warning" | "fail" }) {
   const heights = status === "fail" ? [28, 22, 16, 10, 6] : [8, 14, 18, 26, 24];
-  const color = status === "fail" ? "bg-red-600" : status === "warning" ? "bg-yellow-500" : "bg-emerald-600";
+  const color = status === "fail" ? "bg-red-600" : status === "warning" ? "bg-yellow-500" : "bg-[#0044E6]";
   return (
     <div className="flex h-8 items-end gap-1">
       {heights.map((height, index) => (
@@ -579,7 +579,7 @@ function SparkBars({ status }: { status: "pass" | "warning" | "fail" }) {
 
 function StatusPill({ status }: { status: "pass" | "warning" | "fail" }) {
   const styles = {
-    pass: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+    pass: "bg-[#EBF0FF] text-[#0044E6] ring-1 ring-[#C7D6FF]",
     warning: "bg-yellow-50 text-yellow-800 ring-1 ring-yellow-200",
     fail: "bg-red-50 text-red-700 ring-1 ring-red-200",
   };
@@ -598,8 +598,8 @@ function PhaseStatus({ orders }: { orders: ReturnType<typeof flattenOrders> }) {
   const delayed = orders.filter((order) => order.is_delayed).length;
   const ship = Math.max(orders.length - prep - production - qc, 0);
   const segments = [
-    { label: "Prep", value: prep, color: "bg-teal-500" },
-    { label: "Production", value: production, color: "bg-emerald-600" },
+    { label: "Prep", value: prep, color: "bg-[#4477FF]" },
+    { label: "Production", value: production, color: "bg-[#0044E6]" },
     { label: "QC", value: qc, color: "bg-cyan-500" },
     { label: "Delayed", value: delayed, color: "bg-red-600" },
     { label: "Ship", value: ship, color: "bg-slate-900" },
@@ -616,8 +616,8 @@ function PhaseStatus({ orders }: { orders: ReturnType<typeof flattenOrders> }) {
           <p className="mt-1 text-xs font-semibold text-slate-500">Current load across preparation, production, QC and shipment.</p>
         </div>
         <div className="hidden flex-wrap items-center gap-4 text-[11px] font-black text-slate-700 md:flex">
-          <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-teal-500" /> Prep</span>
-          <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-emerald-600" /> Production</span>
+          <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-[#4477FF]" /> Prep</span>
+          <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-[#0044E6]" /> Production</span>
           <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-cyan-500" /> QC</span>
           <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-red-600" /> Delayed</span>
         </div>
@@ -671,7 +671,7 @@ function ActiveLineTable({
           <h3 className="text-lg font-black text-slate-950">Active Production Lines</h3>
           <p className="mt-1 text-xs font-semibold text-slate-500">Line, floor, vendor, quality risk and workload in one scan.</p>
         </div>
-        <Link href="/tracking-dashboard" className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">
+        <Link href="/tracking-dashboard" className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 transition hover:-translate-y-0.5 hover:border-[#C7D6FF] hover:bg-[#EBF0FF] hover:text-[#0044E6]">
           View Flow
         </Link>
       </div>
@@ -692,7 +692,7 @@ function ActiveLineTable({
             {rows.length ? rows.map((line) => {
               const status = line.risk === "bad" ? "fail" : line.risk === "warn" ? "warning" : "pass";
               return (
-                <tr key={`${line.vendor}-${line.floor}-${line.line}`} className="transition hover:bg-emerald-50/50">
+                <tr key={`${line.vendor}-${line.floor}-${line.line}`} className="transition hover:bg-[#EBF0FF]/50">
                   <td className="px-5 py-4 font-mono font-black text-slate-950">{line.line}</td>
                   <td className="px-5 py-4 text-slate-700">{line.floor}</td>
                   <td className="px-5 py-4 text-slate-700">{line.vendor}</td>
@@ -700,10 +700,10 @@ function ActiveLineTable({
                   <td className="px-5 py-4">
                     <div className="font-mono text-slate-950">{line.total} <span className="text-slate-400">/ B{line.bulk} S{line.sample}</span></div>
                     <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-emerald-600" style={{ width: `${Math.max(Math.min(line.fpy, 100), 6)}%` }} />
+                      <div className="h-full rounded-full bg-[#0044E6]" style={{ width: `${Math.max(Math.min(line.fpy, 100), 6)}%` }} />
                     </div>
                   </td>
-                  <td className={`px-5 py-4 font-mono font-black ${status === "fail" ? "text-red-700" : status === "warning" ? "text-yellow-700" : "text-emerald-700"}`}>{line.dhu}%</td>
+                  <td className={`px-5 py-4 font-mono font-black ${status === "fail" ? "text-red-700" : status === "warning" ? "text-yellow-700" : "text-[#0044E6]"}`}>{line.dhu}%</td>
                   <td className="px-5 py-4"><StatusPill status={status} /></td>
                 </tr>
               );
@@ -733,7 +733,7 @@ function DefectDistribution({ defects }: { defects: Array<{ name: string; code: 
       className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/[0.04]"
     >
       <h3 className="mb-4 flex items-center gap-2 text-lg font-black text-slate-950">
-        <BarChart3 className="h-5 w-5 text-emerald-700" /> Defect Type Distribution
+        <BarChart3 className="h-5 w-5 text-[#0044E6]" /> Defect Type Distribution
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item, index) => (
@@ -743,7 +743,7 @@ function DefectDistribution({ defects }: { defects: Array<{ name: string; code: 
             className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-center shadow-sm"
           >
             <p className="truncate text-[11px] font-black text-slate-700" title={item.name}>{item.name}</p>
-            <p className={`mt-2 font-mono text-3xl font-black ${index === 0 ? "text-emerald-700" : index === 1 ? "text-teal-700" : index === 2 ? "text-slate-950" : "text-yellow-700"}`}>{item.count}</p>
+            <p className={`mt-2 font-mono text-3xl font-black ${index === 0 ? "text-[#0044E6]" : index === 1 ? "text-[#0044E6]" : index === 2 ? "text-slate-950" : "text-yellow-700"}`}>{item.count}</p>
           </motion.div>
         ))}
       </div>
@@ -779,9 +779,9 @@ function CriticalAlerts({ orders }: { orders: ReturnType<typeof flattenOrders> }
           ))}
         </div>
       ) : (
-        <div className="rounded-md bg-emerald-50 p-4 text-sm font-bold text-emerald-800">No critical stage delays right now.</div>
+        <div className="rounded-md bg-[#EBF0FF] p-4 text-sm font-bold text-[#0044E6]">No critical stage delays right now.</div>
       )}
-      <Link href="/tracking-dashboard" className="mt-4 block text-center text-xs font-black uppercase tracking-wider text-emerald-700">
+      <Link href="/tracking-dashboard" className="mt-4 block text-center text-xs font-black uppercase tracking-wider text-[#0044E6]">
         View all alerts
       </Link>
     </motion.section>
@@ -934,7 +934,7 @@ export default function DashboardPage() {
       label: "Bulk Order",
       href: "/bulk-projects",
       icon: <Layers className="h-5 w-5" />,
-      className: "border-emerald-100 bg-emerald-50 text-emerald-700",
+      className: "border-[#C7D6FF] bg-[#EBF0FF] text-[#0044E6]",
     },
     {
       label: "QC Entry",
@@ -968,13 +968,13 @@ export default function DashboardPage() {
         className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-xl shadow-slate-950/[0.06]"
       >
         <div className="grid grid-cols-1 gap-0 xl:grid-cols-[1.25fr_0.75fr]">
-          <div className="relative border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(135deg,#ffffff,#fbfefd)] p-7 xl:border-b-0 xl:border-r">
+          <div className="relative border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(0,68,230,0.15),transparent_34%),linear-gradient(135deg,#ffffff,#fbfefd)] p-7 xl:border-b-0 xl:border-r">
             <div className="mb-7 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
-                <Factory className="h-3.5 w-3.5" /> Live factory command
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#0044E6] px-3.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm" style={{ color: '#ffffff' }}>
+                <Factory className="h-3.5 w-3.5" style={{ color: '#ffffff' }} /> Live factory command
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-700 ring-1 ring-slate-200">
-                <CalendarDays className="h-3.5 w-3.5" /> Today&apos;s control view
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#16233B] px-3.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm" style={{ color: '#ffffff' }}>
+                <CalendarDays className="h-3.5 w-3.5" style={{ color: '#ffffff' }} /> Today&apos;s control view
               </span>
             </div>
 
@@ -991,12 +991,12 @@ export default function DashboardPage() {
                     <input
                       type="text"
                       placeholder="Search style, PO, product, vendor or line..."
-                      className="h-14 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className="h-14 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-[#0044E6] focus:ring-4 focus:ring-[#0044E6]"
                     />
                   </div>
                   <Link
                     href="/tracking-dashboard"
-                    className="inline-flex h-14 items-center justify-center gap-2 rounded-xl !bg-emerald-600 px-5 text-sm font-black uppercase tracking-wide !text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:!bg-emerald-700"
+                    className="inline-flex h-14 items-center justify-center gap-2 rounded-xl !bg-[#0044E6] px-5 text-sm font-black uppercase tracking-wide !text-white shadow-lg shadow-[0_4px_14px_rgba(0,68,230,0.2)] transition hover:-translate-y-0.5 hover:!bg-emerald-700"
                   >
                     Open Tracking <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="dark-panel relative overflow-hidden bg-gradient-to-br from-emerald-900 via-green-800 to-emerald-950 p-7 text-white">
+          <div className="dark-panel relative overflow-hidden bg-gradient-to-br from-[#4477FF] via-green-800 to-[#0044E6] p-7 text-white" style={{ color: '#ffffff' }}>
             {/* Decorative glowing orbs */}
             <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-emerald-400/20 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-green-300/10 blur-2xl" />
@@ -1030,38 +1030,43 @@ export default function DashboardPage() {
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-300 ring-1 ring-emerald-400/30">
                   ● Live
                 </span>
-                <p className="mt-2 text-lg font-black tracking-tight text-white">Today&apos;s Factory Pulse</p>
-                <p className="mt-0.5 text-xs text-white/80">Fast signals for supervisor review</p>
+                <p className="mt-2 text-lg font-black tracking-tight text-white" style={{ color: '#ffffff' }}>Today&apos;s Factory Pulse</p>
+                <p className="mt-0.5 text-xs text-white/80" style={{ color: 'rgba(255,255,255,0.85)' }}>Fast signals for supervisor review</p>
               </div>
-              <button onClick={fetchData} className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/30 px-4 py-2.5 text-xs font-black uppercase text-emerald-100 ring-1 ring-emerald-400/30 transition hover:bg-emerald-400/40 hover:text-white">
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+              <button 
+                onClick={fetchData} 
+                className="inline-flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2.5 text-xs font-black uppercase text-white ring-1 ring-white/30 transition hover:bg-white/30 cursor-pointer shadow-sm"
+                style={{ color: '#ffffff' }}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-white ${loading ? "animate-spin" : ""}`} style={{ color: '#ffffff' }} /> 
+                <span style={{ color: '#ffffff' }}>Refresh</span>
               </button>
             </div>
 
             <div className="relative grid grid-cols-2 gap-3">
               {/* Orders in flow */}
-              <div className="group rounded-2xl border border-emerald-400/20 bg-white/5 p-4 backdrop-blur transition hover:bg-white/10">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/80">Orders in flow</p>
-                <p className="mt-3 font-mono text-4xl font-black text-white">{tracking.summary.total_orders}</p>
+              <div className="group rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur transition hover:bg-white/15">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/90" style={{ color: '#ffffff' }}>Orders in flow</p>
+                <p className="mt-3 font-mono text-4xl font-black text-white" style={{ color: '#ffffff' }}>{tracking.summary.total_orders}</p>
                 <div className="mt-2 h-0.5 w-8 rounded-full bg-emerald-400/60" />
               </div>
               {/* Delayed */}
-              <div className="group rounded-2xl border border-red-400/20 bg-red-500/10 p-4 backdrop-blur transition hover:bg-red-500/20">
-                <p className="text-[10px] font-black uppercase tracking-widest text-red-300/80">Delayed</p>
-                <p className="mt-3 font-mono text-4xl font-black text-red-200">{tracking.summary.delayed_orders}</p>
-                <div className="mt-2 h-0.5 w-8 rounded-full bg-red-400/60" />
+              <div className="group rounded-2xl border border-white/20 bg-red-500/25 p-4 backdrop-blur transition hover:bg-red-500/35">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white" style={{ color: '#ffffff' }}>Delayed</p>
+                <p className="mt-3 font-mono text-4xl font-black text-white" style={{ color: '#ffffff' }}>{tracking.summary.delayed_orders}</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-red-400/80" />
               </div>
               {/* FPY Rate */}
-              <div className="group rounded-2xl border border-green-400/20 bg-green-400/10 p-4 backdrop-blur transition hover:bg-green-400/20">
-                <p className="text-[10px] font-black uppercase tracking-widest text-green-200/80">FPY Rate</p>
-                <p className="mt-3 font-mono text-3xl font-black text-green-100">{stats.fpy_percent}%</p>
-                <div className="mt-2 h-0.5 w-8 rounded-full bg-green-300/60" />
+              <div className="group rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur transition hover:bg-white/15">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white" style={{ color: '#ffffff' }}>FPY Rate</p>
+                <p className="mt-3 font-mono text-3xl font-black text-white" style={{ color: '#ffffff' }}>{stats.fpy_percent}%</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-emerald-400/60" />
               </div>
               {/* DHU Risk */}
-              <div className="group rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 backdrop-blur transition hover:bg-yellow-400/20">
-                <p className="text-[10px] font-black uppercase tracking-widest text-yellow-200/80">DHU Risk</p>
-                <p className="mt-3 font-mono text-3xl font-black text-yellow-100">{stats.dhu_percent}%</p>
-                <div className="mt-2 h-0.5 w-8 rounded-full bg-yellow-300/60" />
+              <div className="group rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur transition hover:bg-white/15">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white" style={{ color: '#ffffff' }}>DHU Risk</p>
+                <p className="mt-3 font-mono text-3xl font-black text-white" style={{ color: '#ffffff' }}>{stats.dhu_percent}%</p>
+                <div className="mt-2 h-0.5 w-8 rounded-full bg-amber-400/60" />
               </div>
             </div>
           </div>
@@ -1070,9 +1075,9 @@ export default function DashboardPage() {
       </motion.section>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Total Active Lines" value={lineHeatmap.length || 0} icon={<Factory className="h-5 w-5" />} tone="bg-emerald-50 text-emerald-700 ring-emerald-100" trend="+ live line map" note={`${tracking.summary.total_orders} orders in flow`} />
-        <MetricCard label="Overall DHU%" value={`${stats.dhu_percent}%`} icon={<AlertTriangle className="h-5 w-5" />} tone={stats.dhu_percent > 5 ? "bg-yellow-50 text-yellow-800 ring-yellow-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100"} trend={stats.dhu_percent > 5 ? "Needs review" : "Within control"} critical={stats.dhu_percent > 5} note={stats.dhu_percent > 5 ? "Above threshold" : "Within control"} />
-        <MetricCard label="Bulk / Sample" value={`${tracking.summary.bulk_orders}/${tracking.summary.sample_orders}`} icon={<Layers className="h-5 w-5" />} tone="bg-teal-50 text-teal-700 ring-teal-100" trend="Workload split" note="Bulk and sampling workload" />
+        <MetricCard label="Total Active Lines" value={lineHeatmap.length || 0} icon={<Factory className="h-5 w-5" />} tone="bg-[#EBF0FF] text-[#0044E6] ring-[#C7D6FF]" trend="+ live line map" note={`${tracking.summary.total_orders} orders in flow`} />
+        <MetricCard label="Overall DHU%" value={`${stats.dhu_percent}%`} icon={<AlertTriangle className="h-5 w-5" />} tone={stats.dhu_percent > 5 ? "bg-yellow-50 text-yellow-800 ring-yellow-100" : "bg-[#EBF0FF] text-[#0044E6] ring-[#C7D6FF]"} trend={stats.dhu_percent > 5 ? "Needs review" : "Within control"} critical={stats.dhu_percent > 5} note={stats.dhu_percent > 5 ? "Above threshold" : "Within control"} />
+        <MetricCard label="Bulk / Sample" value={`${tracking.summary.bulk_orders}/${tracking.summary.sample_orders}`} icon={<Layers className="h-5 w-5" />} tone="bg-teal-50 text-[#0044E6] ring-teal-100" trend="Workload split" note="Bulk and sampling workload" />
         <MetricCard label="Delayed Orders" value={tracking.summary.delayed_orders} icon={<Clock className="h-5 w-5" />} tone="bg-red-50 text-red-700 ring-red-100" trend={tracking.summary.delayed_orders ? "Critical queue" : "No delay"} critical={Boolean(tracking.summary.delayed_orders)} note="Stage targets crossed" />
       </div>
 
@@ -1129,8 +1134,8 @@ export default function DashboardPage() {
                   <XAxis dataKey="stage" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip />
-                  <Bar dataKey="bulk" stackId="a" fill="#0f766e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="sample" stackId="a" fill="#059669" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="bulk" stackId="a" fill="#0036B8" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="sample" stackId="a" fill="#0044E6" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="delayed" fill="#dc2626" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </SafeResponsiveContainer>
@@ -1149,7 +1154,7 @@ export default function DashboardPage() {
                   <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                   <YAxis dataKey="vendor" type="category" width={90} fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip />
-                  <Bar dataKey="healthy" stackId="a" fill="#059669" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="healthy" stackId="a" fill="#0044E6" radius={[0, 4, 4, 0]} />
                   <Bar dataKey="delayed" stackId="a" fill="#dc2626" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </SafeResponsiveContainer>
@@ -1170,7 +1175,7 @@ export default function DashboardPage() {
                   <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                   <YAxis dataKey="code" type="category" width={70} fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#0f766e" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="count" fill="#0036B8" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </SafeResponsiveContainer>
             </div>
@@ -1194,7 +1199,7 @@ export default function DashboardPage() {
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip />
                 <Area type="monotone" dataKey="dhu" stroke="#f59e0b" fill="url(#dhu)" strokeWidth={2} />
-                <Line type="monotone" dataKey="fpy" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="fpy" stroke="#0044E6" strokeWidth={2} dot={{ r: 3 }} />
               </AreaChart>
             </SafeResponsiveContainer>
           </div>
@@ -1205,7 +1210,7 @@ export default function DashboardPage() {
             <SafeResponsiveContainer width="100%" height="100%">
               <RadialBarChart innerRadius="65%" outerRadius="100%" data={[{ name: "Pass", value: aqlPass }]} startAngle={180} endAngle={0}>
                 <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                <RadialBar dataKey="value" fill={aqlPass >= 90 ? "#059669" : aqlPass >= 75 ? "#f59e0b" : "#dc2626"} background cornerRadius={12} />
+                <RadialBar dataKey="value" fill={aqlPass >= 90 ? "#0044E6" : aqlPass >= 75 ? "#f59e0b" : "#dc2626"} background cornerRadius={12} />
               </RadialBarChart>
             </SafeResponsiveContainer>
           </div>
@@ -1228,7 +1233,7 @@ export default function DashboardPage() {
                       ? "border-red-200 bg-red-50"
                       : line.risk === "warn"
                         ? "border-yellow-200 bg-yellow-50"
-                        : "border-emerald-200 bg-emerald-50"
+                        : "border-[#C7D6FF] bg-[#EBF0FF]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1239,8 +1244,8 @@ export default function DashboardPage() {
                     <span className="text-lg font-black text-slate-950">{line.total}</span>
                   </div>
                   <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-                    <div><p className="text-sm font-black text-emerald-700">{line.bulk}</p><p className="text-[8px] font-black uppercase text-slate-500">Bulk</p></div>
-                    <div><p className="text-sm font-black text-teal-700">{line.sample}</p><p className="text-[8px] font-black uppercase text-slate-500">Sample</p></div>
+                    <div><p className="text-sm font-black text-[#0044E6]">{line.bulk}</p><p className="text-[8px] font-black uppercase text-slate-500">Bulk</p></div>
+                    <div><p className="text-sm font-black text-[#0044E6]">{line.sample}</p><p className="text-[8px] font-black uppercase text-slate-500">Sample</p></div>
                     <div><p className="text-sm font-black text-red-700">{line.delayed}</p><p className="text-[8px] font-black uppercase text-slate-500">Late</p></div>
                     <div><p className="text-sm font-black text-slate-900">{line.fpy}%</p><p className="text-[8px] font-black uppercase text-slate-500">FPY</p></div>
                   </div>

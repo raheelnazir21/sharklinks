@@ -140,6 +140,9 @@ class StageChunkCreate(BaseModel):
 class OrderCreate(BaseModel):
     vendor_id: str
     order_no: Optional[str] = None
+    po_number: Optional[str] = None
+    style_code: Optional[str] = None
+    order_value: Optional[float] = 0.0
     style_name: Optional[str] = None
     product_name: Optional[str] = None
     product_type: Optional[str] = None
@@ -172,6 +175,9 @@ class BulkOrderCreate(BaseModel):
 class OrderUpdate(BaseModel):
     vendor_id: Optional[str] = None
     order_no: Optional[str] = None
+    po_number: Optional[str] = None
+    style_code: Optional[str] = None
+    order_value: Optional[float] = None
     style_name: Optional[str] = None
     product_name: Optional[str] = None
     product_type: Optional[str] = None
@@ -197,6 +203,11 @@ class OrderOut(BaseModel):
     vendor_id: str
     vendor_name: Optional[str] = None
     order_no: Optional[str]
+    po_number: Optional[str] = None
+    style_code: Optional[str] = None
+    order_value: Optional[float] = 0.0
+    total_cost: Optional[float] = 0.0
+    remaining_margin: Optional[float] = 0.0
     style_name: Optional[str]
     product_name: Optional[str]
     product_type: Optional[str]
@@ -307,3 +318,65 @@ class StageChunkOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ─── Style Schemas ─────────────────────────────────────────────────────────
+
+class StyleCreate(BaseModel):
+    brand_name: Optional[str] = None
+    article_type: Optional[str] = None
+    style_code: Optional[str] = None
+    description: Optional[str] = None
+
+
+class StyleOut(BaseModel):
+    id: str
+    style_code: str
+    brand_name: Optional[str] = None
+    article_type: Optional[str] = None
+    description: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Stage Expense Schemas ─────────────────────────────────────────────────
+
+class StageExpenseCreate(BaseModel):
+    stage_id: Optional[str] = None
+    stage_name: Optional[str] = None
+    amount: float
+    description: Optional[str] = None
+    expense_date: Optional[date] = None
+    receipt_url: Optional[str] = None
+    receipt_filename: Optional[str] = None
+
+
+class StageExpenseUpdate(BaseModel):
+    stage_id: Optional[str] = None
+    stage_name: Optional[str] = None
+    amount: Optional[float] = None
+    description: Optional[str] = None
+    expense_date: Optional[date] = None
+    receipt_url: Optional[str] = None
+    receipt_filename: Optional[str] = None
+
+
+class StageExpenseOut(BaseModel):
+    id: str
+    order_id: str
+    stage_id: Optional[str] = None
+    stage_name: Optional[str] = None
+    amount: float
+    description: Optional[str] = None
+    expense_date: Optional[date] = None
+    receipt_url: Optional[str] = None
+    receipt_filename: Optional[str] = None
+    created_by: Optional[str] = None
+    creator_name: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
